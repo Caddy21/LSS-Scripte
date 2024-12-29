@@ -1,10 +1,11 @@
 // ==UserScript==
-// @name         Hide Finish Now Button in LightBox
+// @name         [LSS] Hide Finish Now Button in LightBox
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  Entfernt den Fahnenbutton in der Einsatzliste
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @icon            https://www.leitstellenspiel.de/favicon.ico
 // @grant        none
 // ==/UserScript==
 
