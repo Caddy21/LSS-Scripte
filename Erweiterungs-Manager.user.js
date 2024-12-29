@@ -14,9 +14,17 @@
 (function() {
     'use strict';
 
+    console.log('Script gestartet');
+
     // Funktion zum Formatieren der Zahl
     function formatNumber(number) {
         return new Intl.NumberFormat('de-DE').format(number);
+    }
+
+    // Funktion zum Abrufen des CSRF-Tokens
+    function getCSRFToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
     }
 
     // Manuelle Konfiguration der Erweiterungen
@@ -33,7 +41,7 @@
 
     // Stile für das Interface
     const styles = `
-    .lightbox {
+    #extension-lightbox {
         position: fixed;
         top: 0;
         left: 0;
@@ -45,7 +53,7 @@
         align-items: center;
         z-index: 10000;
     }
-    .lightbox-content {
+    #extension-lightbox-content {
         background: var(--background-color, white);
         color: var(--text-color, black);
         border: 1px solid var(--border-color, black);
@@ -56,12 +64,12 @@
         overflow-y: auto;
         position: relative;
     }
-    .lightbox-content.dark {
+    #extension-lightbox-content.dark {
         background: #2c2f33;
         color: #ffffff;
         border-color: #23272a;
     }
-    .lightbox-content.light {
+    #extension-lightbox-content.light {
         background: #ffffff;
         color: #000000;
         border-color: #dddddd;
@@ -178,10 +186,10 @@
 
     // Erstellt das Lightbox-Interface
     const lightbox = document.createElement('div');
-    lightbox.className = 'lightbox';
+    lightbox.id = 'extension-lightbox';
     lightbox.style.display = 'none';
     lightbox.innerHTML = `
-        <div class="lightbox-content">
+        <div id="extension-lightbox-content">
             <button id="close-extension-helper">Schließen</button>
             <h2>Erweiterungshelfer</h2>
             <div id="extension-list">Lade Daten...</div>
@@ -189,7 +197,7 @@
     `;
     document.body.appendChild(lightbox);
 
-    const lightboxContent = lightbox.querySelector('.lightbox-content');
+    const lightboxContent = lightbox.querySelector('#extension-lightbox-content');
 
     // Darkmode oder Whitemode anwenden
     function applyTheme() {
@@ -373,7 +381,7 @@
         coinsButton.className = 'currency-button coins-button';
         coinsButton.textContent = `Coins: ${coins}`;
         coinsButton.onclick = () => {
-            confirmAndBuildExtension(buildingId, extensionId, coins, 'coins');
+            confirmAndBuildExtension(buildingId, extensionId, coins);
             document.body.removeChild(selectionDiv);
         };
 
@@ -401,17 +409,25 @@
 
     // Funktion, um eine Erweiterung in einem Gebäude zu bauen
     function buildExtension(buildingId, extensionId, currency) {
+        const csrfToken = getCSRFToken();
+        console.log(`CSRF Token: ${csrfToken}`);
+        console.log(`Building Extension: Building ID=${buildingId}, Extension ID=${extensionId}, Currency=${currency}`);
+
         const buildUrl = `/buildings/${buildingId}/extension/${currency}/${extensionId}`;
         GM_xmlhttpRequest({
             method: 'POST',
             url: buildUrl,
-            onload: function() {
-                console.log(`Erweiterung in Gebäude ${buildingId} gebaut.`);
+            headers: {
+                'X-CSRF-Token': csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            onload: function(response) {
+                console.log(`Erweiterung in Gebäude ${buildingId} gebaut. Response:`, response);
                 alert(`Erweiterung in Gebäude ${buildingId} gebaut.`);
                 fetchBuildingsAndRender(); // Aktualisiert die Liste nach dem Bauen
             },
-            onerror: function() {
-                console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingId}.`);
+            onerror: function(error) {
+                console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingId}.`, error);
                 alert(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingId}.`);
             }
         });
@@ -485,6 +501,7 @@
                 return response.json();
             })
             .then(data => {
+                console.log('Gebäudedaten abgerufen:', data);
                 renderMissingExtensions(data);
             })
             .catch(error => {
