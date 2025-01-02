@@ -415,9 +415,12 @@
             spoilerButton.classList.add('spoiler-button');
             spoilerButton.onclick = function() {
                 const content = spoilerButton.nextElementSibling;
-                content.style.display = content.style.display === 'none' ? 'block' : 'none';
-                spoilerButton.textContent = content.style.display === 'none' ? 'Details anzeigen' : 'Details ausblenden';
+                if (content) {
+                    content.style.display = content.style.display === 'none' ? 'block' : 'none';
+                    spoilerButton.textContent = content.style.display === 'none' ? 'Details anzeigen' : 'Details ausblenden';
+                }
             };
+
             list.appendChild(spoilerButton);
 
             const tableWrapper = document.createElement('div');
