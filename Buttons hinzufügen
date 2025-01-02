@@ -1,5 +1,3 @@
-Gebäudeliste ganz oben
-
 // Funktion, die den Button hinzufügt
     function addButton() {
         // Überprüfe, ob das Ziel-Element existiert
@@ -20,6 +18,4 @@ Gebäudeliste ganz oben
     // Warte, bis die Seite vollständig geladen ist, und rufe dann die addButton Funktion auf
     window.addEventListener('load', addButton);
 
-    // Fallback, falls der Load-Event nicht richtig ausgelöst wird
-    setTimeout(addButton, 3000);
 })();
