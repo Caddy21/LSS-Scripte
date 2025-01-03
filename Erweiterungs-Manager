@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Listet Wachen auf, bei denen bestimmte Erweiterungen fehlen und ermöglicht das Hinzufügen dieser Erweiterungen.
-// @author       Du
+// @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @grant        GM_xmlhttpRequest
 // @connect      api.lss-manager.de
