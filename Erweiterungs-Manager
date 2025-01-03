@@ -11,6 +11,18 @@
 // @run-at       document-end
 // ==/UserScript==
 
+
+// ToDo-Liste
+// - Abrufen der Credits und Coins vom User
+// - Prüfen beim versuch eines Ausbaus ob User genud Credits und Coins hat, wenn nicht User darauf hinweisen und Bau nicht ausführen
+// - Dopple-Klick beim Button 'Details Anzeigen' verhindern
+// - Kleinwachen Einbauen
+// - TYP ID der Gebäude manuell bennen oder automatisch bennen lassen
+
+// Aktuelle Bugs
+// - Script meldet Ausbau einer Erweiterung obwohl nicht genug Credits oder Coins vorhanden sind.
+// - 
+
 (function() {
     'use strict';
 
