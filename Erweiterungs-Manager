@@ -684,7 +684,10 @@
     }
 
     // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen nach Bestätigung
-    function confirmAndBuildAllExtensions(buildingType, group) {
+    // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen nach Bestätigung
+async function confirmAndBuildAllExtensions(buildingType, group) {
+    try {
+        const userInfo = await getUserCredits();
         const totalCost = group.reduce((sum, { missingExtensions }) => {
             return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.cost, 0);
         }, 0);
@@ -692,6 +695,16 @@
         const totalCoins = group.reduce((sum, { missingExtensions }) => {
             return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.coins, 0);
         }, 0);
+
+        if (userInfo.credits < totalCost) {
+            alert(`Nicht genügend Credits. Benötigt: ${formatNumber(totalCost)}, Verfügbar: ${formatNumber(userInfo.credits)}`);
+            return;
+        }
+
+        if (userInfo.coins < totalCoins) {
+            alert(`Nicht genügend Coins. Benötigt: ${totalCoins}, Verfügbar: ${userInfo.coins}`);
+            return;
+        }
 
         const selectionDiv = document.createElement('div');
         selectionDiv.className = 'currency-selection';
@@ -728,8 +741,11 @@
         selectionDiv.appendChild(cancelButton);
 
         document.body.appendChild(selectionDiv);
+    } catch (error) {
+        console.error('Fehler beim Überprüfen der Credits und Coins:', error);
+        alert('Fehler beim Überprüfen der Credits und Coins.');
     }
-
+}
     // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen
     function buildAllExtensions(buildingType, group, currency) {
         group.forEach(({ building, missingExtensions }, index) => {
