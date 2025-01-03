@@ -13,11 +13,9 @@
 
 
 // ToDo-Liste
-// Feuerwachen und Feuerwachen (Klein) auseinanderhalten, wenn Kleinwachen einbezogen werden sortieren sie sich bei den normalen Wachen mit ein (Vermutlich weil sie ebenfalls die ID 0 beziehen
-// obwohl in der Gebäude API 18 steht.
+// Normale Wachen sowie Kleinwachen auseinanderhalten, wenn Kleinwachen einbezogen werden sortieren sie sich bei den normalen Wachen mit ein (Vermutlich weil sie ebenfalls die ID 0 beziehen
+// obwohl in der Gebäude API 18 steht).
 // - Dopple-Klick beim Button 'Details Anzeigen' verhindern
-
-
 
 
 (function() {
@@ -181,14 +179,14 @@
             ],
 
         18: [ // Feuerwehr (Kleinwache)
-            { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+    //        { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
     //        { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
     //        { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
     //        { id: 3, name: 'Wasserrettung', cost: 400000, coins: 25 },
     //        { id: 4, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
     //        { id: 5, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
     //        { id: 6, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
-            { id: 7, name: 'Großlüfter', cost: 75000, coins: 25 },
+    //        { id: 7, name: 'Großlüfter', cost: 75000, coins: 25 },
     //        { id: 8, name: 'Drohneneinheit', cost: 150000, coins: 25 },
     //        { id: 9, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
     //        { id: 23, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
