@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         LSS Erweiterungshelfer
+// @name         LSS Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Listet Wachen auf, bei denen bestimmte Erweiterungen fehlen und ermöglicht das Hinzufügen dieser Erweiterungen.
@@ -8,6 +8,7 @@
 // @grant        GM_xmlhttpRequest
 // @connect      api.lss-manager.de
 // @connect      leitstellenspiel.de
+// @icon         https://www.leitstellenspiel.de/favicon.ico
 // @run-at       document-end
 // ==/UserScript==
 
@@ -16,6 +17,7 @@
 // Normale Wachen sowie Kleinwachen auseinanderhalten, wenn Kleinwachen einbezogen werden sortieren sie sich bei den normalen Wachen mit ein (Vermutlich weil sie ebenfalls die ID 0 beziehen
 // obwohl in der Gebäude API 18 steht).
 // - Dopple-Klick beim Button 'Details Anzeigen' verhindern
+// Credits und Coins automatisch in die Tabelle einfügen
 
 
 (function() {
