@@ -13,15 +13,11 @@
 
 
 // ToDo-Liste
-// - Abrufen der Credits und Coins vom User
-// - Prüfen beim versuch eines Ausbaus ob User genud Credits und Coins hat, wenn nicht User darauf hinweisen und Bau nicht ausführen
+
 // - Dopple-Klick beim Button 'Details Anzeigen' verhindern
 // - Kleinwachen Einbauen
-// - TYP ID der Gebäude manuell bennen oder automatisch bennen lassen
 
-// Aktuelle Bugs
-// - Script meldet Ausbau einer Erweiterung obwohl nicht genug Credits oder Coins vorhanden sind.
-// - 
+
 
 (function() {
     'use strict';
@@ -408,12 +404,27 @@
             }
         });
 
+        const buildingTypeNames = {
+            0: 'Feuerwache (Normal)',
+            1: 'Feuerwehrschule',
+            2: 'Rettungswache',
+            3: 'Rettungsschule',
+            4: 'Krankenhaus',
+            5: 'Rettungshubschrauber-Station',
+            6: 'Polizeiwache',
+            8: 'Polizeischule',
+            9: 'THW',
+            10: 'THW-Bundesschule',
+            11: 'Bereitschaftspolizei',
+            12: 'SEG'
+        };
+
         Object.keys(buildingGroups).forEach(buildingType => {
             const group = buildingGroups[buildingType];
             const sampleBuilding = group[0].building;
 
             const buildingHeader = document.createElement('h4');
-            buildingHeader.textContent = `Typ: ${sampleBuilding.building_type === 0 ? 'Feuerwache (Normal)' : sampleBuilding.building_type}`;
+            buildingHeader.textContent = `Typ: ${buildingTypeNames[sampleBuilding.building_type] || 'Unbekannt'}`;
             list.appendChild(buildingHeader);
 
             const buildAllButton = document.createElement('button');
@@ -530,11 +541,43 @@
         document.body.appendChild(selectionDiv);
     }
 
-    // Funktion, um eine Erweiterung in einem Gebäude zu bauen nach Bestätigung
-    function confirmAndBuildExtension(buildingId, extensionId, amount, currency) {
-        const currencyText = currency === 'credits' ? 'Credits' : 'Coins';
-        if (confirm(`Möchten Sie wirklich ${formatNumber(amount)} ${currencyText} für diese Erweiterung ausgeben?`)) {
-            buildExtension(buildingId, extensionId, currency);
+
+    // Funktion um die aktuelle Credits und Coins des USERs abzurufen
+    async function getUserCredits() {
+        try {
+            const response = await fetch('https://www.leitstellenspiel.de/api/userinfo');
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der Credits und Coins');
+            }
+            const data = await response.json();
+            console.log('Benutzer Credits und Coins abgerufen:', data);
+            return {
+                credits: data.credits_user_current,
+                coins: data.coins_user_current
+            };
+        } catch (error) {
+            console.error('Fehler beim Abrufen der Credits und Coins:', error);
+            throw error;
+        }
+    }
+    async function confirmAndBuildExtension(buildingId, extensionId, amount, currency) {
+        try {
+            const userInfo = await getUserCredits();
+            const currencyText = currency === 'credits' ? 'Credits' : 'Coins';
+            console.log(`Benutzer hat ${userInfo.credits} Credits und ${userInfo.coins} Coins`);
+
+            if ((currency === 'credits' && userInfo.credits < amount) || (currency === 'coins' && userInfo.coins < amount)) {
+                alert(`Nicht genügend ${currencyText}.`);
+                console.log(`Nicht genügend ${currencyText}.`);
+                return;
+            }
+
+            if (confirm(`Möchten Sie wirklich ${formatNumber(amount)} ${currencyText} für diese Erweiterung ausgeben?`)) {
+                buildExtension(buildingId, extensionId, currency);
+            }
+        } catch (error) {
+            console.error('Fehler beim Überprüfen der Credits und Coins:', error);
+            alert('Fehler beim Überprüfen der Credits und Coins.');
         }
     }
 
@@ -561,6 +604,7 @@
                 console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingId}.`, error);
                 alert(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingId}.`);
             }
+
         });
     }
 
