@@ -13,9 +13,10 @@
 
 
 // ToDo-Liste
-
+// Feuerwachen und Feuerwachen (Klein) auseinanderhalten, wenn Kleinwachen einbezogen werden sortieren sie sich bei den normalen Wachen mit ein (Vermutlich weil sie ebenfalls die ID 0 beziehen
+// obwohl in der Gebäude API 18 steht.
 // - Dopple-Klick beim Button 'Details Anzeigen' verhindern
-// - Kleinwachen Einbauen
+
 
 
 
@@ -172,11 +173,11 @@
             ],
 
         17: [ // Polizeisondereinheit
-            { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
-            { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
-            { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
-            { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
-            { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 }
+   //         { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
+   //         { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
+   //         { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
+   //         { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
+   //         { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 }
             ],
 
         18: [ // Feuerwehr (Kleinwache)
@@ -381,7 +382,12 @@
     lightbox.innerHTML = `
         <div id="extension-lightbox-content">
             <button id="close-extension-helper">Schließen</button>
-            <h2>Erweiterungshelfer</h2>
+            <h2>Erweiterungshelfer<br><h5>Hier findet Ihr die Wachen wo noch Erweiterungen fehlen.
+            <br>
+            <br>Feuerwehr (Kleinwache) und Polizei (Kleinwachen) können bislang noch nicht mit einbezogen werden!
+            <br>
+            <br>Über den grünen Button könnt Ihr bei allen Wachen gleichzeitig sämtliche Erweiterugen bauen, dies kann je nach Anzahl der Gebäude und fehlenden Erweiterungen ein wenig dauern.
+            <br>Wenn Ihr auf den roten Button klickt (derzeit muss dieser leider zweimal geklickt werden), öffnet sich eine Tabelle wo Wachen mit fehlender Erweiterung aufgelistet werden. Dort könnt Ihr auch einzelne Ausbauten vornehmen.</h5>
             <div id="extension-list">Lade Daten...</div>
         </div>
     `;
