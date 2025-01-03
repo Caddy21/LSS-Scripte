@@ -165,6 +165,67 @@
             { id: 4, name: 'SEG-Drohne', cost: 50000, coins: 15 },
             { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 }
             ],
+
+        13: [ // Polizeihubschrauberstation
+            { id: 0, name: 'Außenlastbehälter', cost: 200000, coins: 15 },
+            { id: 1, name: 'Windenrettung', cost: 200000, coins: 15 }
+            ],
+
+        17: [ // Polizeisondereinheit
+            { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
+            { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
+            { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
+            { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
+            { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 }
+            ],
+
+        18: [ // Feuerwehr (Kleinwache)
+            { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+    //        { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 3, name: 'Wasserrettung', cost: 400000, coins: 25 },
+    //        { id: 4, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
+    //        { id: 5, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
+    //        { id: 6, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
+            { id: 7, name: 'Großlüfter', cost: 75000, coins: 25 },
+    //        { id: 8, name: 'Drohneneinheit', cost: 150000, coins: 25 },
+    //        { id: 9, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
+    //        { id: 23, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 24, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 }
+            ],
+
+        19: [ // Polizei (Kleinwache)
+    //        { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
+    //        { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
+    //        { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
+    //        { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            ],
+
+        24: [ // Reiterstaffel
+    //        { id: 0, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 1, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 2, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 3, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 4, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 5, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+            ],
+
+        25: [ // Bergrettungswache
+            { id: 0, name: 'Höhenrettung', cost: 50000, coins: 25 },
+    //        { id: 1, name: 'Drohneneinheit', cost: 75000, coins: 25 },
+            { id: 2, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
+    //        { id: 3, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+            ],
+
+        27: [ // Schule für Seefahrt und Seenotrettung
+            { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
+            { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
+            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 }
+            ],
+
     };
 
     // Stile für das Interface
@@ -416,7 +477,15 @@
             9: 'THW',
             10: 'THW-Bundesschule',
             11: 'Bereitschaftspolizei',
-            12: 'SEG'
+            12: 'SEG',
+            13: 'Polizeihubschrauberstation',
+            17: 'Polizei-Sondereinheiten',
+            18: 'Feuerwache (Kleinwache)',
+            19: 'Polizei (Kleinwache)',
+            24: 'Reiterstaffel',
+            25: 'Bergrettungswache',
+            27: 'Schule für Seefahrt und Seenotrettung',
+
         };
 
         Object.keys(buildingGroups).forEach(buildingType => {
