@@ -14,6 +14,8 @@
 
 
 // ToDo-Liste
+
+// buildAll so anpassen das entweder Credits oder Coins akzeptiert werden, aktuell müssen beides vorrätig sein.
 // Normale Wachen sowie Kleinwachen auseinanderhalten, wenn Kleinwachen einbezogen werden sortieren sie sich bei den normalen Wachen mit ein (Vermutlich weil sie ebenfalls die ID 0 beziehen
 // obwohl in der Gebäude API 18 steht).
 // - Dopple-Klick beim Button 'Details Anzeigen' verhindern
@@ -387,7 +389,7 @@
             <br>Feuerwehr (Kleinwache) und Polizei (Kleinwachen) können bislang noch nicht mit einbezogen werden!
             <br>
             <br>Über den grünen Button könnt Ihr bei allen Wachen gleichzeitig sämtliche Erweiterugen bauen, dies kann je nach Anzahl der Gebäude und fehlenden Erweiterungen ein wenig dauern.
-            <br>Wenn Ihr auf den roten Button klickt (derzeit muss dieser leider zweimal geklickt werden), öffnet sich eine Tabelle wo Wachen mit fehlender Erweiterung aufgelistet werden. Dort könnt Ihr auch einzelne Ausbauten vornehmen.</h5>
+            <br>Wenn Ihr auf den roten Button klickt (derzeit muss dieser leider zweimal getan werden), öffnet sich eine Tabelle wo Wachen mit fehlender Erweiterung aufgelistet werden. Dort könnt Ihr auch einzelne Ausbauten vornehmen.</h5>
             <div id="extension-list">Lade Daten...</div>
         </div>
     `;
@@ -635,6 +637,8 @@
             throw error;
         }
     }
+
+
     async function confirmAndBuildExtension(buildingId, extensionId, amount, currency) {
         try {
             const userInfo = await getUserCredits();
@@ -684,75 +688,68 @@
     }
 
     // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen nach Bestätigung
-    // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen nach Bestätigung
-async function confirmAndBuildAllExtensions(buildingType, group) {
-    try {
-        const userInfo = await getUserCredits();
-        const totalCost = group.reduce((sum, { missingExtensions }) => {
-            return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.cost, 0);
-        }, 0);
+    async function confirmAndBuildAllExtensions(buildingType, group) {
+        try {
+            const userInfo = await getUserCredits();
+            const totalCost = group.reduce((sum, { missingExtensions }) => {
+                return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.cost, 0);
+            }, 0);
 
-        const totalCoins = group.reduce((sum, { missingExtensions }) => {
-            return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.coins, 0);
-        }, 0);
+            const totalCoins = group.reduce((sum, { missingExtensions }) => {
+                return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.coins, 0);
+            }, 0);
 
-        if (userInfo.credits < totalCost) {
-            alert(`Nicht genügend Credits. Benötigt: ${formatNumber(totalCost)}, Verfügbar: ${formatNumber(userInfo.credits)}`);
-            return;
-        }
+            const selectionDiv = document.createElement('div');
+            selectionDiv.className = 'currency-selection';
 
-        if (userInfo.coins < totalCoins) {
-            alert(`Nicht genügend Coins. Benötigt: ${totalCoins}, Verfügbar: ${userInfo.coins}`);
-            return;
-        }
-
-        const selectionDiv = document.createElement('div');
-        selectionDiv.className = 'currency-selection';
-
-        const creditsButton = document.createElement('button');
-        creditsButton.className = 'currency-button credits-button';
-        creditsButton.textContent = `Credits: ${formatNumber(totalCost)}`;
-        creditsButton.onclick = () => {
-            if (confirm(`Möchten Sie wirklich ${formatNumber(totalCost)} Credits für alle Erweiterungen ausgeben?`)) {
+            const creditsButton = document.createElement('button');
+            creditsButton.className = 'currency-button credits-button';
+            creditsButton.textContent = `Credits: ${formatNumber(totalCost)}`;
+            creditsButton.onclick = () => {
+                if (userInfo.credits < totalCost) {
+                    alert(`Nicht genügend Credits. Benötigt: ${formatNumber(totalCost)}, Verfügbar: ${formatNumber(userInfo.credits)}`);
+                    return;
+                }
                 buildAllExtensions(buildingType, group, 'credits');
                 document.body.removeChild(selectionDiv);
-            }
-        };
+            };
 
-        const coinsButton = document.createElement('button');
-        coinsButton.className = 'currency-button coins-button';
-        coinsButton.textContent = `Coins: ${totalCoins}`;
-        coinsButton.onclick = () => {
-            if (confirm(`Möchten Sie wirklich ${totalCoins} Coins für alle Erweiterungen ausgeben?`)) {
+            const coinsButton = document.createElement('button');
+            coinsButton.className = 'currency-button coins-button';
+            coinsButton.textContent = `Coins: ${totalCoins}`;
+            coinsButton.onclick = () => {
+                if (userInfo.coins < totalCoins) {
+                    alert(`Nicht genügend Coins. Benötigt: ${totalCoins}, Verfügbar: ${userInfo.coins}`);
+                    return;
+                }
                 buildAllExtensions(buildingType, group, 'coins');
                 document.body.removeChild(selectionDiv);
-            }
-        };
+            };
 
-        const cancelButton = document.createElement('button');
-        cancelButton.className = 'cancel-button';
-        cancelButton.textContent = 'Abbrechen';
-        cancelButton.onclick = () => {
-            document.body.removeChild(selectionDiv);
-        };
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'cancel-button';
+            cancelButton.textContent = 'Abbrechen';
+            cancelButton.onclick = () => {
+                document.body.removeChild(selectionDiv);
+            };
 
-        selectionDiv.appendChild(creditsButton);
-        selectionDiv.appendChild(coinsButton);
-        selectionDiv.appendChild(cancelButton);
+            selectionDiv.appendChild(creditsButton);
+            selectionDiv.appendChild(coinsButton);
+            selectionDiv.appendChild(cancelButton);
 
-        document.body.appendChild(selectionDiv);
-    } catch (error) {
-        console.error('Fehler beim Überprüfen der Credits und Coins:', error);
-        alert('Fehler beim Überprüfen der Credits und Coins.');
+            document.body.appendChild(selectionDiv);
+        } catch (error) {
+            console.error('Fehler beim Überprüfen der Credits und Coins:', error);
+            alert('Fehler beim Überprüfen der Credits und Coins.');
+        }
     }
-}
-    // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen
+
     function buildAllExtensions(buildingType, group, currency) {
         group.forEach(({ building, missingExtensions }, index) => {
             missingExtensions.forEach((extension, extIndex) => {
                 setTimeout(() => {
                     buildExtension(building.id, extension.id, currency);
-                }, (index * missingExtensions.length + extIndex) * 100); // 100ms Verzögerung
+                }, (index * missingExtensions.length + extIndex) * 200); // 200ms Verzögerung
             });
         });
     }
