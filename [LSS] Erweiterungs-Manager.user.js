@@ -15,12 +15,12 @@
 
 // ToDo-Liste
 
-// Sortierung der Wachen nach Namen und nicht nach der buildingID anpassen, wenn möglich
-// Normale Wachen sowie Kleinwachen auseinanderhalten, wenn Kleinwachen einbezogen werden sortieren sie sich bei den normalen Wachen mit ein (Vermutlich weil sie ebenfalls die ID 0 beziehen
-// obwohl in der Gebäude API 18 steht).
+// Sortierung der Wachen besser gestalten wenn möglich, aktuell geht nur nach GebäudeID
+// Normale Wachen sowie Kleinwachen auseinanderhalten, wenn Kleinwachen einbezogen werden sortieren sie sich bei den normalen Wachen mit ein (Vermutlich weil sie ebenfalls die ID 0 beziehen obwohl in der Gebäude API 18 steht).
 // Doppel-Klick beim Button 'Details Anzeigen' verhindern
 // Credits und Coins automatisch in die Tabelle einfügen
 // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
+// Lagerräume hinzufügn
 
 (function() {
     'use strict';
@@ -309,7 +309,7 @@
         background-color: var(--button-hover-background-color, #0056b3);
     }
     #extension-lightbox .build-all-button {
-        background-color: var(--button-background-color, #28a745);
+        background-color: var(--button-background-color, #a72828);
         color: var(--button-text-color, #ffffff);
         border: none;
         padding: 10px 20px;
@@ -325,7 +325,7 @@
         background-color: var(--button-hover-background-color, #218838);
     }
     #extension-lightbox .spoiler-button {
-        background-color: red;
+        background-color: green;
         color: #ffffff;
         border: none;
         padding: 10px 20px;
@@ -386,10 +386,13 @@
             <button id="close-extension-helper">Schließen</button>
             <h2>Erweiterungshelfer<br><h5>Hier findet Ihr die Wachen wo noch Erweiterungen fehlen.
             <br>
+            <br>Lagerräume werden zu einem späteren Zeitraum hinzugefügt.
+            <br>
             <br>Feuerwehr (Kleinwache) und Polizei (Kleinwachen) können bislang noch nicht mit einbezogen werden!
             <br>
-            <br>Über den grünen Button könnt Ihr bei allen Wachen gleichzeitig sämtliche Erweiterugen bauen, dies kann je nach Anzahl der Gebäude und fehlenden Erweiterungen ein wenig dauern.
-            <br>Wenn Ihr auf den roten Button klickt (derzeit muss dieser leider zweimal getan werden), öffnet sich eine Tabelle wo Wachen mit fehlender Erweiterung aufgelistet werden. Dort könnt Ihr auch einzelne Ausbauten vornehmen.</h5>
+            <br>Über den roten Button könnt Ihr bei allen Wachen gleichzeitig sämtliche fehlende Erweiterugen bauen, dies kann je nach Anzahl der Gebäude und fehlenden Erweiterungen ein wenig dauern.
+            <br>
+            <br>Wenn Ihr auf den grünen Button klickt (derzeit muss dieses leider zweimal getan werden), öffnet sich eine Tabelle wo Wachen mit fehlender Erweiterung aufgelistet werden. Dort könnt Ihr auch einzelne Ausbauten vornehmen.</h5>
             <div id="extension-list">Lade Daten...</div>
         </div>
     `;
