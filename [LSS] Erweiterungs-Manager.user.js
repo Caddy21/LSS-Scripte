@@ -15,10 +15,10 @@
 
 // ToDo-Liste
 
-// buildAll so anpassen das entweder Credits oder Coins akzeptiert werden, aktuell müssen beides vorrätig sein.
+// Sortierung der Wachen nach Namen und nicht nach der buildingID anpassen, wenn möglich
 // Normale Wachen sowie Kleinwachen auseinanderhalten, wenn Kleinwachen einbezogen werden sortieren sie sich bei den normalen Wachen mit ein (Vermutlich weil sie ebenfalls die ID 0 beziehen
 // obwohl in der Gebäude API 18 steht).
-// - Dopple-Klick beim Button 'Details Anzeigen' verhindern
+// Doppel-Klick beim Button 'Details Anzeigen' verhindern
 // Credits und Coins automatisch in die Tabelle einfügen
 // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
 
