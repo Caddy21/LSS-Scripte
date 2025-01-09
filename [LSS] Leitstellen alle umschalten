@@ -1,0 +1,36 @@
+// ==UserScript==
+// @name         [LSS] Buton für die Gebäudeliste ganz oben
+// @namespace    http://tampermonkey.net/
+// @version      0.2
+// @description  Fügt einen neuen Button zum angegebenen div auf Leitstellenspiel.de hinzu
+// @author       Du
+// @match        https://www.leitstellenspiel.de/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // Funktion, die den Button hinzufügt
+    function addButton() {
+        // Überprüfe, ob das Ziel-Element existiert
+        const targetDiv = document.getElementById('building-list-header-buttons');
+        if (targetDiv) {
+            // Erstelle das neue Button-Element
+            const newButton = document.createElement('a');
+            newButton.href = '#';
+            newButton.className = 'btn btn-xs btn-default';
+            newButton.id = 'new_button';
+            newButton.textContent = 'Neuer Button';
+
+            // Füge den neuen Button zum Ziel-Div hinzu
+            targetDiv.appendChild(newButton);
+        }
+    }
+
+    // Warte, bis die Seite vollständig geladen ist, und rufe dann die addButton Funktion auf
+    window.addEventListener('load', addButton);
+
+    // Fallback, falls der Load-Event nicht richtig ausgelöst wird
+    setTimeout(addButton, 3000);
+})();
