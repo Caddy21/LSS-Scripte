@@ -483,7 +483,7 @@
         '3_normal': 'Rettungsschule',
         '4_normal': 'Krankenhaus',
         '5_normal': 'Rettungshubschrauber-Station',
-        '6_normal': 'Polizeiwache',
+        '6_normal': 'Polizeiwache (Normal)',
         '6_small': 'Polizeiwache (Klein)',
         '8_normal': 'Polizeischule',
         '9_normal': 'THW',
