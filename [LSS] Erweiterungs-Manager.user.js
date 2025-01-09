@@ -20,6 +20,7 @@
 // Credits und Coins automatisch in die Tabelle einfügen
 // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
 
+
 (function() {
     'use strict';
 
@@ -37,48 +38,48 @@
     // Manuelle Konfiguration der Erweiterungen
     const manualExtensions = {
         0: [ // Feuerwache (normal)
-            //        { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
-            //        { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 3, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 4, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 5, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 6, name: 'Wasserrettung', cost: 400000, coins: 25 },
-            //        { id: 7, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 8, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
-            //        { id: 9, name: 'Großwache', cost: 1000000, coins: 50 },
-            //        { id: 10, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 11, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 12, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 13, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
-            //        { id: 14, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
-            //        { id: 15, name: 'Netzersatzanlage 200', cost: 100000, coins: 20 },
+    //        { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+    //        { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 3, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 4, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 5, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 6, name: 'Wasserrettung', cost: 400000, coins: 25 },
+    //        { id: 7, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 8, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
+            { id: 9, name: 'Großwache', cost: 1000000, coins: 50 },
+    //        { id: 10, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 11, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 12, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 13, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
+    //        { id: 14, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
+    //        { id: 15, name: 'Netzersatzanlage 200', cost: 100000, coins: 20 },
             { id: 16, name: 'Großlüfter', cost: 75000, coins: 25 },
-            //        { id: 17, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 18, name: 'Drohneneinheit', cost: 150000, coins: 25 },
-            //        { id: 19, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
-            //        { id: 20, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 21, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 22, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 23, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 24, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 }
+    //        { id: 17, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 18, name: 'Drohneneinheit', cost: 150000, coins: 25 },
+    //        { id: 19, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
+    //        { id: 20, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 21, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 22, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 23, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 24, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
         ],
 
         1: [ // Feuerwehrschule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 }
+            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
 
         2: [ // Rettungswache
-            //        { id: 0, name: 'Großwache', cost: 1000000, coins: 50 }
+    //        { id: 0, name: 'Großwache', cost: 1000000, coins: 50 }
         ],
 
         3: [ // Rettungsschule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 }
+            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
 
         4: [ // Krankenhaus
@@ -91,35 +92,35 @@
             { id: 6, name: 'Neurochirugie', coast: 70000, coins: 15 },
             { id: 7, name: 'Kardiologie', coast: 70000, coins: 15 },
             { id: 8, name: 'Kardiochirugie', coast: 70000, coins: 15 },
-            //        { id: 9, name: 'Großkrankenhaus', coast: 200000, coins: 50 },
+    //        { id: 9, name: 'Großkrankenhaus', coast: 200000, coins: 50 },
         ],
         5: [ // Rettungshubschrauber-Station
-            //        { id: 0, name: 'Windenrettung', cost: 200000, coins: 15 }
+    //        { id: 0, name: 'Windenrettung', cost: 200000, coins: 15 }
         ],
 
         6: [ // Polizeiwache
-            { id: 0, name: 'Zelle' },
-            //        { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 2, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 3, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 4, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 5, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 6, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 7, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 8, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 9, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            //        { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            //        { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            //        { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
-            //        { id: 14, name: 'Großwache', cost: 1000000, coins: 50 },
-            //        { id: 15, name: 'Großgewahrsam', cost: 200000, coins: 50 },
+    //        { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 2, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 3, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 4, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 5, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 6, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 7, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 8, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 9, name: 'Zelle', cost: 25000, coins: 5 },
+    //        { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
+    //        { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
+    //        { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
+    //        { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            { id: 14, name: 'Großwache', cost: 1000000, coins: 50 },
+    //        { id: 15, name: 'Großgewahrsam', cost: 200000, coins: 50 },
         ],
 
         8: [ // Polizeischule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 }
+            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
 
         9: [ // THW
@@ -130,13 +131,13 @@
             { id: 4, name: '2. Technischer Zug - Bergungsgruppe', cost: 25000, coins: 5 },
             { id: 5, name: '2. Technischer Zug: Fachgruppe Bergung/Notinstandsetzung', cost: 25000, coins: 5 },
             { id: 6, name: '2. Technischer Zug: Zugtrupp', cost: 25000, coins: 5 },
-            //       { id: 7, name: 'Fachgruppe Ortung', cost: 450000, coins: 25 },
+     //       { id: 7, name: 'Fachgruppe Ortung', cost: 450000, coins: 25 },
             { id: 8, name: 'Fachgruppe Wasserschaden/Pumpen', cost: 200000, coins: 25 },
             { id: 9, name: 'Fachruppe Schwere Bergung', cost: 200000, coins: 25 },
             { id: 10, name: 'Fachgruppe Elektroversorgung', cost: 200000, coins: 25 },
-            //       { id: 11, name: 'Ortsverband-Mannschaftstransportwagen', cost: 50000, coins: 15 },
-            //       { id: 12, name: 'Trupp Unbenannte Luftfahrtsysteme', cost: 50000, coins: 15 },
-            { id: 13, name: 'Fachzug Führung und Kommunikation', cost: 300000, coins: 25 }
+     //       { id: 11, name: 'Ortsverband-Mannschaftstransportwagen', cost: 50000, coins: 15 },
+     //       { id: 12, name: 'Trupp Unbenannte Luftfahrtsysteme', cost: 50000, coins: 15 },
+            { id: 13, name: 'Fachzug Führung und Kommunikation', cost: 300000, coins: 25 },
         ],
 
         10: [ // THW-Bundesschule
@@ -173,52 +174,52 @@
         ],
 
         17: [ // Polizeisondereinheit
-            //         { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
-            //         { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
-            //         { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
-            //         { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
-            //         { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 }
+   //         { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
+   //         { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
+   //         { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
+   //         { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
+   //         { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 }
         ],
 
         18: [ // Feuerwehr (Kleinwache)
-            //        { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
-            //        { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 3, name: 'Wasserrettung', cost: 400000, coins: 25 },
-            //        { id: 4, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
-            //        { id: 5, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
-            //        { id: 6, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
-            //        { id: 7, name: 'Großlüfter', cost: 75000, coins: 25 },
-            //        { id: 8, name: 'Drohneneinheit', cost: 150000, coins: 25 },
-            //        { id: 9, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
-            //        { id: 23, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 24, name: 'Änhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 }
+    //        { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+    //        { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+    //        { id: 3, name: 'Wasserrettung', cost: 400000, coins: 25 },
+    //        { id: 4, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
+    //        { id: 5, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
+    //        { id: 6, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
+            { id: 7, name: 'Großlüfter', cost: 75000, coins: 25 }
+    //        { id: 8, name: 'Drohneneinheit', cost: 150000, coins: 25 },
+    //        { id: 9, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
+    //        { id: 23, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 24, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 }
         ],
 
         19: [ // Polizei (Kleinwache)
-            //        { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            //        { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            //        { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            //        { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 1, name: 'Zelle', cost: 25000, coins: 5 }
+    //        { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
+    //        { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
+    //        { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
+    //        { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
         ],
 
         24: [ // Reiterstaffel
-            //        { id: 0, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 1, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 2, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 3, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 4, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 5, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 0, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 1, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 2, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 3, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 4, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+    //        { id: 5, name: 'Reiterstaffel', cost: 300000, coins: 25 },
         ],
 
         25: [ // Bergrettungswache
             { id: 0, name: 'Höhenrettung', cost: 50000, coins: 25 },
-            //        { id: 1, name: 'Drohneneinheit', cost: 75000, coins: 25 },
+    //        { id: 1, name: 'Drohneneinheit', cost: 75000, coins: 25 },
             { id: 2, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
-            //        { id: 3, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+    //        { id: 3, name: 'Rettungsdienst', cost: 100000, coins: 20 },
         ],
 
         27: [ // Schule für Seefahrt und Seenotrettung
@@ -443,93 +444,91 @@
 
     // Funktion, um alle Gebäude und deren fehlenden Erweiterungen anzuzeigen
     function renderMissingExtensions(buildings) {
-        const list = document.getElementById('extension-list');
-        list.innerHTML = '';
+    const list = document.getElementById('extension-list');
+    list.innerHTML = '';
 
-        // Sortiere die Gebäude nach Typ und dann nach Name
-        buildings.sort((a, b) => {
-            if (a.building_type === b.building_type) {
-                return a.caption.localeCompare(b.caption);
+    // Sortiere die Gebäude nach Typ und dann nach Name
+    buildings.sort((a, b) => {
+        if (a.building_type === b.building_type) {
+            return a.caption.localeCompare(b.caption);
+        }
+        return a.building_type - b.building_type;
+    });
+
+    const buildingGroups = {};
+
+    buildings.forEach(building => {
+        const extensions = manualExtensions[building.building_type];
+        if (!extensions) return;
+
+        // Liste der vorhandenen Erweiterungen im Gebäude
+        const existingExtensions = new Set(building.extensions.map(e => e.type_id));
+
+        const missingExtensions = extensions.filter(extension => !existingExtensions.has(extension.id));
+
+        if (missingExtensions.length > 0) {
+            const groupKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            if (!buildingGroups[groupKey]) {
+                buildingGroups[groupKey] = [];
             }
-            return a.building_type - b.building_type;
-        });
+            buildingGroups[groupKey].push({ building, missingExtensions });
+        }
+    });
 
-        const buildingGroups = {};
+    const buildingTypeNames = {
+        '0_normal': 'Feuerwache (Normal)',
+        '0_small': 'Feuerwache (Kleinwache)',
+        '1_normal': 'Feuerwehrschule',
+        '2_normal': 'Rettungswache',
+        '3_normal': 'Rettungsschule',
+        '4_normal': 'Krankenhaus',
+        '5_normal': 'Rettungshubschrauber-Station',
+        '6_normal': 'Polizeiwache',
+        '6_small': 'Polizeiwache (Klein)',
+        '8_normal': 'Polizeischule',
+        '9_normal': 'THW',
+        '10_normal': 'THW-Bundesschule',
+        '11_normal': 'Bereitschaftspolizei',
+        '12_normal': 'SEG',
+        '13_normal': 'Polizeihubschrauberstation',
+        '17_normal': 'Polizei-Sondereinheiten',
+        '24_normal': 'Reiterstaffel',
+        '25_normal': 'Bergrettungswache',
+        '27_normal': 'Schule für Seefahrt und Seenotrettung',
+    };
 
-        buildings.forEach(building => {
-            // Überspringe kleine Feuerwachen
-            if (building.small_building) return;
+    Object.keys(buildingGroups).forEach(groupKey => {
+        const group = buildingGroups[groupKey];
+        const buildingType = buildingTypeNames[groupKey] || 'Unbekannt';
 
-            const extensions = manualExtensions[building.building_type];
-            if (!extensions) return;
+        const buildingHeader = document.createElement('h4');
+        buildingHeader.textContent = `Typ: ${buildingType}`;
+        list.appendChild(buildingHeader);
 
-            // Liste der vorhandenen Erweiterungen im Gebäude
-            const existingExtensions = new Set(building.extensions.map(e => e.type_id));
+        const buildAllButton = document.createElement('button');
+        buildAllButton.textContent = 'Erweiterung bei allen Wachen bauen';
+        buildAllButton.classList.add('build-all-button');
+        buildAllButton.onclick = () => confirmAndBuildAllExtensions(groupKey, group);
+        list.appendChild(buildAllButton);
 
-            const missingExtensions = extensions.filter(extension => !existingExtensions.has(extension.id));
-
-            if (missingExtensions.length > 0) {
-                if (!buildingGroups[building.building_type]) {
-                    buildingGroups[building.building_type] = [];
-                }
-                buildingGroups[building.building_type].push({ building, missingExtensions });
+        const spoilerButton = document.createElement('button');
+        spoilerButton.textContent = 'Details anzeigen';
+        spoilerButton.classList.add('spoiler-button');
+        spoilerButton.onclick = function() {
+            const content = spoilerButton.nextElementSibling;
+            if (content) {
+                content.style.display = content.style.display === 'none' ? 'block' : 'none';
+                spoilerButton.textContent = content.style.display === 'none' ? 'Details anzeigen' : 'Details ausblenden';
             }
-        });
-
-        const buildingTypeNames = {
-            0: 'Feuerwache (Normal)',
-            1: 'Feuerwehrschule',
-            2: 'Rettungswache',
-            3: 'Rettungsschule',
-            4: 'Krankenhaus',
-            5: 'Rettungshubschrauber-Station',
-            6: 'Polizeiwache',
-            8: 'Polizeischule',
-            9: 'THW',
-            10: 'THW-Bundesschule',
-            11: 'Bereitschaftspolizei',
-            12: 'SEG',
-            13: 'Polizeihubschrauberstation',
-            17: 'Polizei-Sondereinheiten',
-            18: 'Feuerwache (Kleinwache)',
-            19: 'Polizei (Kleinwache)',
-            24: 'Reiterstaffel',
-            25: 'Bergrettungswache',
-            27: 'Schule für Seefahrt und Seenotrettung',
         };
 
-        Object.keys(buildingGroups).forEach(buildingType => {
-            const group = buildingGroups[buildingType];
-            const sampleBuilding = group[0].building;
+        list.appendChild(spoilerButton);
 
-            const buildingHeader = document.createElement('h4');
-            buildingHeader.textContent = `Typ: ${buildingTypeNames[sampleBuilding.building_type] || 'Unbekannt'}`;
-            list.appendChild(buildingHeader);
+        const tableWrapper = document.createElement('div');
+        tableWrapper.className = 'spoiler-content';
 
-            const buildAllButton = document.createElement('button');
-            buildAllButton.textContent = 'Erweiterung bei allen Wachen bauen';
-            buildAllButton.classList.add('build-all-button');
-            buildAllButton.onclick = () => confirmAndBuildAllExtensions(buildingType, group);
-            list.appendChild(buildAllButton);
-
-            const spoilerButton = document.createElement('button');
-            spoilerButton.textContent = 'Details anzeigen';
-            spoilerButton.classList.add('spoiler-button');
-            spoilerButton.onclick = function() {
-                const content = spoilerButton.nextElementSibling;
-                if (content) {
-                    content.style.display = content.style.display === 'none' ? 'block' : 'none';
-                    spoilerButton.textContent = content.style.display === 'none' ? 'Details anzeigen' : 'Details ausblenden';
-                }
-            };
-
-            list.appendChild(spoilerButton);
-
-            const tableWrapper = document.createElement('div');
-            tableWrapper.className = 'spoiler-content';
-
-            const table = document.createElement('table');
-            table.innerHTML = `
+        const table = document.createElement('table');
+        table.innerHTML = `
             <thead>
                 <tr>
                     <th>Wache</th>
@@ -541,49 +540,49 @@
             </thead>
             <tbody></tbody>
         `;
-            const tbody = table.querySelector('tbody');
+        const tbody = table.querySelector('tbody');
 
-            group.forEach(({ building, missingExtensions }) => {
-                missingExtensions.forEach(extension => {
-                    const row = document.createElement('tr');
+        group.forEach(({ building, missingExtensions }) => {
+            missingExtensions.forEach(extension => {
+                const row = document.createElement('tr');
 
-                    const nameCell = document.createElement('td');
-                    nameCell.textContent = building.caption;
-                    row.appendChild(nameCell);
+                const nameCell = document.createElement('td');
+                nameCell.textContent = building.caption;
+                row.appendChild(nameCell);
 
-                    const extensionCell = document.createElement('td');
-                    extensionCell.textContent = extension.name;
-                    row.appendChild(extensionCell);
+                const extensionCell = document.createElement('td');
+                extensionCell.textContent = extension.name;
+                row.appendChild(extensionCell);
 
-                    const costCell = document.createElement('td');
-                    costCell.textContent = `${formatNumber(extension.cost)} Credits`;
-                    row.appendChild(costCell);
+                const costCell = document.createElement('td');
+                costCell.textContent = `${formatNumber(extension.cost)} Credits`;
+                row.appendChild(costCell);
 
-                    const coinsCell = document.createElement('td');
-                    coinsCell.textContent = `${extension.coins} Coins`;
-                    row.appendChild(coinsCell);
+                const coinsCell = document.createElement('td');
+                coinsCell.textContent = `${extension.coins} Coins`;
+                row.appendChild(coinsCell);
 
-                    const actionCell = document.createElement('td');
-                    const buildButton = document.createElement('button');
-                    buildButton.textContent = 'Bauen';
-                    buildButton.classList.add('extension-button');
-                    buildButton.disabled = !missingExtensions.includes(extension);
-                    buildButton.onclick = () => {
-                        if (!buildButton.disabled) {
-                            showCurrencySelection(building.id, extension.id, extension.cost, extension.coins);
-                        }
-                    };
-                    actionCell.appendChild(buildButton);
-                    row.appendChild(actionCell);
+                const actionCell = document.createElement('td');
+                const buildButton = document.createElement('button');
+                buildButton.textContent = 'Bauen';
+                buildButton.classList.add('extension-button');
+                buildButton.disabled = !missingExtensions.includes(extension);
+                buildButton.onclick = () => {
+                    if (!buildButton.disabled) {
+                        showCurrencySelection(building.id, extension.id, extension.cost, extension.coins);
+                    }
+                };
+                actionCell.appendChild(buildButton);
+                row.appendChild(actionCell);
 
-                    tbody.appendChild(row);
-                });
+                tbody.appendChild(row);
             });
-
-            tableWrapper.appendChild(table);
-            list.appendChild(tableWrapper);
         });
-    }
+
+        tableWrapper.appendChild(table);
+        list.appendChild(tableWrapper);
+    });
+}
 
     // Funktion, um die Auswahl der Zahlungsmethode anzuzeigen
     function showCurrencySelection(buildingId, extensionId, cost, coins) {
