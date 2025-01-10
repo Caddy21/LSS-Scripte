@@ -15,7 +15,6 @@
 
 // ToDo-Liste
 
-
 // Doppel-Klick beim Button 'Details Anzeigen' verhindern
 // Credits und Coins automatisch in die Tabelle einfügen
 // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
@@ -35,7 +34,10 @@
         return meta ? meta.getAttribute('content') : '';
     }
 
+
     // Manuelle Konfiguration der Erweiterungen
+
+    // Hier könnt Ihr auswählen welche Erweiterung in der Tabelle angezeigt werden soll, dafür die nicht benötigten einfach mit // ausklammern.
     const manualExtensions = {
         '0_normal': [ // Feuerwache (normal)
     //        { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
@@ -44,7 +46,7 @@
     //        { id: 3, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
     //        { id: 4, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
     //        { id: 5, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-    //        { id: 6, name: 'Wasserrettung', cost: 400000, coins: 25 },
+            { id: 6, name: 'Wasserrettung', cost: 400000, coins: 25 },
     //        { id: 7, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
     //        { id: 8, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
     //        { id: 9, name: 'Großwache', cost: 1000000, coins: 50 },
@@ -54,16 +56,16 @@
     //        { id: 13, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
     //        { id: 14, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
     //        { id: 15, name: 'Netzersatzanlage 200', cost: 100000, coins: 20 },
-    //        { id: 16, name: 'Großlüfter', cost: 75000, coins: 25 },
+            { id: 16, name: 'Großlüfter', cost: 75000, coins: 25 },
     //        { id: 17, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
     //        { id: 18, name: 'Drohneneinheit', cost: 150000, coins: 25 },
     //        { id: 19, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
-            { id: 20, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+    //        { id: 20, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
     //        { id: 21, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
     //        { id: 22, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
     //        { id: 23, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
     //        { id: 24, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-    //        { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
+            { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
         ],
 
         '1_normal': [ // Feuerwehrschule
@@ -230,6 +232,8 @@
 
     };
 
+    // Ab hier nichts mehr ändern!
+
     // Stile für das Interface
     const styles = `
     #extension-lightbox {
@@ -384,8 +388,6 @@
         <div id="extension-lightbox-content">
             <button id="close-extension-helper">Schließen</button>
             <h2>Erweiterungshelfer<br><h5>Hier findet Ihr die Wachen wo noch Erweiterungen fehlen.
-            <br>
-            <br>Feuerwehr (Kleinwache) und Polizei (Kleinwachen) können bislang noch nicht mit einbezogen werden!
             <br>
             <br>Über den roten Button könnt Ihr bei allen Wachen gleichzeitig sämtliche Erweiterugen bauen, dies kann je nach Anzahl der Gebäude und fehlenden Erweiterungen ein wenig dauern.
             <br>Wenn Ihr auf den grünen Button klickt (derzeit muss dieser leider zweimal getan werden), öffnet sich eine Tabelle wo Wachen mit fehlender Erweiterung aufgelistet werden. Dort könnt Ihr auch einzelne Ausbauten vornehmen.</h5>
