@@ -5,6 +5,7 @@
 // @description  Schaltet alle Leitstellen ins Gegenteil um
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @icon         https://www.leitstellenspiel.de/favicon.ico
 // @grant        none
 // ==/UserScript==
 
