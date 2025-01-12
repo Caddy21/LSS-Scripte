@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Leitstellen umschalten (nur ID 7)
+// @name         Leitstellen umschalten
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.3
-// @description  Schaltet nur Leitstellen (Gebäude-ID 7) um mit einem Abstand von 500ms und zeigt eine Info an, wenn alle umgeschaltet wurden.
-// @author       Dein Name
+// @version      1.0
+// @description  Schaltet alle Leitstellen ins Gegenteil um
+// @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @grant        none
 // ==/UserScript==
@@ -12,7 +12,7 @@
     'use strict';
 
     // Wartezeit zwischen den Requests (in Millisekunden)
-    const delay = 500;
+    const delay = 100;
 
     // Funktion zum Umschalten einer Leitstelle
     function toggleBuilding(buildingId) {
@@ -36,15 +36,15 @@
 
     // Funktion zum Umschalten aller Leitstellen
     async function toggleAllCommandCenters() {
-        // Alle Gebäude-IDs mit Gebäude-ID 7 (Leitstellen) sammeln
-        const buildingRows = Array.from(document.querySelectorAll('#building_table tbody tr'));
-        const commandCenterIds = buildingRows
-            .filter((row) => {
-                const typeCell = row.querySelector('td:nth-child(2)');
-                return typeCell && typeCell.textContent.includes('Leitstelle'); // Suche nach "Leitstelle"
-            })
-            .map((row) => {
-                const link = row.querySelector('a[href*="/buildings/"]');
+        // Suche nach allen Leitstellen anhand von building_type_id="7"
+        const buildings = Array.from(
+            document.querySelectorAll('.building_list_li.buildings_searchable[building_type_id="7"]')
+        );
+
+        // Extrahiere die Gebäude-IDs
+        const commandCenterIds = buildings
+            .map((building) => {
+                const link = building.querySelector('a[href*="/buildings/"]');
                 const match = link ? link.href.match(/\/buildings\/(\d+)/) : null;
                 return match ? match[1] : null;
             })
@@ -98,3 +98,4 @@
     // Fallback, falls der Load-Event nicht richtig ausgelöst wird
     setTimeout(addButton, 3000);
 })();
+
