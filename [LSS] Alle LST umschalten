@@ -1,0 +1,100 @@
+// ==UserScript==
+// @name         Leitstellen umschalten (nur ID 7)
+// @namespace    https://www.leitstellenspiel.de/
+// @version      1.3
+// @description  Schaltet nur Leitstellen (Gebäude-ID 7) um mit einem Abstand von 500ms und zeigt eine Info an, wenn alle umgeschaltet wurden.
+// @author       Dein Name
+// @match        https://www.leitstellenspiel.de/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // Wartezeit zwischen den Requests (in Millisekunden)
+    const delay = 500;
+
+    // Funktion zum Umschalten einer Leitstelle
+    function toggleBuilding(buildingId) {
+        const url = `https://www.leitstellenspiel.de/buildings/${buildingId}/active`;
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'active=true', // oder 'active=false', je nach Bedarf
+        })
+            .then((response) => {
+                if (response.ok) {
+                    console.log(`Leitstelle ${buildingId} erfolgreich umgeschaltet.`);
+                } else {
+                    console.error(`Fehler beim Umschalten von Leitstelle ${buildingId}.`);
+                }
+            })
+            .catch((error) => console.error(error));
+    }
+
+    // Funktion zum Umschalten aller Leitstellen
+    async function toggleAllCommandCenters() {
+        // Alle Gebäude-IDs mit Gebäude-ID 7 (Leitstellen) sammeln
+        const buildingRows = Array.from(document.querySelectorAll('#building_table tbody tr'));
+        const commandCenterIds = buildingRows
+            .filter((row) => {
+                const typeCell = row.querySelector('td:nth-child(2)');
+                return typeCell && typeCell.textContent.includes('Leitstelle'); // Suche nach "Leitstelle"
+            })
+            .map((row) => {
+                const link = row.querySelector('a[href*="/buildings/"]');
+                const match = link ? link.href.match(/\/buildings\/(\d+)/) : null;
+                return match ? match[1] : null;
+            })
+            .filter((id) => id !== null);
+
+        console.log(`Gefundene Leitstellen: ${commandCenterIds.join(', ')}`);
+
+        // Alle Leitstellen nacheinander umschalten
+        for (let i = 0; i < commandCenterIds.length; i++) {
+            await toggleBuilding(commandCenterIds[i]);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+
+        // Info ausgeben, wenn alle Leitstellen umgeschaltet wurden
+        alert('Alle Leitstellen wurden erfolgreich umgeschaltet.');
+        console.log('Alle Leitstellen wurden umgeschaltet.');
+    }
+
+    // Funktion zum Hinzufügen des Buttons
+    function addButton() {
+        // Überprüfe, ob das Ziel-Element existiert
+        const targetDiv = document.getElementById('building-list-header-buttons');
+        if (targetDiv) {
+            // Lösche den alten Button, falls vorhanden
+            const oldButton = document.getElementById('new_button');
+            if (oldButton) {
+                oldButton.remove();
+            }
+
+            // Erstelle das neue Button-Element
+            const newButton = document.createElement('a');
+            newButton.href = '#';
+            newButton.className = 'btn btn-xs btn-default';
+            newButton.id = 'new_button';
+            newButton.textContent = 'Leitstellen umschalten';
+
+            // Füge Event-Listener hinzu
+            newButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                toggleAllCommandCenters();
+            });
+
+            // Füge den neuen Button zum Ziel-Div hinzu
+            targetDiv.appendChild(newButton);
+        }
+    }
+
+    // Warte, bis die Seite vollständig geladen ist, und rufe dann die addButton-Funktion auf
+    window.addEventListener('load', addButton);
+
+    // Fallback, falls der Load-Event nicht richtig ausgelöst wird
+    setTimeout(addButton, 3000);
+})();
