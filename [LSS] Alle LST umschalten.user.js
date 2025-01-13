@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Leitstellen umschalten
+// @name         [LSS] Alle Leitstellen umschalten
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.2
-// @description  Schaltet alle Leitstellen ins Gegenteil um und zeigt den Fortschritt an (Dark/Light Mode Unterstützung)
+// @description  Schaltet alle Leitstellen ins Gegenteil um und zeigt den Fortschritt an.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://www.leitstellenspiel.de/favicon.ico
