@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         [LSS] Alle Leitstellen umschalten
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.2
+// @version      1.0
 // @description  Schaltet alle Leitstellen ins Gegenteil um und zeigt den Fortschritt an.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
-// @icon         https://www.leitstellenspiel.de/favicon.ico
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
