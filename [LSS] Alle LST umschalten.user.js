@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Leitstellen umschalten
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.0
-// @description  Schaltet alle Leitstellen ins Gegenteil um
+// @version      1.2
+// @description  Schaltet alle Leitstellen ins Gegenteil um und zeigt den Fortschritt an (Dark/Light Mode Unterstützung)
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://www.leitstellenspiel.de/favicon.ico
@@ -53,15 +53,71 @@
 
         console.log(`Gefundene Leitstellen: ${commandCenterIds.join(', ')}`);
 
+        // Erkennen des Farbschemas (Dark Mode oder Light Mode)
+        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        // Anpassung der Styles je nach Modus
+        const progressContainer = document.createElement('div');
+        progressContainer.id = 'progress-container';
+        progressContainer.style.position = 'fixed';
+        progressContainer.style.top = '10px';
+        progressContainer.style.left = '50%';
+        progressContainer.style.transform = 'translateX(-50%)';
+        progressContainer.style.padding = '15px';
+        progressContainer.style.zIndex = '9999';
+        progressContainer.style.fontFamily = '"Arial", sans-serif';
+
+        // Dark Mode Styles
+        if (isDarkMode) {
+            progressContainer.style.backgroundColor = '#333';
+            progressContainer.style.color = '#fff';
+            progressContainer.style.border = '1px solid #555';
+            progressContainer.style.borderRadius = '8px';
+            progressContainer.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
+        } else {
+            // Light Mode Styles
+            progressContainer.style.backgroundColor = '#fff';
+            progressContainer.style.color = '#333';
+            progressContainer.style.border = '1px solid #ccc';
+            progressContainer.style.borderRadius = '8px';
+            progressContainer.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
+        }
+
+        const progressText = document.createElement('p');
+        progressText.id = 'progress-text';
+        progressText.style.margin = '0';
+        progressText.style.fontSize = '14px';
+        progressText.textContent = `0 von ${commandCenterIds.length} Leitstellen umgeschaltet.`;
+        progressContainer.appendChild(progressText);
+
+        const progressBar = document.createElement('progress');
+        progressBar.id = 'progress-bar';
+        progressBar.max = commandCenterIds.length;
+        progressBar.value = 0;
+        progressBar.style.width = '100%';
+        progressBar.style.height = '20px';
+        progressContainer.appendChild(progressBar);
+
+        document.body.appendChild(progressContainer);
+
         // Alle Leitstellen nacheinander umschalten
         for (let i = 0; i < commandCenterIds.length; i++) {
             await toggleBuilding(commandCenterIds[i]);
             await new Promise((resolve) => setTimeout(resolve, delay));
+
+            // Fortschritt aktualisieren
+            progressBar.value = i + 1;
+            progressText.textContent = `${i + 1} von ${commandCenterIds.length} Leitstellen umgeschaltet.`;
         }
 
         // Info ausgeben, wenn alle Leitstellen umgeschaltet wurden
         alert('Alle Leitstellen wurden erfolgreich umgeschaltet.');
         console.log('Alle Leitstellen wurden umgeschaltet.');
+
+        // Fortschrittsanzeige entfernen
+        setTimeout(() => {
+            progressContainer.remove();
+        }, 2000);
     }
 
     // Funktion zum Hinzufügen des Buttons
@@ -99,4 +155,3 @@
     // Fallback, falls der Load-Event nicht richtig ausgelöst wird
     setTimeout(addButton, 3000);
 })();
-
