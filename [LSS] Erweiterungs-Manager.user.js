@@ -23,7 +23,8 @@
         'use strict';
         
         // Manuelle Konfiguration der Erweiterungen
-        // Hier könnt Ihr auswählen welche Erweiterung in der Tabelle angezeigt werden soll, dafür die nicht benötigten einfach mit // ausklammern.
+        // Hier könnt Ihr auswählen welche Erweiterung in der Tabelle angezeigt werden sollen 
+        // dafür die nicht benötigten einfach mit // ausklammern. Bereits gebaute Erweiterungen werden ausgeblendet.,
         
         const manualExtensions = {
             '0_normal': [ // Feuerwache (normal)
