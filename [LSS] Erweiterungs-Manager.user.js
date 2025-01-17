@@ -19,7 +19,6 @@
     // Credits und Coins automatisch in die Tabelle einfügen
     // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
     
-    
     (function() {
         'use strict';
         
