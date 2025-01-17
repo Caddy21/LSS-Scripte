@@ -52,7 +52,7 @@
         overlay.style.overflowY = 'auto';
         overlay.style.padding = '20px';
 
-        // Tabelle und Schließen-Button erstellen
+        // Schließen-Button erstellen
         const closeButton = document.createElement('button');
         closeButton.textContent = 'Schließen';
         closeButton.style.padding = '10px 20px';
@@ -64,9 +64,28 @@
         closeButton.style.cursor = 'pointer';
         closeButton.addEventListener('click', () => overlay.remove());
 
+        // Suchfeld für die Fahrzeugnamen und Wachen
+        const searchField = document.createElement('input');
+        searchField.type = 'text';
+        searchField.placeholder = 'Fahrzeuge oder Wachen durchsuchen...';
+        searchField.style.padding = '10px';
+        searchField.style.marginBottom = '20px';
+        searchField.style.width = '100%';
+        searchField.style.maxWidth = '500px';
+        searchField.style.fontSize = '16px';
+
+        // Fahrzeuganzahl (Status 6) anzeigen
+        const vehicleCountText = document.createElement('div');
+        vehicleCountText.style.fontSize = '20px';
+        vehicleCountText.style.fontWeight = 'bold';
+        vehicleCountText.style.marginBottom = '20px';
+        vehicleCountText.textContent = 'Gesamtzahl der Fahrzeuge im Status 6: 0'; // Initialwert
+
+        // Tabelle erstellen
         const table = document.createElement('table');
         table.style.width = '100%';
         table.style.borderCollapse = 'collapse';
+        table.style.tableLayout = 'fixed'; // Stellt sicher, dass die Spalten gleichmäßig verteilt sind
         table.innerHTML = `
             <thead>
                 <tr>
@@ -79,7 +98,10 @@
             <tbody id="vehicle-table-body"></tbody>
         `;
 
+        // Elemente zum Overlay hinzufügen
         overlay.appendChild(closeButton);
+        overlay.appendChild(vehicleCountText);
+        overlay.appendChild(searchField);
         overlay.appendChild(table);
         document.body.appendChild(overlay);
 
@@ -98,11 +120,11 @@
         document.body.appendChild(loadingMessage);
 
         // Fahrzeug- und Wachendaten laden
-        loadBuildingsAndVehicles(loadingMessage);
+        loadBuildingsAndVehicles(loadingMessage, vehicleCountText, searchField);
     }
 
     // Funktion zum Laden der Wachen- und Fahrzeugdaten
-    function loadBuildingsAndVehicles(loadingMessage) {
+    function loadBuildingsAndVehicles(loadingMessage, vehicleCountText, searchField) {
         GM_xmlhttpRequest({
             method: 'GET',
             url: 'https://www.leitstellenspiel.de/api/buildings',
@@ -115,7 +137,7 @@
                     });
 
                     // Fahrzeugdaten laden
-                    loadVehicles(buildingMap, loadingMessage);
+                    loadVehicles(buildingMap, loadingMessage, vehicleCountText, searchField);
                 } else {
                     console.error('Fehler beim Laden der Wachen:', response.status, response.responseText);
                     loadingMessage.textContent = 'Fehler beim Laden der Wachen!';
@@ -128,8 +150,8 @@
         });
     }
 
-    // Funktion zum Laden der Fahrzeugdaten
-    function loadVehicles(buildingMap, loadingMessage) {
+    // Funktion zum Laden der Fahrzeugdaten und Hinzufügen der Suchlogik
+    function loadVehicles(buildingMap, loadingMessage, vehicleCountText, searchField) {
         GM_xmlhttpRequest({
             method: 'GET',
             url: 'https://www.leitstellenspiel.de/api/vehicles',
@@ -137,37 +159,55 @@
                 if (response.status === 200) {
                     const vehicles = JSON.parse(response.responseText);
                     const tableBody = document.querySelector('#vehicle-table-body');
+                    const status6Vehicles = vehicles.filter(vehicle => vehicle.fms_real === 6); // Fahrzeuge im Status 6 filtern
 
                     // Ladeanzeige entfernen
                     loadingMessage.remove();
 
+                    // Fahrzeuganzahl im Status 6 anzeigen
+                    vehicleCountText.textContent = `Gesamtzahl der Fahrzeuge im Status 6: ${status6Vehicles.length}`;
+
                     // Fahrzeuge alphabetisch nach Name (caption) sortieren
-                    vehicles.sort((a, b) => a.caption.localeCompare(b.caption));
+                    status6Vehicles.sort((a, b) => a.caption.localeCompare(b.caption));
 
-                    vehicles.forEach(vehicle => {
-                        if (vehicle.fms_real === 6) {
-                            const row = document.createElement('tr');
-                            const buildingName = buildingMap[vehicle.building_id] || 'Unbekannt';
-                            row.innerHTML = `
-                                <td style="border: 1px solid #ccc; padding: 8px;">${vehicle.caption}</td>
-                                <td style="border: 1px solid #ccc; padding: 8px;">${buildingName}</td>
-                                <td style="border: 1px solid #ccc; padding: 8px;">${vehicle.fms_real}</td>
-                                <td style="border: 1px solid #ccc; padding: 8px;">
-                                    <button style="padding: 5px 10px; background-color: #28a745; color: #ffffff; border: none; border-radius: 4px; cursor: pointer;" data-id="${vehicle.id}">
-                                        In S2 versetzen
-                                    </button>
-                                </td>
-                            `;
+                    // Fahrzeugdaten in der Tabelle einfügen
+                    status6Vehicles.forEach(vehicle => {
+                        const row = document.createElement('tr');
+                        const buildingName = buildingMap[vehicle.building_id] || 'Unbekannt';
+                        row.innerHTML = `
+                            <td style="border: 1px solid #ccc; padding: 8px;">${vehicle.caption}</td>
+                            <td style="border: 1px solid #ccc; padding: 8px;">${buildingName}</td>
+                            <td style="border: 1px solid #ccc; padding: 8px;">${vehicle.fms_real}</td>
+                            <td style="border: 1px solid #ccc; padding: 8px;">
+                                <button style="padding: 5px 10px; background-color: #28a745; color: #ffffff; border: none; border-radius: 4px; cursor: pointer;" data-id="${vehicle.id}">
+                                    In S2 versetzen
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
 
-                            // Event-Listener für den Status-Änderungs-Button
-                            row.querySelector('button').addEventListener('click', (event) => {
-                                event.preventDefault(); // Verhindert die Standardaktion
-                                const vehicleId = event.target.getAttribute('data-id');
-                                changeVehicleStatus(vehicleId, vehicle.caption); // Fahrzeugbeschreibung wird jetzt übergeben
-                            });
+                        // Event-Listener für den Status-Änderungs-Button
+                        const button = row.querySelector('button');
+                        button.addEventListener('click', function (event) {
+                            event.preventDefault(); // Verhindert die Standardaktion
+                            const vehicleId = event.target.getAttribute('data-id');
+                            changeVehicleStatus(vehicleId, vehicle.caption); // Fahrzeugbeschreibung wird jetzt übergeben
+                        });
+                    });
 
-                            tableBody.appendChild(row);
-                        }
+                    // Event-Listener für das Suchfeld
+                    searchField.addEventListener('input', function () {
+                        const searchText = searchField.value.toLowerCase();
+                        const rows = tableBody.querySelectorAll('tr');
+                        rows.forEach(row => {
+                            const vehicleName = row.querySelector('td').textContent.toLowerCase();
+                            const buildingName = row.querySelectorAll('td')[1].textContent.toLowerCase();
+                            if (vehicleName.includes(searchText) || buildingName.includes(searchText)) {
+                                row.style.display = '';
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        });
                     });
                 } else {
                     console.error('Fehler beim Laden der Fahrzeugdaten:', response.status, response.responseText);
@@ -192,7 +232,6 @@
             url: url,
             onload: function (response) {
                 if (response.status === 200) {
-                    alert(`Fahrzeug ${vehicleCaption} erfolgreich auf Status 2 gesetzt!`);
 
                     // Button aktualisieren
                     const button = document.querySelector(`#vehicle-table-body button[data-id='${vehicleId}']`);
