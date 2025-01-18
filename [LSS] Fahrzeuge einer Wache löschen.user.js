@@ -2,7 +2,7 @@
 // @name         [LSS] Fahrzeuge löschen
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Löscht alle Fahrzeuge einer Wache
+// @description  Löscht alle Fahrzeuge einer Wache wenn diese im S2 sind
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -98,8 +98,8 @@
     async function deleteAllVehiclesForBuilding() {
         const vehicleList = document.querySelector('#vehicle_table tbody'); // Tabelle mit Fahrzeugen
         if (!vehicleList) {
-            alert("Keine Fahrzeugliste gefunden!");
-            return;
+            console.log("Keine Fahrzeugliste gefunden!"); // Nur einmal loggen, keine ständige Anzeige
+            return; // Keine Fahrzeugliste gefunden, also keine Aktion
         }
 
         const vehicleLinks = Array.from(vehicleList.querySelectorAll('a[href^="/vehicles/"]'))
@@ -109,8 +109,8 @@
 
         console.log(`Gefundene Fahrzeuge: ${vehicleUrls.length}`);
         if (vehicleUrls.length === 0) {
-            alert("Keine Fahrzeuge gefunden!");
-            return;
+            console.log("Keine Fahrzeuge zum Löschen gefunden!");
+            return; // Keine Fahrzeuge gefunden, also keine Aktion
         }
 
         const { progressBar, vehicleCount, overlay } = createOverlay(); // Overlay erstellen
@@ -208,10 +208,16 @@
         }
     }
 
-    // Beobachter für dynamische Änderungen im DOM
-    const observer = new MutationObserver(addDeleteButtonToBuildingTitle);
-    observer.observe(document.body, { childList: true, subtree: true });
+    // Überprüfen, ob wir auf einer Wache-Seite sind (mit /buildings/ und Fahrzeugliste)
+    const currentUrl = window.location.href;
+    if (currentUrl.includes('/buildings/')) {
+        // Beobachter für dynamische Änderungen im DOM
+        const observer = new MutationObserver(addDeleteButtonToBuildingTitle);
+        observer.observe(document.body, { childList: true, subtree: true });
 
-    // Initialer Aufruf beim Laden der Seite
-    addDeleteButtonToBuildingTitle();
+        // Initialer Aufruf beim Laden der Seite
+        addDeleteButtonToBuildingTitle();
+    } else {
+        console.log("Nicht auf einer Wache-Seite.");
+    }
 })();
