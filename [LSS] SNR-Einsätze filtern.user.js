@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] ° SNR-Einsätze filtern
+// @name         [LSS] SNR-Einsätze filtern
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Filtert einzig Seenotrettungseinsätze (SNR)
