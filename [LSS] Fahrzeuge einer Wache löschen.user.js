@@ -1,10 +1,11 @@
 // ==UserScript==
-// @name         Fahrzeuge löschen
+// @name         [LSS] Fahrzeuge löschen
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Löscht alle Fahrzeuge einer Wache
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
