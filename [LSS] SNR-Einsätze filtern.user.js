@@ -1,22 +1,13 @@
 // ==UserScript==
-// @name         [LSS] SNR-Einsätze filtern
+// @name         LSS Mission Filter for SNR (Seenotrettung)
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
-// @description  Filtert einzig Seenotrettungseinsätze (SNR)
+// @description  Filtert einzig SNR Einsätze
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
 // @grant        GM_addStyle
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // ==/UserScript==
-
-GM_addStyle(`
-    .filterShow {
-        display: block;
-    }
-    .filterHide {
-        display: none;
-    }
-`);
 
 (function() {
     'use strict';
@@ -47,8 +38,8 @@ GM_addStyle(`
     function createFilterButton() {
         let filterDiv = $("#search_input_field_missions");
         let html = `<div id="snr_filter_button">
-                    <br /><b>Seenotrettung Filter</b>&nbsp;&nbsp;
-                    <a id='filter_snr' class='btn btn-xs btn-default' href='' title='Grün = Zeigt Seenotrettungseinsätze an. Rot = Blendt sie aus.'>SNR Filter</a>
+                    <br /><b>SNR-Einsätze</b>&nbsp;&nbsp;
+                    <a id='filter_snr' class='btn btn-xs' href='' title='Klicken, um zwischen den Filtermodi zu wechseln.'>SNR</a>
                     </div>`;
 
         filterDiv.before(html);
@@ -64,21 +55,72 @@ GM_addStyle(`
     function toggleFilter() {
         const status = $("#filter_snr").attr("status");
 
-        if (status === "active") {
-            $("#filter_snr").removeClass("btn-success").addClass("btn-danger");
-            $("#filter_snr").attr("status", "inactive");
-            $(".missionSideBarEntry").removeClass("filterShow").addClass("filterHide"); // Verstecken aller
+        if (status === "show_snr") {
+            // SNR ausblenden
+            $("#filter_snr").css(getButtonStyles('hide'));
+            $("#filter_snr").attr("status", "hide_snr");
+            $(".missionSideBarEntry").removeClass("filterShow").addClass("filterHide"); // Verstecken aller SNR-Missionen
+        } else if (status === "hide_snr") {
+            // Alle Einsätze anzeigen
+            $("#filter_snr").css(getButtonStyles('all'));
+            $("#filter_snr").attr("status", "all");
+            $(".missionSideBarEntry").removeClass("filterHide").addClass("filterShow"); // Alle anzeigen
         } else {
-            $("#filter_snr").removeClass("btn-danger").addClass("btn-success");
-            $("#filter_snr").attr("status", "active");
+            // Nur SNR anzeigen
+            $("#filter_snr").css(getButtonStyles('show'));
+            $("#filter_snr").attr("status", "show_snr");
             filterSNR(); // Zeige nur die Seenotrettungseinsätze
         }
     }
 
+    // Funktion, um die Button-Stile anzupassen (auf Basis von Dark oder Light Mode)
+    function getButtonStyles(state) {
+        const isDarkMode = $("body").hasClass("dark-theme");
+        let backgroundColor, color, borderColor;
+
+        // Farbdefinitionen für Dark und Light Mode
+        if (state === 'show') {
+            backgroundColor = isDarkMode ? '#28a745' : '#28a745'; // Grün (für SNR anzeigen)
+            color = 'white';
+            borderColor = isDarkMode ? '#218838' : '#218838'; // Dunkleres Grün
+        } else if (state === 'hide') {
+            backgroundColor = isDarkMode ? '#dc3545' : '#dc3545'; // Rot (für SNR ausblenden)
+            color = 'white';
+            borderColor = isDarkMode ? '#c82333' : '#c82333'; // Dunkleres Rot
+        } else {
+            backgroundColor = isDarkMode ? '#6c757d' : '#6c757d'; // Grauer Hintergrund (für alle anzeigen)
+            color = 'white';
+            borderColor = isDarkMode ? '#5a6268' : '#5a6268'; // Dunkleres Grau
+        }
+
+        return {
+            "background-color": backgroundColor,
+            "color": color,
+            "border": `1px solid ${borderColor}`
+        };
+    }
+
     // Initialisierung des Filters
     function init() {
+        // Überprüfe den aktuellen Status aus dem localStorage (falls verfügbar)
+        const savedStatus = localStorage.getItem("snr_filter_status") || "all";
+        $("#filter_snr").attr("status", savedStatus);
+        // Wende den gespeicherten Status an
+        $("#filter_snr").css(getButtonStyles(savedStatus));
+
+        // Button erstellen und initialisieren
         createFilterButton();
+
+        // Je nach Status die Einsätze filtern
+        if (savedStatus === "show_snr") {
+            filterSNR();
+        } else if (savedStatus === "hide_snr") {
+            $(".missionSideBarEntry").removeClass("filterShow").addClass("filterHide"); // SNR-Missionen ausblenden
+        } else {
+            $(".missionSideBarEntry").removeClass("filterHide").addClass("filterShow"); // Alle anzeigen
+        }
     }
 
     init();
+
 })();
