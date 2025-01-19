@@ -18,7 +18,6 @@
     }
 
     // Funktion, um Checkboxen und Header zur Fahrzeugtabelle hinzuzufügen
-    // Funktion, um Checkboxen und Header zur Fahrzeugtabelle hinzuzufügen
     function addCheckboxHeaderAndRows() {
         const vehicleTable = document.querySelector('#vehicle_table'); // Tabelle mit Fahrzeugen
         if (!vehicleTable) return;
@@ -101,7 +100,7 @@
                 if (vehicleTable) {
                     clearInterval(intervalId);
                     addCheckboxHeaderAndRows(); // Checkboxen und Header hinzufügen
-                    // Beobachten von DOM-Änderungen an der Tabelle (z.B. durch das andere Skript)
+                    // Beobachten von DOM-Änderungen an der Tabelle (z.B. durch andere Skripts)
                     observer.observe(vehicleTable, {
                         childList: true, // Änderungen an den Kindern der Tabelle beobachten
                         subtree: true // Änderungen innerhalb der gesamten Tabelle beobachten
@@ -309,4 +308,3 @@
         console.log("Nicht auf einer Wache-Seite.");
     }
 })();
-
