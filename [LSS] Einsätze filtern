@@ -1,0 +1,118 @@
+// ==UserScript==
+// @name         Einsatzarten Filter für Leitstellenspiel
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  Filtere Einsatzarten von der API und füge einen Filter-Button hinzu
+// @author       Du
+// @match        https://www.leitstellenspiel.de/*
+// @grant        GM_xmlhttpRequest
+// @grant        GM_addStyle
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // URL der API
+    const url = "https://www.leitstellenspiel.de/einsaetze.json";
+
+    let missionCategories = [];
+
+    // Funktion, um Daten von der API zu holen
+    function fetchData() {
+        GM_xmlhttpRequest({
+            method: "GET",
+            url: url,
+            onload: function(response) {
+                if (response.status === 200) {
+                    // Die Antwort als JSON parsen
+                    const einsaetze = JSON.parse(response.responseText);
+
+                    // Alle Einsatzarten sammeln
+                    einsaetze.forEach(einsatz => {
+                        if (einsatz.mission_categories) {
+                            einsatz.mission_categories.forEach(category => {
+                                if (!missionCategories.includes(category)) {
+                                    missionCategories.push(category);
+                                }
+                            });
+                        }
+                    });
+
+                    // UI für den Filter erstellen
+                    createFilterUI();
+                } else {
+                    console.error("Fehler beim Abrufen der Daten: " + response.status);
+                }
+            },
+            onerror: function(error) {
+                console.error("Fehler bei der Anfrage: ", error);
+            }
+        });
+    }
+
+    // Filter-UI erstellen
+    function createFilterUI() {
+        // Button zum Filtern der Einsätze erstellen
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.position = 'fixed';
+        buttonContainer.style.top = '10px';
+        buttonContainer.style.right = '10px';
+        buttonContainer.style.backgroundColor = 'white';
+        buttonContainer.style.border = '1px solid #ccc';
+        buttonContainer.style.padding = '10px';
+        buttonContainer.style.zIndex = '1000';
+        document.body.appendChild(buttonContainer);
+
+        const select = document.createElement('select');
+        select.id = 'missionCategorySelect';
+
+        // Optionen aus den Missionen hinzufügen
+        const defaultOption = document.createElement('option');
+        defaultOption.textContent = 'Alle Einsatzarten';
+        defaultOption.value = '';
+        select.appendChild(defaultOption);
+
+        missionCategories.forEach(category => {
+            const option = document.createElement('option');
+            option.textContent = category;
+            option.value = category;
+            select.appendChild(option);
+        });
+
+        buttonContainer.appendChild(select);
+
+        const filterButton = document.createElement('button');
+        filterButton.textContent = 'Filtern';
+        filterButton.style.marginTop = '10px';
+        buttonContainer.appendChild(filterButton);
+
+        // Event Listener für den Filter-Button
+        filterButton.addEventListener('click', function() {
+            const selectedCategory = select.value;
+            filterEinsaetze(selectedCategory);
+        });
+    }
+
+    // Funktion, um die Einsätze zu filtern
+    function filterEinsaetze(category) {
+        // Hier könnte eine Funktion eingebaut werden, die die angezeigten Missionen basierend auf der Kategorie filtert
+        // Eine Möglichkeit ist, dass du die Missionen in der UI durchgehst und einblendest oder ausblendest
+        // je nachdem, ob sie zur gewählten Kategorie passen.
+
+        const einsatzList = document.querySelectorAll('.mission-row'); // Hier wird angenommen, dass dies die Missions-Elemente sind. Passe dies an.
+        
+        einsatzList.forEach(einsatz => {
+            const missionCategory = einsatz.getAttribute('data-category'); // Hier könnte es ein Attribut mit der Mission-Kategorie geben, z.B. 'data-category'
+            
+            if (category === '' || missionCategory === category) {
+                einsatz.style.display = ''; // Zeige die Mission an
+            } else {
+                einsatz.style.display = 'none'; // Verstecke die Mission
+            }
+        });
+    }
+
+    // API-Daten abrufen
+    fetchData();
+
+})();
