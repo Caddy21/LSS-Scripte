@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Sprechwunsch Sortierer
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.4
+// @version      1.0
 // @description  Sortiert Sprechwünsche (Status 5) nach Fahrzeugtypen
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -12,8 +12,6 @@
 (function() {
     'use strict';
 
-    console.info('Tampermonkey-Skript wird geladen...');
-
     // IDs der Fahrzeuge nach Priorität
     const PRIORITY_ORDER = [31, 28, 25]; // RTH, RTW, FuStW
 
@@ -23,14 +21,10 @@
     // Funktion zum Sortieren der Sprechwünsche
     function sortSprechwünsche() {
         try {
-            console.info('Sortierfunktion wurde aufgerufen.');
             const listContainer = document.querySelector('#radio_messages_important');
             if (!listContainer) {
-                console.error('Sprechwunsch-Container (#radio_messages_important) nicht gefunden.');
                 return;
             }
-
-            console.info('Sprechwunsch-Container gefunden:', listContainer);
 
             // Sprechwünsche sammeln und sortieren
             const items = Array.from(listContainer.children);
@@ -48,7 +42,6 @@
 
             // Sortierte Elemente zurück in den Container einfügen
             items.forEach(item => listContainer.appendChild(item));
-            console.info('Sprechwünsche wurden erfolgreich sortiert.');
         } catch (error) {
             console.error('Fehler in der Sortierfunktion:', error);
         }
@@ -60,7 +53,6 @@
             // Fahrzeug-ID aus dem data-vehicle-type Attribut extrahieren
             const vehicleId = element.getAttribute('data-vehicle-type');
             if (!vehicleId) {
-                console.warn('Keine Fahrzeug-ID im Element gefunden:', element);
                 return -1;
             }
             return parseInt(vehicleId, 10);
@@ -75,20 +67,14 @@
         if (buttonAdded) return; // Verhindert mehrfaches Hinzufügen des Buttons
 
         try {
-            console.info('Versuche, den Button hinzuzufügen...');
-
             // Prüfen, ob der Fenstermodus aktiv ist
             const isFenstermodus = document.querySelector('#iframe-inside-container');
-            console.info('Fenstermodus:', isFenstermodus ? 'Ja' : 'Nein');
 
             if (isFenstermodus) {
                 const fensterMenu = document.querySelector('.map_position_mover');
                 if (!fensterMenu) {
-                    console.error('Fenstermodus-Menu-Container (.map_position_mover) nicht gefunden.');
                     return;
                 }
-
-                console.info('Fenstermodus-Menu-Container gefunden:', fensterMenu);
 
                 const button = document.createElement('button');
                 button.textContent = 'Sprechwünsche sortieren';
@@ -98,14 +84,11 @@
 
                 button.addEventListener('click', sortSprechwünsche);
                 fensterMenu.appendChild(button);
-                console.info('Button wurde im Fenstermodus hinzugefügt.');
             } else {
                 // Standardmodus: Regelmäßig nach dem Container suchen
                 const interval = setInterval(() => {
                     const menu = document.querySelector('#radio_panel_heading');
                     if (menu) {
-                        console.info('Menu-Container (#radio_panel_heading) gefunden:', menu);
-
                         const button = document.createElement('button');
                         button.textContent = 'Sprechwünsche sortieren';
                         button.className = 'btn btn-xs btn-primary';
@@ -114,12 +97,9 @@
 
                         button.addEventListener('click', sortSprechwünsche);
                         menu.appendChild(button);
-                        console.info('Button wurde im Standardmodus hinzugefügt.');
 
                         clearInterval(interval); // Stoppe das Intervall nach erfolgreichem Hinzufügen des Buttons
                         buttonAdded = true; // Markiere, dass der Button hinzugefügt wurde
-                    } else {
-                        console.info('Menu-Container #radio_panel_heading noch nicht gefunden. Versuche es erneut...');
                     }
                 }, 500); // Versuche alle 500 ms, den Container zu finden
             }
@@ -131,7 +111,6 @@
     // Initialisierung
     function init() {
         try {
-            console.info('Skript initialisiert.');
             addButton();
         } catch (error) {
             console.error('Fehler bei der Initialisierung:', error);
@@ -140,7 +119,6 @@
 
     // Warten, bis die Seite vollständig geladen ist
     document.addEventListener('DOMContentLoaded', () => {
-        console.info('DOM vollständig geladen, starte Skript.');
         try {
             init();
         } catch (error) {
@@ -154,13 +132,11 @@
 
     const observer = new MutationObserver(() => {
         attempts++;
-        console.info(`DOM-Änderung erkannt, Versuch #${attempts}`);
         try {
             if (attempts <= maxAttempts) {
                 init();
             } else {
                 observer.disconnect(); // Deaktiviert den Observer nach maxAttempts
-                console.info('MutationObserver deaktiviert nach maximalen Versuchen.');
             }
         } catch (error) {
             console.error('Fehler beim erneuten Ausführen des Skripts:', error);
