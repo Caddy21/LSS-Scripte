@@ -70,7 +70,6 @@
         }
     }
 
-
     // Button zum Sortieren hinzufügen
     function addButton() {
         if (buttonAdded) return; // Verhindert mehrfaches Hinzufügen des Buttons
@@ -101,29 +100,29 @@
                 fensterMenu.appendChild(button);
                 console.info('Button wurde im Fenstermodus hinzugefügt.');
             } else {
-                // Standardmodus
-                const menu = document.querySelector('.panel-heading.big_map_window_head.ui-draggable-handle#radio_panel_heading');
-                if (!menu) {
-                    console.error('Menu-Container (.panel-heading.big_map_window_head.ui-draggable-handle#radio_panel_heading) nicht gefunden.');
-                    const availableContainers = document.querySelectorAll('.panel-heading.big_map_window_head.ui-draggable-handle');
-                    console.info('Verfügbare Container:', availableContainers);
-                    return;
-                }
+                // Standardmodus: Regelmäßig nach dem Container suchen
+                const interval = setInterval(() => {
+                    const menu = document.querySelector('#radio_panel_heading');
+                    if (menu) {
+                        console.info('Menu-Container (#radio_panel_heading) gefunden:', menu);
 
-                console.info('Menu-Container gefunden:', menu);
+                        const button = document.createElement('button');
+                        button.textContent = 'Sprechwünsche sortieren';
+                        button.className = 'btn btn-xs btn-primary';
+                        button.style.margin = '0 5px';
+                        button.style.cursor = 'pointer';
 
-                const button = document.createElement('button');
-                button.textContent = 'Sprechwünsche sortieren';
-                button.className = 'btn btn-xs btn-primary';
-                button.style.margin = '0 5px';
-                button.style.cursor = 'pointer';
+                        button.addEventListener('click', sortSprechwünsche);
+                        menu.appendChild(button);
+                        console.info('Button wurde im Standardmodus hinzugefügt.');
 
-                button.addEventListener('click', sortSprechwünsche);
-                menu.appendChild(button);
-                console.info('Button wurde im Standardmodus hinzugefügt.');
+                        clearInterval(interval); // Stoppe das Intervall nach erfolgreichem Hinzufügen des Buttons
+                        buttonAdded = true; // Markiere, dass der Button hinzugefügt wurde
+                    } else {
+                        console.info('Menu-Container #radio_panel_heading noch nicht gefunden. Versuche es erneut...');
+                    }
+                }, 500); // Versuche alle 500 ms, den Container zu finden
             }
-
-            buttonAdded = true; // Markiere, dass der Button hinzugefügt wurde
         } catch (error) {
             console.error('Fehler beim Hinzufügen des Buttons:', error);
         }
