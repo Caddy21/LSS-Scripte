@@ -1,12 +1,15 @@
 // ==UserScript==
-// @name         [LSS] Sprechwunsch Sortierer
+// @name         [LSS] 8 - Sprechwunsch Sortierer
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.7
-// @description  Sortiert Sprechwünsche (Status 5) nach Fahrzeugtypen aus der API und benutzerdefinierter Reihenfolge
+// @version      1.2
+// @description  Sortiert Sprechwünsche nach Fahrzeugtypen
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_deleteValue
 // ==/UserScript==
 
 (function () {
@@ -23,24 +26,50 @@
     // Flag für Button-Hinzufügung
     let buttonAdded = false;
 
-    // Fahrzeugdaten aus der API laden
-    async function fetchVehicleData() {
-        try {
-            const response = await fetch('https://www.leitstellenspiel.de/api/vehicles');
-            if (!response.ok) {
-                throw new Error(`API-Fehler: ${response.status}`);
-            }
+    // Funktion zum Abrufen der Fahrzeugdaten aus dem GM-Speicher
+    function getStoredVehicleData() {
+        const storedData = GM_getValue('vehicleData', null);
+        const timestamp = GM_getValue('vehicleDataTimestamp', 0);
+        const currentTime = Date.now();
 
-            const data = await response.json();
-            vehicleData = data.reduce((acc, vehicle) => {
-                acc[vehicle.id] = vehicle.vehicle_type; // Speichert Fahrzeug-ID und Typ
-                return acc;
-            }, {});
-
-            console.info('Fahrzeugdaten erfolgreich geladen:', vehicleData);
-        } catch (error) {
-            console.error('Fehler beim Laden der Fahrzeugdaten:', error);
+        // Wenn Daten vorhanden sind und noch nicht älter als 24 Stunden
+        if (storedData && (currentTime - timestamp < 24 * 60 * 60 * 1000)) {
+            console.info('Fahrzeugdaten aus dem Speicher geladen.');
+            return storedData;
         }
+
+        return null;
+    }
+
+    // Fahrzeugdaten aus der API laden und im GM-Speicher speichern
+    function fetchVehicleData() {
+        console.info('Fahrzeugdaten werden aus der API geladen...');
+
+        GM_xmlhttpRequest({
+            method: "GET",
+            url: 'https://www.leitstellenspiel.de/api/vehicles',
+            onload: function(response) {
+                try {
+                    const data = JSON.parse(response.responseText);
+
+                    vehicleData = data.reduce((acc, vehicle) => {
+                        acc[vehicle.id] = vehicle.vehicle_type; // Speichert Fahrzeug-ID und Typ
+                        return acc;
+                    }, {});
+
+                    // Speichern der Fahrzeugdaten und Timestamp (damit wir sie später aktualisieren können)
+                    GM_setValue('vehicleData', vehicleData);
+                    GM_setValue('vehicleDataTimestamp', Date.now());
+
+                    console.info('Fahrzeugdaten erfolgreich aus der API geladen und im Speicher gespeichert.');
+                } catch (error) {
+                    console.error('Fehler beim Verarbeiten der API-Daten:', error);
+                }
+            },
+            onerror: function() {
+                console.error('Fehler bei der API-Anfrage');
+            }
+        });
     }
 
     // Funktion zum Sortieren der Sprechwünsche
@@ -103,51 +132,33 @@
         try {
             console.info('Versuche, den Button hinzuzufügen...');
 
-            // Prüfen, ob der Fenstermodus aktiv ist
-            const isFenstermodus = document.querySelector('#iframe-inside-container');
-            console.info('Fenstermodus:', isFenstermodus ? 'Ja' : 'Nein');
+            // Suche das Element, das das Wort "Funk" enthält
+            const funkDiv = document.querySelector('.flex-grow-1');
 
-            if (isFenstermodus) {
-                const fensterMenu = document.querySelector('.map_position_mover');
-                if (!fensterMenu) {
-                    console.error('Fenstermodus-Menu-Container (.map_position_mover) nicht gefunden.');
-                    return;
-                }
-
-                console.info('Fenstermodus-Menu-Container gefunden:', fensterMenu);
+            if (funkDiv) {
+                console.info('Funk-Div gefunden:', funkDiv);
 
                 const button = document.createElement('button');
                 button.textContent = 'Sprechwünsche sortieren';
                 button.className = 'btn btn-xs btn-primary';
-                button.style.margin = '0 5px';
+                button.style.marginLeft = '10px'; // Etwas Abstand vom Wort "Funk"
                 button.style.cursor = 'pointer';
 
-                button.addEventListener('click', sortSprechwünsche);
-                fensterMenu.appendChild(button);
-                console.info('Button wurde im Fenstermodus hinzugefügt.');
-            } else {
-                // Standardmodus: Regelmäßig nach dem Container suchen
-                const interval = setInterval(() => {
-                    const menu = document.querySelector('#radio_panel_heading');
-                    if (menu) {
-                        console.info('Menu-Container (#radio_panel_heading) gefunden:', menu);
-
-                        const button = document.createElement('button');
-                        button.textContent = 'Sprechwünsche sortieren';
-                        button.className = 'btn btn-xs btn-primary';
-                        button.style.margin = '0 5px';
-                        button.style.cursor = 'pointer';
-
-                        button.addEventListener('click', sortSprechwünsche);
-                        menu.appendChild(button);
-                        console.info('Button wurde im Standardmodus hinzugefügt.');
-
-                        clearInterval(interval); // Stoppe das Intervall nach erfolgreichem Hinzufügen des Buttons
-                        buttonAdded = true; // Markiere, dass der Button hinzugefügt wurde
-                    } else {
-                        console.info('Menu-Container #radio_panel_heading noch nicht gefunden. Versuche es erneut...');
+                button.addEventListener('click', async () => {
+                    // Abrufen der Fahrzeugdaten aus dem Speicher oder von der API
+                    vehicleData = getStoredVehicleData() || {};
+                    if (Object.keys(vehicleData).length === 0) {
+                        await fetchVehicleData(); // Wenn keine Daten im Speicher, API-Daten holen
                     }
-                }, 500); // Versuche alle 500 ms, den Container zu finden
+                    sortSprechwünsche(); // Anschließend die Sprechwünsche sortieren
+                });
+
+                // Button nach dem "Funk"-Div einfügen
+                funkDiv.appendChild(button);
+                buttonAdded = true;
+                console.info('Button wurde neben dem "Funk"-Element hinzugefügt.');
+            } else {
+                console.error('Kein "Funk"-Element gefunden.');
             }
         } catch (error) {
             console.error('Fehler beim Hinzufügen des Buttons:', error);
@@ -158,8 +169,7 @@
     async function init() {
         try {
             console.info('Skript initialisiert.');
-            await fetchVehicleData(); // Fahrzeugdaten laden
-            addButton();
+            addButton(); // Button hinzufügen ohne API-Daten
         } catch (error) {
             console.error('Fehler bei der Initialisierung:', error);
         }
