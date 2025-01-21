@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] Fahrzeuge im S6 auflisten
+// @name         [LSS] 4 - Fahrzeuge im S6 auflisten
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Listet alle Fahrzeuge im S6 auf
+// @version      1.2
+// @description  Listet alle Fahrzeuge im S6 auf und unterstützt Dark/Light Mode und Standarddesign
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @grant        GM_xmlhttpRequest
@@ -14,18 +14,18 @@
 (function () {
     'use strict';
 
+    // Funktion zur Erkennung des Modus (Dark oder Light)
+    function getCurrentMode() {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
     // Funktion zum Einfügen des Buttons
     function insertButton() {
         const buildingPanelBody = document.querySelector('#building_panel_body');
         if (buildingPanelBody) {
             const button = document.createElement('button');
             button.textContent = 'Fahrzeuge im S6 anzeigen';
-            button.style.padding = '10px 20px';
-            button.style.backgroundColor = '#007bff';
-            button.style.color = '#ffffff';
-            button.style.border = 'none';
-            button.style.borderRadius = '4px';
-            button.style.cursor = 'pointer';
+            button.classList.add('btn', 'btn-primary'); // Standard Bootstrap-Button-Klasse
 
             // Event-Listener für den Button
             button.addEventListener('click', openOverlay);
@@ -46,8 +46,8 @@
         overlay.style.left = '0';
         overlay.style.width = '100%';
         overlay.style.height = '100%';
-        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        overlay.style.color = '#ffffff';
+        overlay.style.backgroundColor = getCurrentMode() === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+        overlay.style.color = getCurrentMode() === 'dark' ? '#ffffff' : '#000000';
         overlay.style.zIndex = '10000';
         overlay.style.overflowY = 'auto';
         overlay.style.padding = '20px';
@@ -55,24 +55,16 @@
         // Schließen-Button erstellen
         const closeButton = document.createElement('button');
         closeButton.textContent = 'Schließen';
-        closeButton.style.padding = '10px 20px';
+        closeButton.classList.add('btn', 'btn-danger'); // Standard Bootstrap-Button-Klasse
         closeButton.style.marginBottom = '20px';
-        closeButton.style.backgroundColor = '#ff4d4d';
-        closeButton.style.color = '#ffffff';
-        closeButton.style.border = 'none';
-        closeButton.style.borderRadius = '4px';
-        closeButton.style.cursor = 'pointer';
         closeButton.addEventListener('click', () => overlay.remove());
 
         // Suchfeld für die Fahrzeugnamen und Wachen
         const searchField = document.createElement('input');
         searchField.type = 'text';
         searchField.placeholder = 'Fahrzeuge oder Wachen durchsuchen...';
-        searchField.style.padding = '10px';
+        searchField.classList.add('form-control'); // Standard Bootstrap-Formularfeld
         searchField.style.marginBottom = '20px';
-        searchField.style.width = '100%';
-        searchField.style.maxWidth = '500px';
-        searchField.style.fontSize = '16px';
 
         // Fahrzeuganzahl (Status 6) anzeigen
         const vehicleCountText = document.createElement('div');
@@ -83,16 +75,17 @@
 
         // Tabelle erstellen
         const table = document.createElement('table');
+        table.classList.add('table', 'table-striped'); // Standard Bootstrap-Tabelle
         table.style.width = '100%';
         table.style.borderCollapse = 'collapse';
         table.style.tableLayout = 'fixed'; // Stellt sicher, dass die Spalten gleichmäßig verteilt sind
         table.innerHTML = `
             <thead>
                 <tr>
-                    <th style="border: 1px solid #ccc; padding: 8px;">Name</th>
-                    <th style="border: 1px solid #ccc; padding: 8px;">Wache</th>
-                    <th style="border: 1px solid #ccc; padding: 8px;">Status</th>
-                    <th style="border: 1px solid #ccc; padding: 8px;">Aktion</th>
+                    <th>Name</th>
+                    <th>Wache</th>
+                    <th>Status</th>
+                    <th>Aktion</th>
                 </tr>
             </thead>
             <tbody id="vehicle-table-body"></tbody>
@@ -108,7 +101,7 @@
         // Ladeanzeige einfügen
         const loadingMessage = document.createElement('div');
         loadingMessage.id = 'loading-message';
-        loadingMessage.textContent = 'Lade Fahrzeuge...';
+        loadingMessage.textContent = 'Lade Fahrzeuge & Wachen...';
         loadingMessage.style.position = 'absolute';
         loadingMessage.style.top = '50%';
         loadingMessage.style.left = '50%';
@@ -174,12 +167,23 @@
                     status6Vehicles.forEach(vehicle => {
                         const row = document.createElement('tr');
                         const buildingName = buildingMap[vehicle.building_id] || 'Unbekannt';
+                        const buildingLink = `https://www.leitstellenspiel.de/buildings/${vehicle.building_id}`; // Link zur Wache
+                        const vehicleLink = `https://www.leitstellenspiel.de/vehicles/${vehicle.id}`; // Link zum Fahrzeug
+
                         row.innerHTML = `
-                            <td style="border: 1px solid #ccc; padding: 8px;">${vehicle.caption}</td>
-                            <td style="border: 1px solid #ccc; padding: 8px;">${buildingName}</td>
-                            <td style="border: 1px solid #ccc; padding: 8px;">${vehicle.fms_real}</td>
-                            <td style="border: 1px solid #ccc; padding: 8px;">
-                                <button style="padding: 5px 10px; background-color: #28a745; color: #ffffff; border: none; border-radius: 4px; cursor: pointer;" data-id="${vehicle.id}">
+                            <td>
+                                <a href="${vehicleLink}" target="_blank" style="color: ${getCurrentMode() === 'dark' ? '#007bff' : '#0056b3'}; text-decoration: none;">
+                                    ${vehicle.caption}
+                                </a>
+                            </td>
+                            <td>
+                                <a href="${buildingLink}" target="_blank" style="color: ${getCurrentMode() === 'dark' ? '#007bff' : '#0056b3'}; text-decoration: none;">
+                                    ${buildingName}
+                                </a>
+                            </td>
+                            <td>${vehicle.fms_real}</td>
+                            <td>
+                                <button class="btn btn-success" data-id="${vehicle.id}">
                                     In S2 versetzen
                                 </button>
                             </td>
@@ -238,8 +242,8 @@
                     if (button) {
                         button.disabled = true;
                         button.textContent = `Status geändert (${vehicleCaption})`;
-                        button.style.backgroundColor = '#6c757d';
-                        button.style.cursor = 'not-allowed';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-secondary');
                     }
 
                     // Tabellenzeile aktualisieren
