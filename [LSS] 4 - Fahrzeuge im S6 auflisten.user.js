@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 4 - Fahrzeuge im S6 auflisten
+// @name         [LSS] Fahrzeuge im S6 auflisten
 // @namespace    http://tampermonkey.net/
 // @version      1.2
 // @description  Listet alle Fahrzeuge im S6 auf und unterstützt Dark/Light Mode und Standarddesign
