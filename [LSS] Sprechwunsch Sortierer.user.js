@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Sprechwunsch Sortierer
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.2
+// @version      1.0
 // @description  Sortiert Sprechwünsche nach Fahrzeugtypen
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
