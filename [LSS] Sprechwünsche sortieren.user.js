@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Sprechwunsch Sortierer
+// @name         [LSS] Sprechwunsch Sortierer mit S5 Färber
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Sortiert Sprechwünsche (Status 5) nach Fahrzeugtypen
