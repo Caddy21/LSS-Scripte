@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] 4 - Fahrzeuge im S6 auflisten
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  Listet alle Fahrzeuge im S6 auf, unterstützt Dark/Light Mode und speichert Farbauswahlen
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
