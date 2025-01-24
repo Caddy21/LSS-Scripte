@@ -116,11 +116,11 @@
         });
 
         const vehicleColorLabel = document.createElement('label');
-        vehicleColorLabel.textContent = 'Farbe für Fahrzeug-Links:';
+        vehicleColorLabel.textContent = 'Farbe für Fahrzeuge:';
         vehicleColorLabel.style.marginRight = '10px';
 
         const buildingColorLabel = document.createElement('label');
-        buildingColorLabel.textContent = 'Farbe für Wachen-Links:';
+        buildingColorLabel.textContent = 'Farbe für Wachen:';
         buildingColorLabel.style.marginRight = '10px';
 
         colorPickerContainer.appendChild(vehicleColorLabel);
