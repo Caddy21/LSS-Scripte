@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] Fahrzeuge im S6 auflisten
+// @name         [LSS] 4 - Fahrzeuge im S6 auflisten
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Listet alle Fahrzeuge im S6 auf und unterstützt Dark/Light Mode und Standarddesign
+// @version      1.1
+// @description  Listet alle Fahrzeuge im S6 auf, unterstützt Dark/Light Mode und speichert Farbauswahlen
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @grant        GM_xmlhttpRequest
@@ -18,6 +18,23 @@
     function getCurrentMode() {
         return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
+
+    // Farben im LocalStorage speichern und laden
+    const defaultColors = {
+        vehicleLink: getCurrentMode() === 'dark' ? '#007bff' : '#0056b3',
+        buildingLink: getCurrentMode() === 'dark' ? '#007bff' : '#0056b3',
+    };
+
+    function saveColorsToLocalStorage(colors) {
+        localStorage.setItem('customColors', JSON.stringify(colors));
+    }
+
+    function getColorsFromLocalStorage() {
+        const savedColors = localStorage.getItem('customColors');
+        return savedColors ? JSON.parse(savedColors) : { ...defaultColors };
+    }
+
+    const colors = getColorsFromLocalStorage();
 
     // Funktion zum Einfügen des Buttons
     function insertButton() {
@@ -59,12 +76,58 @@
         closeButton.style.marginBottom = '20px';
         closeButton.addEventListener('click', () => overlay.remove());
 
-        // Suchfeld für die Fahrzeugnamen und Wachen
-        const searchField = document.createElement('input');
-        searchField.type = 'text';
-        searchField.placeholder = 'Fahrzeuge oder Wachen durchsuchen...';
-        searchField.classList.add('form-control'); // Standard Bootstrap-Formularfeld
-        searchField.style.marginBottom = '20px';
+        // Button zum Ein- und Ausblenden der Farbauswahl
+        const toggleColorsButton = document.createElement('button');
+        toggleColorsButton.textContent = 'Farbauswahl einblenden';
+        toggleColorsButton.classList.add('btn', 'btn-info');
+        toggleColorsButton.style.marginBottom = '20px';
+
+        const colorPickerContainer = document.createElement('div');
+        colorPickerContainer.style.display = 'none';
+        colorPickerContainer.style.marginBottom = '20px';
+
+        toggleColorsButton.addEventListener('click', () => {
+            if (colorPickerContainer.style.display === 'none') {
+                colorPickerContainer.style.display = 'block';
+                toggleColorsButton.textContent = 'Farbauswahl ausblenden';
+            } else {
+                colorPickerContainer.style.display = 'none';
+                toggleColorsButton.textContent = 'Farbauswahl einblenden';
+            }
+        });
+
+        // Farbauswahl hinzufügen
+        const vehicleColorPicker = document.createElement('input');
+        vehicleColorPicker.type = 'color';
+        vehicleColorPicker.value = colors.vehicleLink;
+        vehicleColorPicker.addEventListener('input', (event) => {
+            colors.vehicleLink = event.target.value;
+            saveColorsToLocalStorage(colors);
+            updateTableColors();
+        });
+
+        const buildingColorPicker = document.createElement('input');
+        buildingColorPicker.type = 'color';
+        buildingColorPicker.value = colors.buildingLink;
+        buildingColorPicker.addEventListener('input', (event) => {
+            colors.buildingLink = event.target.value;
+            saveColorsToLocalStorage(colors);
+            updateTableColors();
+        });
+
+        const vehicleColorLabel = document.createElement('label');
+        vehicleColorLabel.textContent = 'Farbe für Fahrzeug-Links:';
+        vehicleColorLabel.style.marginRight = '10px';
+
+        const buildingColorLabel = document.createElement('label');
+        buildingColorLabel.textContent = 'Farbe für Wachen-Links:';
+        buildingColorLabel.style.marginRight = '10px';
+
+        colorPickerContainer.appendChild(vehicleColorLabel);
+        colorPickerContainer.appendChild(vehicleColorPicker);
+        colorPickerContainer.appendChild(document.createElement('br'));
+        colorPickerContainer.appendChild(buildingColorLabel);
+        colorPickerContainer.appendChild(buildingColorPicker);
 
         // Fahrzeuganzahl (Status 6) anzeigen
         const vehicleCountText = document.createElement('div');
@@ -93,8 +156,9 @@
 
         // Elemente zum Overlay hinzufügen
         overlay.appendChild(closeButton);
+        overlay.appendChild(toggleColorsButton);
+        overlay.appendChild(colorPickerContainer);
         overlay.appendChild(vehicleCountText);
-        overlay.appendChild(searchField);
         overlay.appendChild(table);
         document.body.appendChild(overlay);
 
@@ -113,11 +177,22 @@
         document.body.appendChild(loadingMessage);
 
         // Fahrzeug- und Wachendaten laden
-        loadBuildingsAndVehicles(loadingMessage, vehicleCountText, searchField);
+        loadBuildingsAndVehicles(loadingMessage, vehicleCountText);
+    }
+
+    // Funktion zum Aktualisieren der Farben in der Tabelle
+    function updateTableColors() {
+        const rows = document.querySelectorAll('#vehicle-table-body tr');
+        rows.forEach(row => {
+            const vehicleLink = row.querySelector('td a');
+            const buildingLink = row.querySelectorAll('td a')[1];
+            if (vehicleLink) vehicleLink.style.color = colors.vehicleLink;
+            if (buildingLink) buildingLink.style.color = colors.buildingLink;
+        });
     }
 
     // Funktion zum Laden der Wachen- und Fahrzeugdaten
-    function loadBuildingsAndVehicles(loadingMessage, vehicleCountText, searchField) {
+    function loadBuildingsAndVehicles(loadingMessage, vehicleCountText) {
         GM_xmlhttpRequest({
             method: 'GET',
             url: 'https://www.leitstellenspiel.de/api/buildings',
@@ -130,7 +205,7 @@
                     });
 
                     // Fahrzeugdaten laden
-                    loadVehicles(buildingMap, loadingMessage, vehicleCountText, searchField);
+                    loadVehicles(buildingMap, loadingMessage, vehicleCountText);
                 } else {
                     console.error('Fehler beim Laden der Wachen:', response.status, response.responseText);
                     loadingMessage.textContent = 'Fehler beim Laden der Wachen!';
@@ -143,8 +218,8 @@
         });
     }
 
-    // Funktion zum Laden der Fahrzeugdaten und Hinzufügen der Suchlogik
-    function loadVehicles(buildingMap, loadingMessage, vehicleCountText, searchField) {
+    // Funktion zum Laden der Fahrzeugdaten
+    function loadVehicles(buildingMap, loadingMessage, vehicleCountText) {
         GM_xmlhttpRequest({
             method: 'GET',
             url: 'https://www.leitstellenspiel.de/api/vehicles',
@@ -172,12 +247,12 @@
 
                         row.innerHTML = `
                             <td>
-                                <a href="${vehicleLink}" target="_blank" style="color: ${getCurrentMode() === 'dark' ? '#007bff' : '#0056b3'}; text-decoration: none;">
+                                <a href="${vehicleLink}" target="_blank" style="color: ${colors.vehicleLink}; text-decoration: none;">
                                     ${vehicle.caption}
                                 </a>
                             </td>
                             <td>
-                                <a href="${buildingLink}" target="_blank" style="color: ${getCurrentMode() === 'dark' ? '#007bff' : '#0056b3'}; text-decoration: none;">
+                                <a href="${buildingLink}" target="_blank" style="color: ${colors.buildingLink}; text-decoration: none;">
                                     ${buildingName}
                                 </a>
                             </td>
@@ -199,28 +274,13 @@
                         });
                     });
 
-                    // Event-Listener für das Suchfeld
-                    searchField.addEventListener('input', function () {
-                        const searchText = searchField.value.toLowerCase();
-                        const rows = tableBody.querySelectorAll('tr');
-                        rows.forEach(row => {
-                            const vehicleName = row.querySelector('td').textContent.toLowerCase();
-                            const buildingName = row.querySelectorAll('td')[1].textContent.toLowerCase();
-                            if (vehicleName.includes(searchText) || buildingName.includes(searchText)) {
-                                row.style.display = '';
-                            } else {
-                                row.style.display = 'none';
-                            }
-                        });
-                    });
+                    updateTableColors();
                 } else {
                     console.error('Fehler beim Laden der Fahrzeugdaten:', response.status, response.responseText);
-                    loadingMessage.textContent = 'Fehler beim Laden der Daten!';
                 }
             },
             onerror: function (error) {
                 console.error('Fehler bei der Fahrzeugdaten-Anfrage:', error);
-                loadingMessage.textContent = 'Fehler beim Laden der Daten!';
             }
         });
     }
