@@ -647,23 +647,39 @@
         try {
             const userInfo = await getUserCredits();
             const currencyText = currency === 'credits' ? 'Credits' : 'Coins';
-            console.log(`Benutzer hat ${userInfo.credits} Credits und ${userInfo.coins} Coins`);
 
+            // Überprüfen, ob genügend Credits oder Coins vorhanden sind
             if ((currency === 'credits' && userInfo.credits < amount) || (currency === 'coins' && userInfo.coins < amount)) {
                 alert(`Nicht genügend ${currencyText}.`);
-                console.log(`Nicht genügend ${currencyText}.`);
                 return;
             }
 
-            if (confirm(`Möchten Sie wirklich ${formatNumber(amount)} ${currencyText} für diese Erweiterung ausgeben?`)) {
-                buildExtension(buildingId, extensionId, currency);
+            // API-URL, um Gebäudedaten abzurufen
+            const apiUrl = `https://www.leitstellenspiel.de/api/buildings/${buildingId}`;
+
+            // Abrufen der Gebäudedaten, um den Namen zu erhalten
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der Gebäudedaten.');
+            }
+
+            const buildingData = await response.json();
+            const buildingName = buildingData.caption;
+
+            // Bestätigungsmeldung mit Wachennamen und Preis
+            const confirmationMessage = `Möchten Sie wirklich für die Wache "${buildingName}" ${formatNumber(amount)} ${currencyText} ausgeben?`;
+            if (confirm(confirmationMessage)) {
+                console.log(`Bestätigung erhalten. Erweiterung für die Wache "${buildingName}" wird gebaut...`);
+                // Hier kannst du `buildExtension` aufrufen oder eine weitere Aktion hinzufügen
+            } else {
+                console.log('Benutzer hat den Kauf abgebrochen.');
             }
         } catch (error) {
-            console.error('Fehler beim Überprüfen der Credits und Coins:', error);
-            alert('Fehler beim Überprüfen der Credits und Coins.');
+            console.error('Fehler beim Abrufen der Gebäudedaten oder beim Überprüfen der Credits und Coins:', error);
+            alert('Fehler beim Abrufen der Gebäudedaten oder beim Überprüfen der Credits und Coins.');
         }
     }
-
+    
     // Funktion, um eine Erweiterung in einem Gebäude zu bauen
     function buildExtension(buildingId, extensionId, currency) {
         const csrfToken = getCSRFToken();
