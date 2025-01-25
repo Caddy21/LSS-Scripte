@@ -18,6 +18,7 @@
 // ToDo-Liste
 
 // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
+// Prüfen ob ein limitierter Ausbau gebaut werden kann
 // Abfragen ob USER Premium hat oder nicht (var user_premium) > Hinweiß für NICHT PremiumUser einbauen. 
 // Prüfen ob bei Nichtpremium User bereits eine Erweiterung gebaut wird, wenn ja, dann Erweiterungsausbau abbrechen, wenn nein, dann starten.
 // Credits und Coins automatisch in die Tabelle einfügen lassen aus der API herraus wenn möglich
