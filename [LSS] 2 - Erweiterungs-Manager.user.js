@@ -8,6 +8,8 @@
 // @grant        GM_xmlhttpRequest
 // @connect      api.lss-manager.de
 // @connect      leitstellenspiel.de
+// @downloadURL  https://github.com/Caddy21/LSS-Scripte/raw/main/%5BLSS%5D%202%20-%20Erweiterungs-Manager.user.js
+// @updateURL    https://github.com/Caddy21/LSS-Scripte/raw/main/%5BLSS%5D%202%20-%20Erweiterungs-Manager.user.js
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @run-at       document-end
 // ==/UserScript==
