@@ -233,7 +233,7 @@
 
     };
 
-    // Ab hier nichts mehr ändern!
+    // Ab hier nichts mehr ändern! (Es sei denn Ihr wisst was Ihr tut)
 
     // Stile für das Interface
     const styles = `
@@ -435,8 +435,8 @@
 
                 });
             }
-            //  } else {
-            //      console.error('Profilmenü (#menu_profile + .dropdown-menu) nicht gefunden. Der Button konnte nicht hinzugefügt werden.');
+              } else {
+                  console.error('Profilmenü (#menu_profile + .dropdown-menu) nicht gefunden. Der Button konnte nicht hinzugefügt werden.');
         }
     }
 
@@ -621,8 +621,7 @@
 
         document.body.appendChild(selectionDiv);
     }
-
-
+    
     // Funktion um die aktuelle Credits und Coins des USERs abzurufen
     async function getUserCredits() {
         try {
@@ -641,8 +640,7 @@
             throw error;
         }
     }
-
-
+    
     async function confirmAndBuildExtension(buildingId, extensionId, amount, currency) {
         try {
             const userInfo = await getUserCredits();
@@ -773,8 +771,7 @@
             });
         });
     }
-
-
+    
     // Daten von der API abrufen und fehlende Erweiterungen anzeigen
     function fetchBuildingsAndRender() {
         fetch('https://www.leitstellenspiel.de/api/buildings')
