@@ -17,10 +17,9 @@
 
 // ToDo-Liste
 
-// Doppel-Klick beim Button 'Details Anzeigen' verhindern
-// Credits und Coins automatisch in die Tabelle einfügen
 // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
-
+// Credits und Coins automatisch in die Tabelle einfügen lassen aus der API herraus wenn möglich
+// Lagerräume einbauen
 
 (function() {
     'use strict';
@@ -41,31 +40,31 @@
     // Hier könnt Ihr auswählen welche Erweiterung in der Tabelle angezeigt werden soll, dafür die nicht benötigten einfach mit // ausklammern.
     const manualExtensions = {
         '0_normal': [ // Feuerwache (normal)
-            //        { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
-            //        { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 3, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 4, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 5, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 6, name: 'Wasserrettung', cost: 400000, coins: 25 },
-            //        { id: 7, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 8, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
-            //        { id: 9, name: 'Großwache', cost: 1000000, coins: 50 },
-            //        { id: 10, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 11, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 12, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 13, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
-            //        { id: 14, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
-            //        { id: 15, name: 'Netzersatzanlage 200', cost: 100000, coins: 20 },
+            { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+            { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 3, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 4, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 5, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 6, name: 'Wasserrettung', cost: 400000, coins: 25 },
+            { id: 7, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 8, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
+            { id: 9, name: 'Großwache', cost: 1000000, coins: 50 },
+            { id: 10, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 11, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 12, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 13, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
+            { id: 14, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
+            { id: 15, name: 'Netzersatzanlage 200', cost: 100000, coins: 20 },
             { id: 16, name: 'Großlüfter', cost: 75000, coins: 25 },
-            //        { id: 17, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 18, name: 'Drohneneinheit', cost: 150000, coins: 25 },
-            //        { id: 19, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
-            //        { id: 20, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 21, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 22, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 23, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 24, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 17, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 18, name: 'Drohneneinheit', cost: 150000, coins: 25 },
+            { id: 19, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
+            { id: 20, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 21, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 22, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 23, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 24, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
             { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
         ],
 
@@ -76,7 +75,7 @@
         ],
 
         '2_normal': [ // Rettungswache
-            //        { id: 0, name: 'Großwache', cost: 1000000, coins: 50 }
+            { id: 0, name: 'Großwache', cost: 1000000, coins: 50 }
         ],
 
         '3_normal': [ // Rettungsschule
@@ -95,7 +94,7 @@
             { id: 6, name: 'Neurochirugie', cost: 70000, coins: 15 },
             { id: 7, name: 'Kardiologie', cost: 70000, coins: 15 },
             { id: 8, name: 'Kardiochirugie', cost: 70000, coins: 15 },
-            //         { id: 9, name: 'Großkrankenhaus', cost: 200000, coins: 50 },
+            { id: 9, name: 'Großkrankenhaus', cost: 200000, coins: 50 },
         ],
 
         '5_normal': [ // Rettungshubschrauber-Station
@@ -105,20 +104,20 @@
         '6_normal': [ // Polizeiwache
             { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
             { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 2, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 3, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 4, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 5, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 6, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 7, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 8, name: 'Zelle', cost: 25000, coins: 5 },
-            //        { id: 9, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 2, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 3, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 4, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 5, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 6, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 7, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 8, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 9, name: 'Zelle', cost: 25000, coins: 5 },
             { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            //        { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            //        { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            //        { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
-            //        { id: 14, name: 'Großwache', cost: 1000000, coins: 50 },
-            //        { id: 15, name: 'Großgewahrsam', cost: 200000, coins: 50 },
+            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
+            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
+            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            { id: 14, name: 'Großwache', cost: 1000000, coins: 50 },
+            { id: 15, name: 'Großgewahrsam', cost: 200000, coins: 50 },
         ],
 
         '8_normal': [ // Polizeischule
@@ -131,7 +130,7 @@
             { id: 0, name: '1. Technischer Zug: Fachgruppe Bergung/Notinstandsetzung', cost: 25000, coins: 5 },
             { id: 1, name: '1. Technischer Zug: Zugtrupp', cost: 25000, coins: 5 },
             { id: 2, name: 'Fachgruppe Räumen', cost: 25000, coins: 5 },
-            //       { id: 3, name: 'Fachgruppe Wassergefahren', cost: 500000, coins: 15 },
+            { id: 3, name: 'Fachgruppe Wassergefahren', cost: 500000, coins: 15 },
             { id: 4, name: '2. Technischer Zug - Bergungsgruppe', cost: 25000, coins: 5 },
             { id: 5, name: '2. Technischer Zug: Fachgruppe Bergung/Notinstandsetzung', cost: 25000, coins: 5 },
             { id: 6, name: '2. Technischer Zug: Zugtrupp', cost: 25000, coins: 5 },
@@ -139,8 +138,8 @@
             { id: 8, name: 'Fachgruppe Wasserschaden/Pumpen', cost: 200000, coins: 25 },
             { id: 9, name: 'Fachruppe Schwere Bergung', cost: 200000, coins: 25 },
             { id: 10, name: 'Fachgruppe Elektroversorgung', cost: 200000, coins: 25 },
-            //       { id: 11, name: 'Ortsverband-Mannschaftstransportwagen', cost: 50000, coins: 15 },
-            //       { id: 12, name: 'Trupp Unbenannte Luftfahrtsysteme', cost: 50000, coins: 15 },
+            { id: 11, name: 'Ortsverband-Mannschaftstransportwagen', cost: 50000, coins: 15 },
+            { id: 12, name: 'Trupp Unbenannte Luftfahrtsysteme', cost: 50000, coins: 15 },
             { id: 13, name: 'Fachzug Führung und Kommunikation', cost: 300000, coins: 25 },
         ],
 
@@ -166,65 +165,64 @@
 
         '12_normal': [ // SEG
             { id: 0, name: 'Führung', cost: 25000, coins: 5 },
-            //        { id: 1, name: 'Sanitätsdienst', cost: 25500, coins: 5 },
-            //        { id: 2, name: 'Wasserrettung', cost: 500000, coins: 25 },
-            //        { id: 3, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
-            //        { id: 4, name: 'SEG-Drohne', cost: 50000, coins: 15 },
-            //        { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 }
+            { id: 1, name: 'Sanitätsdienst', cost: 25500, coins: 5 },
+            { id: 2, name: 'Wasserrettung', cost: 500000, coins: 25 },
+            { id: 3, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
+            { id: 4, name: 'SEG-Drohne', cost: 50000, coins: 15 },
+            { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 }
         ],
 
         '13_normal': [ // Polizeihubschrauberstation
             { id: 0, name: 'Außenlastbehälter', cost: 200000, coins: 15 },
-            //        { id: 1, name: 'Windenrettung', cost: 200000, coins: 15 }
+            { id: 1, name: 'Windenrettung', cost: 200000, coins: 15 }
         ],
 
         '17_normal': [ // Polizeisondereinheit
-            //         { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
-            //         { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
-            //         { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
-            //         { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
-            //         { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 }
+            { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
+            { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
+            { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
+            { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
+            { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 }
         ],
-
         '0_small': [ // Feuerwehr (Kleinwache)
-            //        { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
-            //        { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
-            //        { id: 3, name: 'Wasserrettung', cost: 400000, coins: 25 },
-            //        { id: 4, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
-            //        { id: 5, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
-            //        { id: 6, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
-            //        { id: 7, name: 'Großlüfter', cost: 75000, coins: 25 }
-            //        { id: 8, name: 'Drohneneinheit', cost: 150000, coins: 25 },
-            //        { id: 9, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
-            //        { id: 23, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 24, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            //        { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 }
+            { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+            { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
+            { id: 3, name: 'Wasserrettung', cost: 400000, coins: 25 },
+            { id: 4, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
+            { id: 5, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
+            { id: 6, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
+            { id: 7, name: 'Großlüfter', cost: 75000, coins: 25 },
+            { id: 8, name: 'Drohneneinheit', cost: 150000, coins: 25 },
+            { id: 9, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
+            { id: 23, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 24, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 }
         ],
 
         '6_small': [ // Polizei (Kleinwache)
             { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
-            { id: 1, name: 'Zelle', cost: 25000, coins: 5 }
-            //        { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            //        { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            //        { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            //        { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
+            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
+            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
+            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
+            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
         ],
 
         '24_normal': [ // Reiterstaffel
-            //        { id: 0, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 1, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 2, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 3, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 4, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            //        { id: 5, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+            { id: 0, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+            { id: 1, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+            { id: 2, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+            { id: 3, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+            { id: 4, name: 'Reiterstaffel', cost: 300000, coins: 25 },
+            { id: 5, name: 'Reiterstaffel', cost: 300000, coins: 25 },
         ],
 
         '25_normal': [ // Bergrettungswache
             { id: 0, name: 'Höhenrettung', cost: 50000, coins: 25 },
-            //        { id: 1, name: 'Drohneneinheit', cost: 75000, coins: 25 },
+            { id: 1, name: 'Drohneneinheit', cost: 75000, coins: 25 },
             { id: 2, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
-            //        { id: 3, name: 'Rettungsdienst', cost: 100000, coins: 20 },
+            { id: 3, name: 'Rettungsdienst', cost: 100000, coins: 20 },
         ],
 
         '27_normal': [ // Schule für Seefahrt und Seenotrettung
