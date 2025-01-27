@@ -1,0 +1,263 @@
+// ==UserScript==
+// @name         LSS Mission Kategorien-Filter (Optimiert mit GM-Speicherung)
+// @namespace    http://tampermonkey.net/
+// @version      1.8
+// @description  Filtert dynamisch die Einsatzliste nach Kategorien mit GM-Speicherung
+// @author       Dein Name
+// @match        https://www.leitstellenspiel.de/*
+// @grant        GM.setValue
+// @grant        GM.getValue
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    const apiUrl = "https://v3.lss-manager.de/modules/lss-missionHelper/missions/de_DE.json";
+    const settingsApiUrl = "https://www.leitstellenspiel.de/api/settings"; // API zum Abrufen der Einstellungen
+    const storageKey = "lssMissionsData";
+    const storageTimestampKey = "lssMissionsDataTimestamp";
+    const updateInterval = 24 * 60 * 60 * 1000; // 24 Stunden in Millisekunden
+
+    let missions = {};
+    let categories = new Set();
+    let missionCategoryMap = new Map();
+    let isDarkMode = false; // Standardwert: Helles Design
+    let activeCategoryButton = null; // Referenz auf den aktiven Button
+
+    // Mapping der Kategorien zu den benutzerdefinierten Beschriftungen
+    const customCategoryLabels = {
+        'fire': 'FF',
+        'police': 'POL',
+        'ambulance': 'RD',
+        'thw': 'THW',
+        "criminal_investigation": 'SEK',
+        'riot_police': 'B-Pol',
+        'water_rescue': 'WR',
+        'mountain': 'BR',
+        'coastal': 'SNR',
+        'airport': 'FHF',
+        'airport_specialization': 'FHF',
+        'factory_fire_brigade': 'WF',
+        'seg_medical_service': 'SEG',
+        'energy_supply': 'NEA50',
+        'energy_supply_2': 'NEA200',
+    };
+
+    // Funktion zum Laden der API-Daten (oder aus der GM-Speicherung)
+    async function loadMissionData() {
+        const now = Date.now();
+        const storedTimestamp = await GM.getValue(storageTimestampKey, 0);
+        const isDataExpired = now - storedTimestamp > updateInterval;
+
+        if (!isDataExpired) {
+            // Daten aus GM-Speicherung laden
+            console.info("Lade Einsatzdaten aus der GM-Speicherung...");
+            missions = JSON.parse(await GM.getValue(storageKey, "{}"));
+        } else {
+            // Daten aus der API laden und in der GM-Speicherung speichern
+            console.info("Lade Einsatzdaten aus der API...");
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                console.error("Fehler beim Abrufen der API:", response.statusText);
+                return;
+            }
+            missions = await response.json();
+            await GM.setValue(storageKey, JSON.stringify(missions));
+            await GM.setValue(storageTimestampKey, now);
+            console.info("Einsatzdaten wurden aus der API geladen und in der GM-Speicherung gespeichert.");
+        }
+
+        // Kategorien und Mapping erstellen
+        console.info("Erstelle Kategorien und Mapping...");
+        for (const mission of Object.values(missions)) {
+            if (mission.mission_categories && Array.isArray(mission.mission_categories)) {
+                mission.mission_categories.forEach(category => categories.add(category));
+            }
+            missionCategoryMap.set(mission.id, mission.mission_categories || []);
+        }
+
+        // Hole die aktuellen Einstellungen, um den Designmodus zu bestimmen
+        console.info("Lade die Benutzereinstellungen...");
+        await loadSettings();
+
+        // Buttons erstellen
+        createCategoryButtons();
+    }
+
+    // Funktion zum Abrufen der Einstellungen und Bestimmung des Modus
+    async function loadSettings() {
+        try {
+            const response = await fetch(settingsApiUrl);
+            const settings = await response.json();
+
+            // Logge die Antwortstruktur, um die genaue Struktur der API-Antwort zu überprüfen
+            console.log("API Antwortstruktur: ", settings);
+
+            // Prüfen, ob die Antwort den Bereich 'design_mode' enthält
+            if (settings && settings.design_mode !== undefined) {
+                const designMode = settings.design_mode;  // Wir nehmen an, dass design_mode direkt hier vorhanden ist.
+
+                // Anhand des design_mode-Wertes den Modus ermitteln
+                if (designMode === 1 || designMode === 4) {
+                    isDarkMode = true;  // Dunkelmodus
+                    console.info("Designmodus aktiviert: Dunkelmodus");
+                } else {
+                    isDarkMode = false;  // Hellmodus oder Standard
+                    console.info("Designmodus aktiviert: Hellmodus");
+                }
+            } else {
+                console.error("Die erwartete Struktur wurde in der API-Antwort nicht gefunden.");
+            }
+        } catch (error) {
+            console.error("Fehler beim Abrufen der Einstellungen:", error);
+        }
+    }
+
+    // Funktion zum Erstellen der Buttons
+    function createCategoryButtons() {
+        const searchInput = document.getElementById('search_input_field_missions');
+        if (!searchInput) {
+            console.error("Suchfeld nicht gefunden!");
+            return;
+        }
+
+        // Container für Buttons
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.flexWrap = 'wrap';
+        buttonContainer.style.marginBottom = '10px';
+
+        // Hier legst du die Reihenfolge der Kategorien fest
+        const desiredOrder =
+              [
+                  'fire', 'police', 'ambulance', 'thw', 'riot_police', 'water_rescue',
+                  'mountain', 'coastal', 'airport', 'factory_fire_brigade', 'criminal_investigation', 'seg_medical_service',
+                  'energy_supply', 'energy_supply_2' ];
+
+        // Für jede Kategorie in der gewünschten Reihenfolge einen Button erstellen
+        desiredOrder.forEach(category => {
+            if (categories.has(category)) {  // Nur Kategorien, die auch existieren
+                const button = document.createElement('button');
+                button.textContent = customCategoryLabels[category] || category; // Benutzerdefinierte Beschriftung
+                button.classList.add('btn', 'btn-xs');
+                button.style.margin = '2px';
+
+                // Design der Buttons an das aktuelle Design anpassen
+                styleButtonForCurrentTheme(button);
+
+                button.addEventListener('click', () => {
+                    console.log(`Button für Kategorie "${category}" wurde geklickt.`);
+                    // Filter anwenden
+                    filterMissionListByCategory(category);
+
+                    // Aktiven Button visualisieren (grün)
+                    setActiveButton(button);
+                });
+
+                buttonContainer.appendChild(button);
+            }
+        });
+
+        // Reset-Button erstellen
+        const resetButton = document.createElement('button');
+        resetButton.textContent = 'Alle anzeigen';
+        resetButton.classList.add('btn', 'btn-xs', 'btn-primary');  // 'primary' für den Hintergrund
+        resetButton.style.margin = '2px';
+        resetButton.addEventListener('click', () => {
+            console.log("Reset-Button wurde geklickt.");
+            resetMissionList();
+            // Reset: Kein aktiver Filter-Button
+            resetActiveButton();
+        });
+
+        // Reset-Button zum Container hinzufügen
+        buttonContainer.appendChild(resetButton);
+
+        // Button-Container einfügen
+        searchInput.parentNode.insertBefore(buttonContainer, searchInput);
+    }
+
+    // Funktion, um die Buttons dem Design anzupassen
+    function styleButtonForCurrentTheme(button) {
+        if (isDarkMode) {
+            // Dunkles Design: Dunkler Hintergrund, helle Schrift
+            button.style.backgroundColor = '#333';  // Dunkler Hintergrund
+            button.style.color = '#fff';  // Helle Schriftfarbe
+            button.style.border = '1px solid #555';  // Dunkler Rand
+        } else {
+            // Helles Design: Weißer Hintergrund, dunkle Schrift
+            button.style.backgroundColor = '#fff';  // Weißer Hintergrund
+            button.style.color = '#333';  // Dunkle Schriftfarbe
+            button.style.border = '1px solid #ccc';  // Heller Rand
+        }
+    }
+
+    // Funktion, um die Einsatzliste nach Kategorie zu filtern
+    function filterMissionListByCategory(category) {
+        console.clear();
+        console.log(`Filtern der Einsätze nach Kategorie: ${category}`);
+
+        const missionElements = document.querySelectorAll('.missionSideBarEntry');
+        missionElements.forEach(element => {
+            const missionId = element.getAttribute('mission_type_id');
+
+            if (missionCategoryMap.has(missionId)) {
+                const categories = missionCategoryMap.get(missionId);
+                if (categories.includes(category)) {
+                    console.log(`Einsatz ID ${missionId} wird angezeigt.`);
+                    element.style.display = ''; // Einblenden
+                } else {
+                    console.log(`Einsatz ID ${missionId} wird ausgeblendet.`);
+                    element.style.display = 'none'; // Ausblenden
+                }
+            } else {
+                console.log(`Einsatz ID ${missionId} hat keine zugewiesene Kategorie und wird ausgeblendet.`);
+                element.style.display = 'none'; // Ausblenden, wenn keine Kategorie vorhanden
+            }
+        });
+    }
+
+    // Funktion, um alle Einsätze anzuzeigen (Reset)
+    function resetMissionList() {
+        console.clear();
+        console.log("Alle Einsätze werden angezeigt.");
+
+        const missionElements = document.querySelectorAll('.missionSideBarEntry');
+        missionElements.forEach(element => {
+            element.style.display = ''; // Alle anzeigen
+        });
+    }
+
+    // Funktion, um den aktiven Filter-Button grün zu färben
+    function setActiveButton(button) {
+        console.log("Aktiviere Filter-Button.");
+
+        // Falls bereits ein aktiver Button existiert, setze ihn zurück
+        if (activeCategoryButton) {
+            console.log("Setze den vorherigen aktiven Button zurück.");
+            styleButtonForCurrentTheme(activeCategoryButton); // Den Stil für das aktuelle Design wiederherstellen
+        }
+
+        // Aktuellen Button grün färben
+        button.style.backgroundColor = '#28a745';  // Grün
+        button.style.color = '#fff';  // Weiße Schrift
+
+        // Speichere den aktiven Button
+        activeCategoryButton = button;
+    }
+
+    // Funktion, um den aktiven Button zurückzusetzen
+    function resetActiveButton() {
+        console.log("Setze den aktiven Button zurück.");
+
+        if (activeCategoryButton) {
+            // Stelle sicher, dass der Hintergrund und die Schriftfarbe zurückgesetzt werden
+            styleButtonForCurrentTheme(activeCategoryButton); // Den Stil für das aktuelle Design wiederherstellen
+        }
+        activeCategoryButton = null;  // Kein aktiver Button mehr
+    }
+
+    // Initialisierung
+    console.log("Starte das Script...");
+    loadMissionData();
+})();
