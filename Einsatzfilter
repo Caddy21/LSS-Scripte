@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         LSS Mission Kategorien-Filter (Optimiert mit GM-Speicherung)
 // @namespace    http://tampermonkey.net/
-// @version      1.8
-// @description  Filtert dynamisch die Einsatzliste nach Kategorien mit GM-Speicherung
+// @version      1.9
+// @description  Filtert dynamisch die Einsatzliste nach Kategorien mit GM-Speicherung und entfernt Kategorien-Buttons, die in Gruppen enthalten sind
 // @author       Dein Name
 // @match        https://www.leitstellenspiel.de/*
 // @grant        GM.setValue
@@ -25,12 +25,14 @@
     let activeCategoryButton = null; // Referenz auf den aktiven Button
 
     // Mapping der Kategorien zu den benutzerdefinierten Beschriftungen
+
+    // Nichts ändern !
     const customCategoryLabels = {
         'fire': 'FF',
         'police': 'POL',
         'ambulance': 'RD',
         'thw': 'THW',
-        "criminal_investigation": 'SEK',
+        'criminal_investigation': 'SEK',
         'riot_police': 'B-Pol',
         'water_rescue': 'WR',
         'mountain': 'BR',
@@ -41,6 +43,23 @@
         'seg_medical_service': 'SEG',
         'energy_supply': 'NEA50',
         'energy_supply_2': 'NEA200',
+    };
+
+    // Neue Gruppen von Kategorien definieren
+    const categoryGroups = {
+        "FF": ['fire'],
+        "POL": ['police'],
+        "RD": ['ambulance'],
+        "THW": ['thw', 'energy_supply', 'energy_supply_2'],
+        "Be-Pol": ['criminal_investigation', 'riot_police'],
+        "WR": ['water_rescue'],
+        "BR": ['mountain'],
+        "SNR": ['coastal'],
+        "FHF": ['airport', 'airport_specialization'],
+        "WF": ['factory_fire_brigade'],
+        "SEG": ['seg', 'seg_medical_service'],
+
+        // Weitere Gruppen hinzufügen, falls gewünscht
     };
 
     // Funktion zum Laden der API-Daten (oder aus der GM-Speicherung)
@@ -90,21 +109,12 @@
             const response = await fetch(settingsApiUrl);
             const settings = await response.json();
 
-            // Logge die Antwortstruktur, um die genaue Struktur der API-Antwort zu überprüfen
             console.log("API Antwortstruktur: ", settings);
 
-            // Prüfen, ob die Antwort den Bereich 'design_mode' enthält
             if (settings && settings.design_mode !== undefined) {
-                const designMode = settings.design_mode;  // Wir nehmen an, dass design_mode direkt hier vorhanden ist.
-
-                // Anhand des design_mode-Wertes den Modus ermitteln
-                if (designMode === 1 || designMode === 4) {
-                    isDarkMode = true;  // Dunkelmodus
-                    console.info("Designmodus aktiviert: Dunkelmodus");
-                } else {
-                    isDarkMode = false;  // Hellmodus oder Standard
-                    console.info("Designmodus aktiviert: Hellmodus");
-                }
+                const designMode = settings.design_mode;
+                isDarkMode = (designMode === 1 || designMode === 4);
+                console.info("Designmodus aktiviert:", isDarkMode ? "Dunkelmodus" : "Hellmodus");
             } else {
                 console.error("Die erwartete Struktur wurde in der API-Antwort nicht gefunden.");
             }
@@ -127,72 +137,74 @@
         buttonContainer.style.flexWrap = 'wrap';
         buttonContainer.style.marginBottom = '10px';
 
-        // Hier legst du die Reihenfolge der Kategorien fest
-        const desiredOrder =
-              [
-                  'fire', 'police', 'ambulance', 'thw', 'riot_police', 'water_rescue',
-                  'mountain', 'coastal', 'airport', 'factory_fire_brigade', 'criminal_investigation', 'seg_medical_service',
-                  'energy_supply', 'energy_supply_2' ];
+        // Erstelle Buttons für einzelne Kategorien (nur die Kategorien, die keiner Gruppe angehören)
+        const desiredOrder = [
+            'fire', 'police', 'ambulance', 'thw', 'riot_police', 'water_rescue',
+            'mountain', 'coastal', 'airport', 'factory_fire_brigade', 'criminal_investigation', 'seg_medical_service'
+        ];
 
-        // Für jede Kategorie in der gewünschten Reihenfolge einen Button erstellen
         desiredOrder.forEach(category => {
-            if (categories.has(category)) {  // Nur Kategorien, die auch existieren
+            if (categories.has(category) && !isCategoryInAnyGroup(category)) {
                 const button = document.createElement('button');
-                button.textContent = customCategoryLabels[category] || category; // Benutzerdefinierte Beschriftung
+                button.textContent = customCategoryLabels[category] || category;
                 button.classList.add('btn', 'btn-xs');
                 button.style.margin = '2px';
-
-                // Design der Buttons an das aktuelle Design anpassen
                 styleButtonForCurrentTheme(button);
-
                 button.addEventListener('click', () => {
-                    console.log(`Button für Kategorie "${category}" wurde geklickt.`);
-                    // Filter anwenden
                     filterMissionListByCategory(category);
-
-                    // Aktiven Button visualisieren (grün)
                     setActiveButton(button);
                 });
-
                 buttonContainer.appendChild(button);
             }
         });
 
+        // Erstelle Buttons für Kategorie-Gruppen
+        for (const [groupName, groupCategories] of Object.entries(categoryGroups)) {
+            const groupButton = document.createElement('button');
+            groupButton.textContent = groupName;
+            groupButton.classList.add('btn', 'btn-xs');
+            groupButton.style.margin = '2px';
+            styleButtonForCurrentTheme(groupButton);
+            groupButton.addEventListener('click', () => {
+                filterMissionListByCategoryGroup(groupCategories);
+                setActiveButton(groupButton);
+            });
+            buttonContainer.appendChild(groupButton);
+        }
+
         // Reset-Button erstellen
         const resetButton = document.createElement('button');
         resetButton.textContent = 'Alle anzeigen';
-        resetButton.classList.add('btn', 'btn-xs', 'btn-primary');  // 'primary' für den Hintergrund
+        resetButton.classList.add('btn', 'btn-xs', 'btn-primary');
         resetButton.style.margin = '2px';
         resetButton.addEventListener('click', () => {
-            console.log("Reset-Button wurde geklickt.");
             resetMissionList();
-            // Reset: Kein aktiver Filter-Button
             resetActiveButton();
         });
 
-        // Reset-Button zum Container hinzufügen
         buttonContainer.appendChild(resetButton);
-
-        // Button-Container einfügen
         searchInput.parentNode.insertBefore(buttonContainer, searchInput);
+    }
+
+    // Funktion, um zu überprüfen, ob eine Kategorie Teil einer Gruppe ist
+    function isCategoryInAnyGroup(category) {
+        return Object.values(categoryGroups).some(group => group.includes(category));
     }
 
     // Funktion, um die Buttons dem Design anzupassen
     function styleButtonForCurrentTheme(button) {
         if (isDarkMode) {
-            // Dunkles Design: Dunkler Hintergrund, helle Schrift
-            button.style.backgroundColor = '#333';  // Dunkler Hintergrund
-            button.style.color = '#fff';  // Helle Schriftfarbe
-            button.style.border = '1px solid #555';  // Dunkler Rand
+            button.style.backgroundColor = '#333';
+            button.style.color = '#fff';
+            button.style.border = '1px solid #555';
         } else {
-            // Helles Design: Weißer Hintergrund, dunkle Schrift
-            button.style.backgroundColor = '#fff';  // Weißer Hintergrund
-            button.style.color = '#333';  // Dunkle Schriftfarbe
-            button.style.border = '1px solid #ccc';  // Heller Rand
+            button.style.backgroundColor = '#fff';
+            button.style.color = '#333';
+            button.style.border = '1px solid #ccc';
         }
     }
 
-    // Funktion, um die Einsatzliste nach Kategorie zu filtern
+    // Funktion, um die Einsatzliste nach einer Kategorie zu filtern
     function filterMissionListByCategory(category) {
         console.clear();
         console.log(`Filtern der Einsätze nach Kategorie: ${category}`);
@@ -200,61 +212,67 @@
         const missionElements = document.querySelectorAll('.missionSideBarEntry');
         missionElements.forEach(element => {
             const missionId = element.getAttribute('mission_type_id');
-
             if (missionCategoryMap.has(missionId)) {
                 const categories = missionCategoryMap.get(missionId);
                 if (categories.includes(category)) {
-                    console.log(`Einsatz ID ${missionId} wird angezeigt.`);
-                    element.style.display = ''; // Einblenden
+                    element.style.display = '';
                 } else {
-                    console.log(`Einsatz ID ${missionId} wird ausgeblendet.`);
-                    element.style.display = 'none'; // Ausblenden
+                    element.style.display = 'none';
                 }
             } else {
-                console.log(`Einsatz ID ${missionId} hat keine zugewiesene Kategorie und wird ausgeblendet.`);
-                element.style.display = 'none'; // Ausblenden, wenn keine Kategorie vorhanden
+                element.style.display = 'none';
+            }
+        });
+    }
+
+    // Funktion, um die Einsatzliste nach einer Gruppe von Kategorien zu filtern
+    function filterMissionListByCategoryGroup(categoriesGroup) {
+        console.clear();
+        console.log(`Filtern der Einsätze nach den Kategorien: ${categoriesGroup.join(", ")}`);
+
+        const missionElements = document.querySelectorAll('.missionSideBarEntry');
+        missionElements.forEach(element => {
+            const missionId = element.getAttribute('mission_type_id');
+            if (missionCategoryMap.has(missionId)) {
+                const missionCategories = missionCategoryMap.get(missionId);
+                const match = categoriesGroup.some(category => missionCategories.includes(category));
+
+                if (match) {
+                    element.style.display = '';
+                } else {
+                    element.style.display = 'none';
+                }
+            } else {
+                element.style.display = 'none';
             }
         });
     }
 
     // Funktion, um alle Einsätze anzuzeigen (Reset)
     function resetMissionList() {
-        console.clear();
-        console.log("Alle Einsätze werden angezeigt.");
-
         const missionElements = document.querySelectorAll('.missionSideBarEntry');
         missionElements.forEach(element => {
-            element.style.display = ''; // Alle anzeigen
+            element.style.display = '';
         });
     }
 
     // Funktion, um den aktiven Filter-Button grün zu färben
     function setActiveButton(button) {
-        console.log("Aktiviere Filter-Button.");
-
-        // Falls bereits ein aktiver Button existiert, setze ihn zurück
         if (activeCategoryButton) {
-            console.log("Setze den vorherigen aktiven Button zurück.");
-            styleButtonForCurrentTheme(activeCategoryButton); // Den Stil für das aktuelle Design wiederherstellen
+            styleButtonForCurrentTheme(activeCategoryButton);
         }
 
-        // Aktuellen Button grün färben
-        button.style.backgroundColor = '#28a745';  // Grün
-        button.style.color = '#fff';  // Weiße Schrift
-
-        // Speichere den aktiven Button
+        button.style.backgroundColor = '#28a745';
+        button.style.color = '#fff';
         activeCategoryButton = button;
     }
 
     // Funktion, um den aktiven Button zurückzusetzen
     function resetActiveButton() {
-        console.log("Setze den aktiven Button zurück.");
-
         if (activeCategoryButton) {
-            // Stelle sicher, dass der Hintergrund und die Schriftfarbe zurückgesetzt werden
-            styleButtonForCurrentTheme(activeCategoryButton); // Den Stil für das aktuelle Design wiederherstellen
+            styleButtonForCurrentTheme(activeCategoryButton);
         }
-        activeCategoryButton = null;  // Kein aktiver Button mehr
+        activeCategoryButton = null;
     }
 
     // Initialisierung
