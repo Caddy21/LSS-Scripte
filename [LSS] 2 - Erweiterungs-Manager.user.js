@@ -17,14 +17,12 @@
 
 // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
 // Prüfen ob ein limitierter Ausbau gebaut werden kann
-
 // Prüfen ob bei Nichtpremium User bereits eine Erweiterung gebaut wird, wenn ja, dann Erweiterungsausbau abbrechen, wenn nein, dann starten.
 // Credits und Coins automatisch in die Tabelle einfügen lassen aus der API herraus wenn möglich
 // Lagerräume einbauen
 
 (function() {
     'use strict';
-
     // Manuelle Konfiguration der Erweiterungen
 
     // Hier könnt Ihr auswählen welche Erweiterung in der Tabelle angezeigt werden soll, dafür die nicht benötigten einfach mit // ausklammern.
@@ -402,6 +400,33 @@
     // Theme initial anwenden
     applyTheme();
 
+    // Funktion zum Formatieren der Zahl
+    function formatNumber(number) {
+        return new Intl.NumberFormat('de-DE').format(number);
+    }
+
+    // Funktion zum Abrufen des CSRF-Tokens
+    function getCSRFToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    // Funktion zur Prüfung von Premium und Hinweis
+    function checkPremiumAndShowHint() {
+        if (typeof user_premium !== 'undefined') {
+            console.log("Die Variable 'user_premium' ist definiert."); // Debugging-Info
+
+            if (!user_premium) {
+                console.warn("Der Nutzer hat keinen Premium-Account.");
+                alert("Hinweis: Als Nicht-Premium-Nutzer kannst du maximal 2 Ausbauten pro Gebäude starten:\n\n- 1 Ausbau aktiv\n- 1 Ausbau in der Warteschlange\n\nBei Kleinwachen kannst du maximal einen Ausbau haben");
+            } else {
+                console.log("Der Nutzer hat einen Premium-Account.");
+            }
+        } else {
+            console.error("Die Variable 'user_premium' ist nicht definiert. Bitte prüfe, ob sie korrekt geladen wurde.");
+        }
+    }
+
     // Button im Profilmenü hinzufügen
     function addMenuButton() {
         const profileMenu = document.querySelector('#menu_profile + .dropdown-menu');
@@ -420,21 +445,26 @@
 
                 menuButton.addEventListener('click', (e) => {
                     e.preventDefault();
+                    checkPremiumAndShowHint(); // Hinweis überprüfen und anzeigen
                     fetchBuildingsAndRender(); // API-Daten abrufen, wenn das Script geöffnet wird
+                    const lightbox = document.getElementById('extension-lightbox');
                     lightbox.style.display = 'flex';
-
                 });
             }
-              } else {
-                  console.error('Profilmenü (#menu_profile + .dropdown-menu) nicht gefunden. Der Button konnte nicht hinzugefügt werden.');
+        } else {
+            console.error('Profilmenü (#menu_profile + .dropdown-menu) nicht gefunden. Der Button konnte nicht hinzugefügt werden.');
         }
     }
 
     // Schließen-Button-Funktionalität
     document.getElementById('close-extension-helper').addEventListener('click', () => {
+        const lightbox = document.getElementById('extension-lightbox');
         lightbox.style.display = 'none';
     });
-    
+
+    // Initial den Button hinzufügen
+    addMenuButton();
+
     function renderMissingExtensions(buildings) {
         const list = document.getElementById('extension-list');
         list.innerHTML = '';
@@ -577,16 +607,6 @@
         });
     }
 
-    // Funktion zum Formatieren der Zahl
-    function formatNumber(number) {
-        return new Intl.NumberFormat('de-DE').format(number);
-    }
-
-    // Funktion zum Abrufen des CSRF-Tokens
-    function getCSRFToken() {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? meta.getAttribute('content') : '';
-    }
 
     // Funktion, um die Auswahl der Zahlungsmethode anzuzeigen
     function showCurrencySelection(buildingId, extensionId, cost, coins) {
@@ -753,7 +773,7 @@
             missingExtensions.forEach((extension, extIndex) => {
                 setTimeout(() => {
                     buildExtension(building.id, extension.id, currency);
-                }, (index * missingExtensions.length + extIndex) * 2000); // 1000ms Verzögerung
+                }, (index * missingExtensions.length + extIndex) * 3000); // 3000ms Verzögerung
             });
         });
     }
