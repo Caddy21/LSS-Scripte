@@ -59,7 +59,7 @@
           "FHF": ['airport', 'airport_specialization'],
           "WF": ['factory_fire_brigade'],
           "SEG": ['seg', 'seg_medical_service'],
-  
+        
           // Weitere Gruppen hinzufügen, falls gewünscht
       };
   
