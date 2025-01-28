@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 2 - Erweiterungs-Manager
+// @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Listet Wachen auf, bei denen bestimmte Erweiterungen fehlen und ermöglicht das Hinzufügen dieser Erweiterungen.
@@ -8,8 +8,6 @@
 // @grant        GM_xmlhttpRequest
 // @connect      api.lss-manager.de
 // @connect      leitstellenspiel.de
-// @downloadURL  https://github.com/Caddy21/LSS-Scripte/raw/main/%5BLSS%5D%202%20-%20Erweiterungs-Manager.user.js
-// @updateURL    https://github.com/Caddy21/LSS-Scripte/raw/main/%5BLSS%5D%202%20-%20Erweiterungs-Manager.user.js
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @run-at       document-end
 // ==/UserScript==
@@ -19,24 +17,13 @@
 
 // Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
 // Prüfen ob ein limitierter Ausbau gebaut werden kann
-// Abfragen ob USER Premium hat oder nicht (var user_premium) > Hinweiß für NICHT PremiumUser einbauen. 
+
 // Prüfen ob bei Nichtpremium User bereits eine Erweiterung gebaut wird, wenn ja, dann Erweiterungsausbau abbrechen, wenn nein, dann starten.
 // Credits und Coins automatisch in die Tabelle einfügen lassen aus der API herraus wenn möglich
 // Lagerräume einbauen
 
 (function() {
     'use strict';
-
-    // Funktion zum Formatieren der Zahl
-    function formatNumber(number) {
-        return new Intl.NumberFormat('de-DE').format(number);
-    }
-
-    // Funktion zum Abrufen des CSRF-Tokens
-    function getCSRFToken() {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? meta.getAttribute('content') : '';
-    }
 
     // Manuelle Konfiguration der Erweiterungen
 
@@ -447,6 +434,7 @@
     document.getElementById('close-extension-helper').addEventListener('click', () => {
         lightbox.style.display = 'none';
     });
+    
     function renderMissingExtensions(buildings) {
         const list = document.getElementById('extension-list');
         list.innerHTML = '';
@@ -589,6 +577,16 @@
         });
     }
 
+    // Funktion zum Formatieren der Zahl
+    function formatNumber(number) {
+        return new Intl.NumberFormat('de-DE').format(number);
+    }
+
+    // Funktion zum Abrufen des CSRF-Tokens
+    function getCSRFToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
 
     // Funktion, um die Auswahl der Zahlungsmethode anzuzeigen
     function showCurrencySelection(buildingId, extensionId, cost, coins) {
@@ -624,7 +622,7 @@
 
         document.body.appendChild(selectionDiv);
     }
-    
+
     // Funktion um die aktuelle Credits und Coins des USERs abzurufen
     async function getUserCredits() {
         try {
@@ -643,7 +641,7 @@
             throw error;
         }
     }
-    
+
     // Funktion um eine Erweiterung in einem Gebäude zu bauen
     async function confirmAndBuildExtension(buildingId, extensionId, amount, currency) {
         try {
@@ -692,7 +690,7 @@
 
         });
     }
-    
+
     // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen nach Bestätigung
     async function confirmAndBuildAllExtensions(buildingType, group) {
         try {
@@ -759,7 +757,7 @@
             });
         });
     }
-    
+
     // Daten von der API abrufen und fehlende Erweiterungen anzeigen
     function fetchBuildingsAndRender() {
         fetch('https://www.leitstellenspiel.de/api/buildings')
