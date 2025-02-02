@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Einsatzkategorienfilter
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.2
 // @description  Filtert die Einsatzliste nach Kategorien
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
