@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Einsatzkategorienfilter
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.0
 // @description  Filtert die Einsatzliste nach Kategorien
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -50,7 +50,7 @@
         "FF": ['fire'],
         "POL": ['police'],
         "RD": ['ambulance'],
-        "THW": ['thw', 'energy_supply', 'energy_supply_2'],
+        "THW": ['thw'],
         "Be-Pol": ['criminal_investigation', 'riot_police'],
         "WR": ['water_rescue'],
         "BR": ['mountain'],
@@ -58,6 +58,7 @@
         "FHF": ['airport', 'airport_specialization'],
         "WF": ['factory_fire_brigade'],
         "SEG": ['seg', 'seg_medical_service'],
+        "Stromausfälle": ['energy_supply', 'energy_supply_2'],
     };
 
     // Funktion zum Überprüfen, ob eine Kategorie in einer der Gruppen enthalten ist
@@ -71,10 +72,10 @@
         const isDataExpired = now - storedTimestamp > updateInterval;
 
         if (!isDataExpired) {
-            console.info("Lade Einsatzdaten aus der GM-Speicherung...");
+            //            console.info("Lade Einsatzdaten aus der GM-Speicherung...");
             missions = JSON.parse(await GM.getValue(storageKey, "{}"));
         } else {
-            console.info("Lade Einsatzdaten aus der API...");
+            //            console.info("Lade Einsatzdaten aus der API...");
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 console.error("Fehler beim Abrufen der API:", response.statusText);
@@ -83,10 +84,10 @@
             missions = await response.json();
             await GM.setValue(storageKey, JSON.stringify(missions));
             await GM.setValue(storageTimestampKey, now);
-            console.info("Einsatzdaten wurden aus der API geladen und in der GM-Speicherung gespeichert.");
+            //            console.info("Einsatzdaten wurden aus der API geladen und in der GM-Speicherung gespeichert.");
         }
 
-        console.info("Erstelle Kategorien und Mapping...");
+        //        console.info("Erstelle Kategorien und Mapping...");
         for (const mission of Object.values(missions)) {
             if (mission.mission_categories && Array.isArray(mission.mission_categories)) {
                 mission.mission_categories.forEach(category => categories.add(category));
@@ -94,10 +95,10 @@
             missionCategoryMap.set(mission.id, mission.mission_categories || []);
         }
 
-        console.info("Lade die Benutzereinstellungen...");
+        //        console.info("Lade die Benutzereinstellungen...");
         await loadSettings();
 
-        console.info("Erstelle die Kategorie-Buttons...");
+        //        console.info("Erstelle die Kategorie-Buttons...");
         createCategoryButtons();
     }
 
@@ -106,12 +107,12 @@
             const response = await fetch(settingsApiUrl);
             const settings = await response.json();
 
-            console.log("API Antwortstruktur: ", settings);
+            //            console.log("API Antwortstruktur: ", settings);
 
             if (settings && settings.design_mode !== undefined) {
                 const designMode = settings.design_mode;
                 isDarkMode = (designMode === 1 || designMode === 4);
-                console.info("Designmodus aktiviert:", isDarkMode ? "Dunkelmodus" : "Hellmodus");
+                //                console.info("Designmodus aktiviert:", isDarkMode ? "Dunkelmodus" : "Hellmodus");
             } else {
                 console.error("Die erwartete Struktur wurde in der API-Antwort nicht gefunden.");
             }
@@ -164,7 +165,7 @@
                 button.title = customTooltips[category] || `Zeigt Einsätze der Kategorie ${customCategoryLabels[category] || category}`;
 
                 button.addEventListener('click', () => {
-                    console.info(`Kategoriefilter aktiviert: ${category}`);
+                    //                    console.info(`Kategoriefilter aktiviert: ${category}`);
                     filterMissionListByCategory(category);
                     setActiveButton(button);
                 });
@@ -183,7 +184,7 @@
             groupButton.title = groupTooltip;
 
             groupButton.addEventListener('click', () => {
-                console.info(`Kategoriegruppen-Filter aktiviert: ${groupName}`);
+                //                console.info(`Kategoriegruppen-Filter aktiviert: ${groupName}`);
                 filterMissionListByCategoryGroup(groupCategories);
                 setActiveButton(groupButton);
             });
@@ -191,15 +192,15 @@
         }
 
         const unoButton = document.createElement('button');
-        unoButton.textContent = 'VGE/ÜO';
+        unoButton.textContent = 'VGSL/ÜO';
         unoButton.classList.add('btn', 'btn-xs');
         unoButton.style.margin = '2px';
         styleButtonForCurrentTheme(unoButton);
 
-        unoButton.title = customTooltips['VGE/ÜO'] || "Zeigt alle VGE's und Übergabeorte an";
+        unoButton.title = customTooltips['VGSL/ÜO'] || "Zeigt Verbandsgroßschadenslagen und Übergabeorte an";
 
         unoButton.addEventListener('click', () => {
-            console.info("VGE/ÜO-Filter aktiviert: Zeige alle VGE's und Übergabeorte an");
+            //            console.info("VGE/ÜO-Filter aktiviert: Zeige alle VGE's und Übergabeorte an");
             filterMissionListWithoutCategory();
             setActiveButton(unoButton);
         });
@@ -213,7 +214,7 @@
         resetButton.title = customTooltips['reset'] || "Alle Einsätze anzeigen";
 
         resetButton.addEventListener('click', () => {
-            console.info("Reset-Filter aktiviert: Alle Einsätze anzeigen");
+            //            console.info("Reset-Filter aktiviert: Alle Einsätze anzeigen");
             resetMissionList();
             resetActiveButton();
         });
@@ -229,25 +230,27 @@
     }
 
     function filterMissionListByCategory(category) {
-    console.clear();
-    console.log(`Filtern der Einsätze nach Kategorie: ${category}`);
+        console.clear();
+        console.log(`Filtern der Einsätze nach Kategorie: ${category}`);
 
-    const missionElements = document.querySelectorAll('.missionSideBarEntry');
-    missionElements.forEach(element => {
-        const missionId = element.getAttribute('mission_type_id');
-        if (missionCategoryMap.has(missionId)) {
-            const categories = missionCategoryMap.get(missionId);
-            if (categories.includes(category)) {
-                element.style.display = '';
-                console.log(`Einsatz-ID ${missionId} bleibt sichtbar (Kategorie: ${category})`);
+        const specialMissionIds = [41, 43, 59, 75, 99, 207, 221, 222, 256, 350]; // Spezielle Einsatz-IDs
+
+        const missionElements = document.querySelectorAll('.missionSideBarEntry');
+        missionElements.forEach(element => {
+            const missionId = element.getAttribute('mission_type_id');
+            if (missionCategoryMap.has(missionId)) {
+                const categories = missionCategoryMap.get(missionId);
+                if (categories.includes(category) && !specialMissionIds.includes(parseInt(missionId))) {
+                    element.style.display = '';
+                    console.log(`Einsatz-ID ${missionId} bleibt sichtbar (Kategorie: ${category})`);
+                } else {
+                    element.style.display = 'none';
+                }
             } else {
                 element.style.display = 'none';
             }
-        } else {
-            element.style.display = 'none';
-        }
-    });
-}
+        });
+    }
 
 
     function styleButtonForCurrentTheme(button) {
@@ -263,50 +266,53 @@
     }
 
     function filterMissionListByCategoryGroup(categoriesGroup) {
-    console.clear();
-    console.log(`Filtern der Einsätze nach den Kategorien: ${categoriesGroup.join(", ")}`);
+        console.clear();
+        console.log(`Filtern der Einsätze nach den Kategorien: ${categoriesGroup.join(", ")}`);
 
-    const missionElements = document.querySelectorAll('.missionSideBarEntry');
-    missionElements.forEach(element => {
-        const missionId = element.getAttribute('mission_type_id');
-        if (missionCategoryMap.has(missionId)) {
-            const missionCategories = missionCategoryMap.get(missionId);
-            const match = categoriesGroup.some(category => missionCategories.includes(category));
+        const specialMissionIds = [41, 43, 59, 75, 99, 207, 221, 222, 256, 350]; // Spezielle Einsatz-IDs
 
-            if (match) {
-                element.style.display = '';
-                console.log(`Einsatz-ID ${missionId} bleibt sichtbar (Kategorieguppe: ${categoriesGroup.join(", ")})`);
+        const missionElements = document.querySelectorAll('.missionSideBarEntry');
+        missionElements.forEach(element => {
+            const missionId = element.getAttribute('mission_type_id');
+            if (missionCategoryMap.has(missionId)) {
+                const missionCategories = missionCategoryMap.get(missionId);
+                const match = categoriesGroup.some(category => missionCategories.includes(category));
+
+                if (match && !specialMissionIds.includes(parseInt(missionId))) {
+                    element.style.display = '';
+                    console.log(`Einsatz-ID ${missionId} bleibt sichtbar (Kategorieguppe: ${categoriesGroup.join(", ")})`);
+                } else {
+                    element.style.display = 'none';
+                }
             } else {
                 element.style.display = 'none';
             }
-        } else {
-            element.style.display = 'none';
-        }
-    });
-}
-
+        });
+    }
 
     function filterMissionListWithoutCategory() {
-    console.clear();
-    console.log("Filtern der Einsätze ohne Kategorie");
+        console.clear();
+        console.log("Filtern der Einsätze ohne Kategorie");
 
-    const missionElements = document.querySelectorAll('.missionSideBarEntry');
-    missionElements.forEach(element => {
-        const missionId = element.getAttribute('mission_type_id');
-        if (missionCategoryMap.has(missionId)) {
-            const categories = missionCategoryMap.get(missionId);
-            if (categories.length === 0) {
-                element.style.display = '';
-                console.log(`Einsatz-ID ${missionId} bleibt sichtbar (ohne Kategorie)`);
+        const specialMissionIds = [41, 43, 59, 75, 99, 207, 221, 222, 256, 350]; // Spezielle Einsatz-IDs
+
+        const missionElements = document.querySelectorAll('.missionSideBarEntry');
+        missionElements.forEach(element => {
+            const missionId = element.getAttribute('mission_type_id');
+            if (missionCategoryMap.has(missionId)) {
+                const categories = missionCategoryMap.get(missionId);
+                if (categories.length === 0 || specialMissionIds.includes(parseInt(missionId))) {
+                    element.style.display = '';
+                    // console.log(`Einsatz-ID ${missionId} bleibt sichtbar (ohne Kategorie oder spezielle ID)`);
+                } else {
+                    element.style.display = 'none';
+                }
             } else {
-                element.style.display = 'none';
+                element.style.display = '';
+                console.log(`Einsatz-ID ${missionId} bleibt sichtbar (keine Kategorien zugewiesen oder spezielle ID)`);
             }
-        } else {
-            element.style.display = '';
-            console.log(`Einsatz-ID ${missionId} bleibt sichtbar (keine Kategorien zugewiesen)`);
-        }
-    });
-}
+        });
+    }
 
     function resetMissionList() {
         const missionElements = document.querySelectorAll('.missionSideBarEntry');
@@ -332,6 +338,6 @@
         activeCategoryButton = null;
     }
 
-    console.log("Starte das Script...");
+    //    console.log("Starte das Script...");
     loadMissionData();
 })();
