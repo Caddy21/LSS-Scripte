@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 10 - Auszeichnungsverwalter
+// @name         [LSS] Auszeichnungssortierer
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Fügt Tabs bei den Auszeichnungen hinzu zur besseren Übersicht
