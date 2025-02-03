@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Auszeichnungssortierer
+// @name         [LSS] 10 - Auszeichnungsverwalter
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Fügt Tabs bei den Auszeichnungen hinzu zur besseren Übersicht
@@ -15,20 +15,20 @@
 (function() {
     'use strict';
 
-    console.log("Skript gestartet.");
+//    console.log("Skript gestartet.");
 
     // Funktion zum Überwachen des DOMs auf Änderungen
     const observer = new MutationObserver(() => {
         let iframe = document.querySelector("iframe[id^='lightbox_iframe_']");
         if (iframe && !iframe.hasAttribute('data-processed')) { // Verhindern, dass der iFrame mehrfach verarbeitet wird
-            console.log("iFrame gefunden:", iframe);
+//            console.log("iFrame gefunden:", iframe);
             iframe.onload = function() {
-                console.log("iFrame vollständig geladen.");
+//                console.log("iFrame vollständig geladen.");
                 processIframe(iframe); // Verarbeitet das iFrame, wenn es vollständig geladen ist
                 iframe.setAttribute('data-processed', 'true'); // Markiert den iFrame als verarbeitet
             };
         } else {
-            console.log("Kein iFrame oder bereits verarbeitet.");
+//            console.log("Kein iFrame oder bereits verarbeitet.");
         }
     });
 
@@ -44,11 +44,11 @@
 
         // Warten, bis der Inhalt des iFrames vollständig geladen ist
         if (iframeDoc.readyState === "complete") {
-            console.log("iFrame-Dokument vollständig geladen.");
+//            console.log("iFrame-Dokument vollständig geladen.");
             addTabs(iframeDoc); // Tabs hinzufügen
         } else {
             iframe.onload = function() {
-                console.log("iFrame-Dokument vollständig geladen (onload).");
+//                console.log("iFrame-Dokument vollständig geladen (onload).");
                 addTabs(iframeDoc); // Wenn iFrame nachgeladen wird, füge Tabs hinzu
             };
         }
@@ -56,7 +56,7 @@
 
     // Funktion zum Hinzufügen der Tabs mit Jahreszahlen, "Allgemein" und "VIP"
     function addTabs(iframeDoc) {
-        console.log("Beginne mit Tab-Erstellung...");
+//        console.log("Beginne mit Tab-Erstellung...");
 
         let years = new Set();
         let generalItems = [];
@@ -66,24 +66,24 @@
         // Jahreszahlen auslesen
         let headers = iframeDoc.querySelectorAll(".grid-item-header .panel-title");
         if (headers.length === 0) {
-            console.warn("Keine Auszeichnungen im iFrame gefunden.");
+//            console.warn("Keine Auszeichnungen im iFrame gefunden.");
         }
 
         headers.forEach(header => {
             let text = header.innerText.trim();
-            console.log(`Gefundener Text in Auszeichnung: ${text}`);
+//            console.log(`Gefundener Text in Auszeichnung: ${text}`);
 
             // Überprüfen, ob eine Jahreszahl vorhanden ist
             let yearMatch = text.match(/\b(20\d{2})\b/); // Jahreszahlen suchen
             if (yearMatch) {
                 years.add(yearMatch[1]);
-                console.log(`Jahreszahl gefunden: ${yearMatch[1]}`);
+//                console.log(`Jahreszahl gefunden: ${yearMatch[1]}`);
             } else if (text.includes("VIP")) {
                 vipItems.push(header.closest(".grid-item"));
-                console.log(`"VIP" Auszeichnung gefunden, wird unter "VIP" angezeigt.`);
+//                console.log(`"VIP" Auszeichnung gefunden, wird unter "VIP" angezeigt.`);
             } else {
                 generalItems.push(header.closest(".grid-item"));
-                console.log(`Keine Jahreszahl gefunden, wird unter "Allgemein" angezeigt.`);
+//                console.log(`Keine Jahreszahl gefunden, wird unter "Allgemein" angezeigt.`);
             }
         });
 
@@ -94,7 +94,7 @@
 
             if (goldLabel) {
                 goldItems.push(item); // In den Gold-Tab verschieben
-                console.log(`Gold-Auszeichnung gefunden und in "Gold" verschoben: ${item.querySelector(".panel-title").innerText}`);
+//                console.log(`Gold-Auszeichnung gefunden und in "Gold" verschoben: ${item.querySelector(".panel-title").innerText}`);
                 return false; // Entferne aus "Allgemein"
             }
             return true; // Behalte in "Allgemein"
@@ -103,13 +103,13 @@
 
 
         if (years.size === 0 && generalItems.length === 0 && vipItems.length === 0) {
-            console.warn("Keine Jahreszahlen, keine Allgemein-Auszeichnungen und keine VIP-Auszeichnungen gefunden, breche ab.");
+//            console.warn("Keine Jahreszahlen, keine Allgemein-Auszeichnungen und keine VIP-Auszeichnungen gefunden, breche ab.");
             return;
         }
 
-        console.log(`Erkannte Jahreszahlen: ${Array.from(years).join(', ')}`);
-        console.log(`"Allgemein"-Auszeichnungen: ${generalItems.length}`);
-        console.log(`"VIP"-Auszeichnungen: ${vipItems.length}`);
+//        console.log(`Erkannte Jahreszahlen: ${Array.from(years).join(', ')}`);
+//        console.log(`"Allgemein"-Auszeichnungen: ${generalItems.length}`);
+//        console.log(`"VIP"-Auszeichnungen: ${vipItems.length}`);
 
         // Prüfen, ob der Tab-Container im iFrame bereits existiert, falls nicht, erstellen
         let tabContainer = iframeDoc.querySelector("#year-tabs");
@@ -203,7 +203,7 @@
             if (header) {
                 header.insertAdjacentElement("afterend", tabContainer);
                 header.insertAdjacentElement("afterend", tabContent);
-                console.log("[Tampermonkey] Tabs erfolgreich eingefügt!");
+//                console.log("[Tampermonkey] Tabs erfolgreich eingefügt!");
             } else {
                 console.warn("Kein Header gefunden, Tabs wurden nicht eingefügt.");
             }
@@ -253,7 +253,7 @@
                 }
             });
         } else {
-            console.log("Tab-Container existiert bereits.");
+//            console.log("Tab-Container existiert bereits.");
         }
     }
 })();
