@@ -58,6 +58,7 @@
         let years = new Set();
         let generalItems = [];
         let vipItems = [];
+        let goldItems = [];
 
         // Jahreszahlen auslesen
         let headers = iframeDoc.querySelectorAll(".grid-item-header .panel-title");
@@ -82,6 +83,21 @@
                 console.log(`[Tampermonkey] Keine Jahreszahl gefunden, wird unter "Allgemein" angezeigt.`);
             }
         });
+
+
+        // Suche nach "Gold"-Auszeichnungen und entferne sie aus "Allgemein"
+        generalItems = generalItems.filter(item => {
+            let goldLabel = item.querySelector(".grid-item-text .label-award-gold");
+
+            if (goldLabel) {
+                goldItems.push(item); // In den Gold-Tab verschieben
+                console.log(`[Tampermonkey] Gold-Auszeichnung gefunden und in "Gold" verschoben: ${item.querySelector(".panel-title").innerText}`);
+                return false; // Entferne aus "Allgemein"
+            }
+            return true; // Behalte in "Allgemein"
+        });
+
+
 
         if (years.size === 0 && generalItems.length === 0 && vipItems.length === 0) {
             console.warn("[Tampermonkey] Keine Jahreszahlen, keine Allgemein-Auszeichnungen und keine VIP-Auszeichnungen gefunden, breche ab.");
@@ -119,6 +135,12 @@
             vipTab.innerHTML = `<a href="#vip" aria-controls="vip" role="tab" data-toggle="tab" aria-expanded="false">VIP</a>`;
             tabNav.appendChild(vipTab);
 
+            // "Gold"-Tab hinzufügen
+            let goldTab = iframeDoc.createElement("li");
+            goldTab.setAttribute("role", "presentation");
+            goldTab.innerHTML = `<a href="#gold" aria-controls="gold" role="tab" data-toggle="tab" aria-expanded="false">Gold</a>`;
+            tabNav.appendChild(goldTab);
+
             // Jahreszahl-Tabs hinzufügen
             years = Array.from(years).sort().reverse(); // Sortieren absteigend
             years.forEach(year => {
@@ -147,6 +169,13 @@
             vipTabContent.className = "tab-pane";
             vipTabContent.innerHTML = vipItems.map(item => item.outerHTML).join('');
             tabContent.appendChild(vipTabContent);
+
+            // "Gold"-Tab-Inhalt hinzufügen
+            let goldTabContent = iframeDoc.createElement("div");
+            goldTabContent.id = "gold";
+            goldTabContent.className = "tab-pane";
+            goldTabContent.innerHTML = goldItems.map(item => item.outerHTML).join('');
+            tabContent.appendChild(goldTabContent);
 
             // Jahreszahl-Inhalte hinzufügen
             years.forEach(year => {
@@ -190,7 +219,6 @@
             // Auszeichnungen im "VIP"-Tab anzeigen
             vipItems.forEach(item => item.style.display = "block");
 
-            // Klick-Event für Tabs hinzufügen
             $(tabNav).find("li").on("click", function(event) {
                 let targetTabId = $(this).find("a").attr("href").substr(1); // Tab-ID extrahieren
                 $(tabNav).find("li").removeClass("active"); // Entferne "active" von allen Tabs
@@ -201,11 +229,13 @@
                 // Alle Auszeichnungen verstecken
                 allItems.forEach(item => item.style.display = "none");
 
-                // Nur die Auszeichnungen für das ausgewählte Jahr, "Allgemein" oder "VIP" anzeigen
+                // Logik für verschiedene Tabs
                 if (targetTabId === "general") {
                     generalItems.forEach(item => item.style.display = "block");
                 } else if (targetTabId === "vip") {
                     vipItems.forEach(item => item.style.display = "block");
+                } else if (targetTabId === "gold") {
+                    goldItems.forEach(item => item.style.display = "block");
                 } else {
                     let selectedYear = targetTabId.replace("profile_", "");
                     let yearItems = [];
@@ -224,3 +254,4 @@
         }
     }
 })();
+
