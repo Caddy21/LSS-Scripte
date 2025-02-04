@@ -16,6 +16,7 @@
 // ToDo-Liste
 
 // Prüfen ob ein limitierter Ausbau gebaut werden kann
+// Prüfen ob bei Nichtpremium User bereits das Limit an Erweiterugen vorhanden ist, wenn ja, dann Button deaktivieren, wenn nein, dann normal lassen.
 // Lagerräume einbauen
 
 
@@ -690,7 +691,43 @@
         }
     }
 
-    // Funktion um eine Erweiterung in einem Gebäude zu bauen
+    let buildingsData = []; // Globale Variable, um die abgerufenen Gebäudedaten zu speichern
+
+    // Funktion zum Abrufen der Gebäudedaten
+    function fetchBuildingsAndRender() {
+        fetch('https://www.leitstellenspiel.de/api/buildings')
+            .then(response => {
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der Daten');
+            }
+            return response.json();
+        })
+            .then(data => {
+            console.log('Abgerufene Gebäudedaten:', data); // Protokolliere die abgerufenen Daten
+            buildingsData = data; // Speichern der Gebäudedaten in einer globalen Variablen
+            renderMissingExtensions(data); // Weiterverarbeiten der abgerufenen Daten
+        })
+            .catch(error => {
+            console.error('Es ist ein Fehler aufgetreten:', error);
+            const list = document.getElementById('extension-list');
+            list.innerHTML = 'Fehler beim Laden der Gebäudedaten.';
+        });
+    }
+
+
+    // Funktion, um den Namen eines Gebäudes anhand der ID zu bekommen
+    function getBuildingCaption(buildingId) {
+        console.log('Übergebene buildingId:', buildingId);  // Überprüfen, welche ID übergeben wird
+        const building = buildingsData.find(b => String(b.id) === String(buildingId));
+
+        if (building) {
+            console.log('Gefundenes Gebäude:', building);  // Protokolliere das gefundene Gebäude
+            return building.caption; // Direkt den Gebäudennamen zurückgeben
+        }
+        console.log('Gebäude nicht gefunden. ID:', buildingId); // Wenn das Gebäude nicht gefunden wird
+        return 'Unbekanntes Gebäude';
+    }
+
     async function confirmAndBuildExtension(buildingId, extensionId, amount, currency) {
         try {
             const userInfo = await getUserCredits();
@@ -703,8 +740,15 @@
                 return;
             }
 
+            console.log('Übergebene buildingId:', buildingId);  // Ausgabe der übergebenen buildingId
+
+            // Hier die Konsolenausgabe hinzufügen, um sicherzustellen, dass buildingsData vorhanden ist
+            console.log('Aktuelle Gebäudedaten:', buildingsData);
+
             if (confirm(`Möchten Sie wirklich ${formatNumber(amount)} ${currencyText} für diese Erweiterung ausgeben?`)) {
-                buildExtension(buildingId, extensionId, currency);
+                const buildingCaption = getBuildingCaption(buildingId); // Holen des Gebäudenamens
+                console.log('Gefundener Gebäudename:', buildingCaption); // Ausgabe des abgerufenen Gebäudennamens
+                buildExtension(buildingId, extensionId, currency, buildingCaption);
             }
         } catch (error) {
             console.error('Fehler beim Überprüfen der Credits und Coins:', error);
@@ -713,7 +757,7 @@
     }
 
     // Funktion, um eine Erweiterung in einem Gebäude zu bauen
-    function buildExtension(buildingId, extensionId, currency) {
+    function buildExtension(buildingId, extensionId, currency, buildingCaption) {
         const csrfToken = getCSRFToken();
         console.log(`CSRF Token: ${csrfToken}`);
         console.log(`Building Extension: Building ID=${buildingId}, Extension ID=${extensionId}, Currency=${currency}`);
@@ -727,15 +771,14 @@
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             onload: function(response) {
-                console.log(`Erweiterung in Gebäude ${buildingId} gebaut. Response:`, response);
-                alert(`Erweiterung in Gebäude ${buildingId} gebaut.`);
+                console.log(`Erweiterung in Gebäude ${buildingCaption} gebaut. Response:`, response);
+                alert(`Erweiterung in Gebäude ${buildingCaption} gebaut.`);
                 fetchBuildingsAndRender(); // Aktualisiert die Liste nach dem Bauen
             },
             onerror: function(error) {
-                console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingId}.`, error);
-                alert(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingId}.`);
+                console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingCaption}.`, error);
+                alert(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingCaption}.`);
             }
-
         });
     }
 
@@ -803,26 +846,6 @@
                     buildExtension(building.id, extension.id, currency);
                 }, (index * missingExtensions.length + extIndex) * 3000); // 3000ms Verzögerung
             });
-        });
-    }
-
-    // Daten von der API abrufen und fehlende Erweiterungen anzeigen
-    function fetchBuildingsAndRender() {
-        fetch('https://www.leitstellenspiel.de/api/buildings')
-            .then(response => {
-            if (!response.ok) {
-                throw new Error('Fehler beim Abrufen der Daten');
-            }
-            return response.json();
-        })
-            .then(data => {
-            console.log('Gebäudedaten abgerufen:', data);
-            renderMissingExtensions(data);
-        })
-            .catch(error => {
-            console.error('Es ist ein Fehler aufgetreten:', error);
-            const list = document.getElementBy('extension-list');
-            list.innerHTML = 'Fehler beim Laden der Gebäudedaten.';
         });
     }
 
