@@ -19,8 +19,6 @@
 // Prüfen ob bei Nichtpremium User bereits das Limit an Erweiterugen vorhanden ist, wenn ja, dann Button deaktivieren, wenn nein, dann normal lassen.
 // Lagerräume einbauen
 
-
-
 (function() {
     'use strict';
     // Manuelle Konfiguration der Erweiterungen
