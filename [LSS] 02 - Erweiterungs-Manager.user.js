@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Erweiterungs-Manager
+// @name         [LSS] 02 - Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Listet Wachen auf, bei denen bestimmte Erweiterungen fehlen und ermöglicht das Hinzufügen dieser Erweiterungen.
@@ -15,9 +15,10 @@
 
 // ToDo-Liste
 
-// Prüfen ob ein limitierter Ausbau gebaut werden kann
-// Prüfen ob bei Nichtpremium User bereits das Limit an Erweiterugen vorhanden ist, wenn ja, dann Button deaktivieren, wenn nein, dann normal lassen.
+// Prüfen ob ein limitierter Ausbau gebaut werden kann.
 // Lagerräume einbauen
+
+
 
 (function() {
     'use strict';
@@ -189,10 +190,10 @@
         '6_small': [ // Polizei (Kleinwache)
             { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
             { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
-            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            //            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
+            //            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
+            //            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
+            //            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
         ],
 
         '24_normal': [ // Reiterstaffel
@@ -490,7 +491,6 @@
         return false;
     }
 
-
     // Funktion, die die Suchleiste erstellt und der Seite hinzufügt
     function addSearchBar() {
         const searchBar = document.createElement('input');
@@ -507,7 +507,6 @@
             searchBar.addEventListener('input', filterBuildings);
         }
     }
-
 
     // Funktion, die die Wachen und Erweiterungen basierend auf der Suchanfrage filtert
     function filterBuildings() {
@@ -765,16 +764,20 @@
     }
 
 
-    // Funktion, um den Namen eines Gebäudes anhand der ID zu bekommen
     function getBuildingCaption(buildingId) {
-        console.log('Übergebene buildingId:', buildingId);  // Überprüfen, welche ID übergeben wird
-        const building = buildingsData.find(b => String(b.id) === String(buildingId));
+        if (!buildingsData.length) {
+            console.warn('Gebäudedaten noch nicht geladen.');
+            return 'Daten werden geladen...';
+        }
+
+        console.log('Übergebene buildingId:', buildingId);
+        const building = buildingsData.find(b => Number(b.id) === Number(buildingId));
 
         if (building) {
-            console.log('Gefundenes Gebäude:', building);  // Protokolliere das gefundene Gebäude
-            return building.caption; // Direkt den Gebäudennamen zurückgeben
+            console.log('Gefundenes Gebäude:', building);
+            return building.caption;
         }
-        console.log('Gebäude nicht gefunden. ID:', buildingId); // Wenn das Gebäude nicht gefunden wird
+        console.warn('Gebäude nicht gefunden. ID:', buildingId);
         return 'Unbekanntes Gebäude';
     }
 
@@ -833,123 +836,123 @@
     }
 
     async function confirmAndBuildAllExtensions(buildingType, group, searchQuery = '') {
-    try {
-        const userInfo = await getUserCredits();
+        try {
+            const userInfo = await getUserCredits();
 
-        // Standardwert für searchQuery setzen, falls undefined
-        if (typeof searchQuery === 'undefined') {
-            searchQuery = '';
+            // Standardwert für searchQuery setzen, falls undefined
+            if (typeof searchQuery === 'undefined') {
+                searchQuery = '';
+            }
+
+            // Erweiterungen filtern, die der Suchanfrage entsprechen
+            const filteredGroup = group.map(({ building, missingExtensions }) => {
+                // Filtert nur die Erweiterungen, die der Suchanfrage entsprechen
+                const filteredExtensions = missingExtensions.filter(extension => {
+                    return extension.name.toLowerCase().includes(searchQuery.toLowerCase());
+                });
+                return { building, missingExtensions: filteredExtensions };
+            }).filter(groupItem => groupItem.missingExtensions.length > 0); // Filtert leere Gruppen raus
+
+            const totalCost = filteredGroup.reduce((sum, { missingExtensions }) => {
+                return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.cost, 0);
+            }, 0);
+
+            const totalCoins = filteredGroup.reduce((sum, { missingExtensions }) => {
+                return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.coins, 0);
+            }, 0);
+
+            const totalExtensions = filteredGroup.reduce((sum, { missingExtensions }) => sum + missingExtensions.length, 0); // Gesamtanzahl an Erweiterungen
+            let completedExtensions = 0; // Zähler für die abgeschlossenen Erweiterungen
+
+            // Falls keine Erweiterungen gefunden wurden, eine Nachricht anzeigen
+            if (totalExtensions === 0) {
+                alert('Keine Erweiterungen gefunden, die Ihrer Suche entsprechen.');
+                return;
+            }
+
+            const selectionDiv = document.createElement('div');
+            selectionDiv.className = 'currency-selection';
+
+            const creditsButton = document.createElement('button');
+            creditsButton.className = 'currency-button credits-button';
+            creditsButton.textContent = `Credits: ${formatNumber(totalCost)}`;
+            creditsButton.onclick = () => {
+                if (userInfo.credits < totalCost) {
+                    alert(`Nicht genügend Credits. Benötigt: ${formatNumber(totalCost)}, Verfügbar: ${formatNumber(userInfo.credits)}`);
+                    return;
+                }
+                buildAllExtensions(buildingType, filteredGroup, 'credits', totalExtensions, updateProgress);
+                document.body.removeChild(selectionDiv);
+            };
+
+            const coinsButton = document.createElement('button');
+            coinsButton.className = 'currency-button coins-button';
+            coinsButton.textContent = `Coins: ${totalCoins}`;
+            coinsButton.onclick = () => {
+                if (userInfo.coins < totalCoins) {
+                    alert(`Nicht genügend Coins. Benötigt: ${totalCoins}, Verfügbar: ${userInfo.coins}`);
+                    return;
+                }
+                buildAllExtensions(buildingType, filteredGroup, 'coins', totalExtensions, updateProgress);
+                document.body.removeChild(selectionDiv);
+            };
+
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'cancel-button';
+            cancelButton.textContent = 'Abbrechen';
+            cancelButton.onclick = () => {
+                document.body.removeChild(selectionDiv);
+            };
+
+            selectionDiv.appendChild(creditsButton);
+            selectionDiv.appendChild(coinsButton);
+            selectionDiv.appendChild(cancelButton);
+
+            document.body.appendChild(selectionDiv);
+        } catch (error) {
+            console.error('Fehler beim Überprüfen der Credits und Coins:', error);
+            alert('Fehler beim Überprüfen der Credits und Coins.');
         }
+    }
 
-        // Erweiterungen filtern, die der Suchanfrage entsprechen
-        const filteredGroup = group.map(({ building, missingExtensions }) => {
-            // Filtert nur die Erweiterungen, die der Suchanfrage entsprechen
-            const filteredExtensions = missingExtensions.filter(extension => {
-                return extension.name.toLowerCase().includes(searchQuery.toLowerCase());
-            });
-            return { building, missingExtensions: filteredExtensions };
-        }).filter(groupItem => groupItem.missingExtensions.length > 0); // Filtert leere Gruppen raus
+    // Funktion zum Aktualisieren des Fortschritts
+    function updateProgress(completedExtensions, totalExtensions) {
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) {
+            const progress = (completedExtensions / totalExtensions) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+    }
 
-        const totalCost = filteredGroup.reduce((sum, { missingExtensions }) => {
-            return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.cost, 0);
-        }, 0);
-
-        const totalCoins = filteredGroup.reduce((sum, { missingExtensions }) => {
-            return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.coins, 0);
-        }, 0);
-
-        const totalExtensions = filteredGroup.reduce((sum, { missingExtensions }) => sum + missingExtensions.length, 0); // Gesamtanzahl an Erweiterungen
+    // Funktion, um alle Erweiterungen zu bauen
+    function buildAllExtensions(buildingType, group, currency, totalExtensions, updateProgress) {
         let completedExtensions = 0; // Zähler für die abgeschlossenen Erweiterungen
 
-        // Falls keine Erweiterungen gefunden wurden, eine Nachricht anzeigen
-        if (totalExtensions === 0) {
-            alert('Keine Erweiterungen gefunden, die Ihrer Suche entsprechen.');
-            return;
-        }
-
-        const selectionDiv = document.createElement('div');
-        selectionDiv.className = 'currency-selection';
-
-        const creditsButton = document.createElement('button');
-        creditsButton.className = 'currency-button credits-button';
-        creditsButton.textContent = `Credits: ${formatNumber(totalCost)}`;
-        creditsButton.onclick = () => {
-            if (userInfo.credits < totalCost) {
-                alert(`Nicht genügend Credits. Benötigt: ${formatNumber(totalCost)}, Verfügbar: ${formatNumber(userInfo.credits)}`);
-                return;
-            }
-            buildAllExtensions(buildingType, filteredGroup, 'credits', totalExtensions, updateProgress);
-            document.body.removeChild(selectionDiv);
-        };
-
-        const coinsButton = document.createElement('button');
-        coinsButton.className = 'currency-button coins-button';
-        coinsButton.textContent = `Coins: ${totalCoins}`;
-        coinsButton.onclick = () => {
-            if (userInfo.coins < totalCoins) {
-                alert(`Nicht genügend Coins. Benötigt: ${totalCoins}, Verfügbar: ${userInfo.coins}`);
-                return;
-            }
-            buildAllExtensions(buildingType, filteredGroup, 'coins', totalExtensions, updateProgress);
-            document.body.removeChild(selectionDiv);
-        };
-
-        const cancelButton = document.createElement('button');
-        cancelButton.className = 'cancel-button';
-        cancelButton.textContent = 'Abbrechen';
-        cancelButton.onclick = () => {
-            document.body.removeChild(selectionDiv);
-        };
-
-        selectionDiv.appendChild(creditsButton);
-        selectionDiv.appendChild(coinsButton);
-        selectionDiv.appendChild(cancelButton);
-
-        document.body.appendChild(selectionDiv);
-    } catch (error) {
-        console.error('Fehler beim Überprüfen der Credits und Coins:', error);
-        alert('Fehler beim Überprüfen der Credits und Coins.');
-    }
-}
-
-// Funktion zum Aktualisieren des Fortschritts
-function updateProgress(completedExtensions, totalExtensions) {
-    const progressBar = document.getElementById('progressBar');
-    if (progressBar) {
-        const progress = (completedExtensions / totalExtensions) * 100;
-        progressBar.style.width = `${progress}%`;
-    }
-}
-
-// Funktion, um alle Erweiterungen zu bauen
-function buildAllExtensions(buildingType, group, currency, totalExtensions, updateProgress) {
-    let completedExtensions = 0; // Zähler für die abgeschlossenen Erweiterungen
-
-    group.forEach(({ building, missingExtensions }, index) => {
-        missingExtensions.forEach((extension, extIndex) => {
-            setTimeout(() => {
-                buildExtension(building.id, extension.id, currency);
-                completedExtensions++; // Nach jedem Ausbau die Anzahl erhöhen
-                updateProgress(completedExtensions, totalExtensions); // Fortschritt aktualisieren
-            }, (index * missingExtensions.length + extIndex) * 3000); // 3000ms Verzögerung
+        group.forEach(({ building, missingExtensions }, index) => {
+            missingExtensions.forEach((extension, extIndex) => {
+                setTimeout(() => {
+                    buildExtension(building.id, extension.id, currency);
+                    completedExtensions++; // Nach jedem Ausbau die Anzahl erhöhen
+                    updateProgress(completedExtensions, totalExtensions); // Fortschritt aktualisieren
+                }, (index * missingExtensions.length + extIndex) * 3000); // 3000ms Verzögerung
+            });
         });
-    });
 
-    // Eine Progressbar im DOM erstellen
-    const progressDiv = document.createElement('div');
-    progressDiv.style.width = '100%';
-    progressDiv.style.backgroundColor = '#f3f3f3';
-    progressDiv.style.border = '1px solid #ccc';
-    progressDiv.style.marginTop = '10px';
+        // Eine Progressbar im DOM erstellen
+        const progressDiv = document.createElement('div');
+        progressDiv.style.width = '100%';
+        progressDiv.style.backgroundColor = '#f3f3f3';
+        progressDiv.style.border = '1px solid #ccc';
+        progressDiv.style.marginTop = '10px';
 
-    const progressBar = document.createElement('div');
-    progressBar.id = 'progressBar';
-    progressBar.style.height = '20px';
-    progressBar.style.backgroundColor = '#4caf50';
-    progressDiv.appendChild(progressBar);
+        const progressBar = document.createElement('div');
+        progressBar.id = 'progressBar';
+        progressBar.style.height = '20px';
+        progressBar.style.backgroundColor = '#4caf50';
+        progressDiv.appendChild(progressBar);
 
-    document.body.appendChild(progressDiv);
-}
+        document.body.appendChild(progressDiv);
+    }
 
     // Initial den Button hinzufügen
     addMenuButton();
