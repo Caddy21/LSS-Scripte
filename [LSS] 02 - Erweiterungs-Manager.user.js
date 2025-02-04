@@ -15,11 +15,11 @@
 
 // ToDo-Liste
 
-// Einbauen das man nicht jeden Erweiterungsausbau bestätigen muss beim Bau von allen Erweiterungen gleichzeitig
 // Prüfen ob ein limitierter Ausbau gebaut werden kann
 // Prüfen ob bei Nichtpremium User bereits das Limit an Erweiterugen vorhanden ist, wenn ja, dann Button deaktivieren, wenn nein, dann normal lassen.
-// Credits und Coins automatisch in die Tabelle einfügen lassen aus der API herraus wenn möglich
 // Lagerräume einbauen
+
+
 
 (function() {
     'use strict';
@@ -183,9 +183,9 @@
             { id: 7, name: 'Großlüfter', cost: 75000, coins: 25 },
             { id: 8, name: 'Drohneneinheit', cost: 150000, coins: 25 },
             { id: 9, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
-            { id: 23, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 24, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 }
+            { id: 10, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 11, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
+            { id: 12, name: 'Bahnrettung', cost: 125000, coins: 25 }
         ],
 
         '6_small': [ // Polizei (Kleinwache)
@@ -435,7 +435,7 @@
             if (!menuButton) {
                 const divider = profileMenu.querySelector('li.divider');
                 menuButton = document.createElement('li');
-                menuButton.setAttribute('role', 'presentation'); 
+                menuButton.setAttribute('role', 'presentation');
                 menuButton.innerHTML = `
                     <a href="#" id="open-extension-helper">
                         <span class="glyphicon glyphicon-wrench"></span>&nbsp;&nbsp; Erweiterungshelfer
@@ -468,6 +468,30 @@
 
     // Initial den Button hinzufügen
     addMenuButton();
+
+    function isExtensionLimitReached(building, extensionId) {
+
+        const fireStationSmallAlwaysAllowed = [1, 2, 10, 11];
+        const fireStationSmallLimited = [0, 3, 4, 5, 6, 7, 8, 9, 12];
+
+        const policeStationSmallAlwaysAllowed = [0, 1];
+        const policeStationSmallLimited = [10, 11, 12, 13];
+
+        if (building.building_type === 0 && building.small_building) {
+            // Feuerwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
+            if (fireStationSmallAlwaysAllowed.includes(extensionId)) return false;
+            return building.extensions.some(ext => fireStationSmallLimited.includes(ext.type_id));
+        }
+
+        if (building.building_type === 6 && building.small_building) {
+            // Polizeiwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
+            if (policeStationSmallAlwaysAllowed.includes(extensionId)) return false;
+            return building.extensions.some(ext => policeStationSmallLimited.includes(ext.type_id));
+        }
+
+        return false;
+    }
+
 
     function renderMissingExtensions(buildings) {
         const list = document.getElementById('extension-list');
@@ -590,10 +614,11 @@
                     row.appendChild(coinsCell);
 
                     const actionCell = document.createElement('td');
+
                     const buildButton = document.createElement('button');
                     buildButton.textContent = 'Bauen';
                     buildButton.classList.add('extension-button');
-                    buildButton.disabled = !missingExtensions.includes(extension);
+                    buildButton.disabled = isExtensionLimitReached(building, extension.id) || !missingExtensions.includes(extension);
                     buildButton.onclick = () => {
                         if (!buildButton.disabled) {
                             showCurrencySelection(building.id, extension.id, extension.cost, extension.coins);
