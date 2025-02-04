@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS]  Erweiterungs-Manager
+// @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Listet Wachen auf, bei denen bestimmte Erweiterungen fehlen und ermöglicht das Hinzufügen dieser Erweiterungen.
