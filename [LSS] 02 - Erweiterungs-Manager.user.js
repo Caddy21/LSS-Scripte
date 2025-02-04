@@ -467,22 +467,78 @@
     // Initial den Button hinzufügen
     addMenuButton();
 
-    // Funktion zur Überprüfung, ob ein Ausbau gestartet werden kann
-function canStartExtension(building) {
-    const isPremium = typeof user_premium !== 'undefined' && user_premium;
-    const maxActiveExtensions = isPremium ? Infinity : 1;
-    const maxQueuedExtensions = isPremium ? Infinity : 1;
-    const activeExtensions = building.extensions.filter(e => e.level === 0).length; // Erweiterungen, die auf Level 0 sind, gelten als aktiv
-    const queuedExtensions = building.extensions.filter(e => e.level > 0).length; // Erweiterungen, die auf Level > 0 sind, gelten als in der Warteschlange
+    function isExtensionLimitReached(building, extensionId) {
 
-    if (building.small_building) {
-        // Kleinwachen: maximal 1 Ausbau aktiv
-        return activeExtensions < maxActiveExtensions;
-    } else {
-        // Normale Wachen: maximal 2 Ausbauten (1 aktiv, 1 in der Warteschlange) für Nicht-Premium Nutzer
-        return (activeExtensions < maxActiveExtensions) && (queuedExtensions < maxQueuedExtensions);
+        const fireStationSmallAlwaysAllowed = [1, 2, 10, 11];
+        const fireStationSmallLimited = [0, 3, 4, 5, 6, 7, 8, 9, 12];
+
+        const policeStationSmallAlwaysAllowed = [0, 1];
+        const policeStationSmallLimited = [10, 11, 12, 13];
+
+        if (building.building_type === 0 && building.small_building) {
+            // Feuerwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
+            if (fireStationSmallAlwaysAllowed.includes(extensionId)) return false;
+            return building.extensions.some(ext => fireStationSmallLimited.includes(ext.type_id));
+        }
+
+        if (building.building_type === 6 && building.small_building) {
+            // Polizeiwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
+            if (policeStationSmallAlwaysAllowed.includes(extensionId)) return false;
+            return building.extensions.some(ext => policeStationSmallLimited.includes(ext.type_id));
+        }
+
+        return false;
     }
-}
+
+    // Funktion, die die Suchleiste erstellt und der Seite hinzufügt
+    function addSearchBar() {
+        const searchBar = document.createElement('input');
+        searchBar.type = 'text';
+        searchBar.id = 'search-bar';
+        searchBar.placeholder = 'Suche nach Wachen oder Erweiterungen...';
+        searchBar.style.marginBottom = '10px'; // Optional: etwas Abstand hinzufügen
+
+        const extensionList = document.getElementById('extension-list');
+        if (extensionList) {
+            extensionList.insertBefore(searchBar, extensionList.firstChild);
+
+            // Füge einen Event-Listener hinzu, der die Suche ausführt
+            searchBar.addEventListener('input', filterBuildings);
+        }
+    }
+
+    // Funktion, die die Wachen und Erweiterungen basierend auf der Suchanfrage filtert
+    function filterBuildings() {
+        const searchQuery = document.getElementById('search-bar').value.toLowerCase();
+        const rows = document.querySelectorAll('#extension-list table tbody tr');
+
+        rows.forEach(row => {
+            const nameCell = row.querySelector('td:nth-child(1)');
+            const extensionCell = row.querySelector('td:nth-child(2)');
+
+            const nameText = nameCell.textContent.toLowerCase();
+            const extensionText = extensionCell.textContent.toLowerCase();
+
+            // Zeige die Zeile nur an, wenn sie mit der Suchanfrage übereinstimmt
+            if (nameText.includes(searchQuery) || extensionText.includes(searchQuery)) {
+                row.style.display = ''; // Zeige die Zeile an
+                // Markiere übereinstimmende Zellen
+                if (nameText.includes(searchQuery)) {
+                    nameCell.style.backgroundColor = 'yellow'; // Wache markieren
+                } else {
+                    nameCell.style.backgroundColor = ''; // Standard Hintergrundfarbe
+                }
+
+                if (extensionText.includes(searchQuery)) {
+                    extensionCell.style.backgroundColor = 'yellow'; // Erweiterung markieren
+                } else {
+                    extensionCell.style.backgroundColor = ''; // Standard Hintergrundfarbe
+                }
+            } else {
+                row.style.display = 'none'; // Verstecke die Zeile
+            }
+        });
+    }
 
 // Aktualisiere die Funktion 'renderMissingExtensions', um 'canStartExtension' zu verwenden
 function renderMissingExtensions(buildings) {
@@ -682,7 +738,47 @@ function renderMissingExtensions(buildings) {
         }
     }
 
-    // Funktion um eine Erweiterung in einem Gebäude zu bauen
+   let buildingsData = []; // Globale Variable, um die abgerufenen Gebäudedaten zu speichern
+
+    // Funktion zum Abrufen der Gebäudedaten
+    function fetchBuildingsAndRender() {
+        fetch('https://www.leitstellenspiel.de/api/buildings')
+            .then(response => {
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der Daten');
+            }
+            return response.json();
+        })
+            .then(data => {
+            console.log('Abgerufene Gebäudedaten:', data); // Protokolliere die abgerufenen Daten
+            buildingsData = data; // Speichern der Gebäudedaten in einer globalen Variablen
+            renderMissingExtensions(data); // Weiterverarbeiten der abgerufenen Daten
+        })
+            .catch(error => {
+            console.error('Es ist ein Fehler aufgetreten:', error);
+            const list = document.getElementById('extension-list');
+            list.innerHTML = 'Fehler beim Laden der Gebäudedaten.';
+        });
+    }
+
+
+    function getBuildingCaption(buildingId) {
+        if (!buildingsData.length) {
+            console.warn('Gebäudedaten noch nicht geladen.');
+            return 'Daten werden geladen...';
+        }
+
+        console.log('Übergebene buildingId:', buildingId);
+        const building = buildingsData.find(b => Number(b.id) === Number(buildingId));
+
+        if (building) {
+            console.log('Gefundenes Gebäude:', building);
+            return building.caption;
+        }
+        console.warn('Gebäude nicht gefunden. ID:', buildingId);
+        return 'Unbekanntes Gebäude';
+    }
+
     async function confirmAndBuildExtension(buildingId, extensionId, amount, currency) {
         try {
             const userInfo = await getUserCredits();
@@ -695,8 +791,15 @@ function renderMissingExtensions(buildings) {
                 return;
             }
 
+            console.log('Übergebene buildingId:', buildingId);  // Ausgabe der übergebenen buildingId
+
+            // Hier die Konsolenausgabe hinzufügen, um sicherzustellen, dass buildingsData vorhanden ist
+            console.log('Aktuelle Gebäudedaten:', buildingsData);
+
             if (confirm(`Möchten Sie wirklich ${formatNumber(amount)} ${currencyText} für diese Erweiterung ausgeben?`)) {
-                buildExtension(buildingId, extensionId, currency);
+                const buildingCaption = getBuildingCaption(buildingId); // Holen des Gebäudenamens
+                console.log('Gefundener Gebäudename:', buildingCaption); // Ausgabe des abgerufenen Gebäudennamens
+                buildExtension(buildingId, extensionId, currency, buildingCaption);
             }
         } catch (error) {
             console.error('Fehler beim Überprüfen der Credits und Coins:', error);
@@ -705,28 +808,30 @@ function renderMissingExtensions(buildings) {
     }
 
     // Funktion, um eine Erweiterung in einem Gebäude zu bauen
-    function buildExtension(buildingId, extensionId, currency) {
-    const csrfToken = getCSRFToken();
-    console.log(`CSRF Token: ${csrfToken}`);
-    console.log(`Building Extension: Building ID=${buildingId}, Extension ID=${extensionId}, Currency=${currency}`);
+    function buildExtension(buildingId, extensionId, currency, buildingCaption) {
+        const csrfToken = getCSRFToken();
+        console.log(`CSRF Token: ${csrfToken}`);
+        console.log(`Building Extension: Building ID=${buildingId}, Extension ID=${extensionId}, Currency=${currency}`);
 
-    const buildUrl = `/buildings/${buildingId}/extension/${currency}/${extensionId}`;
-    GM_xmlhttpRequest({
-        method: 'POST',
-        url: buildUrl,
-        headers: {
-            'X-CSRF-Token': csrfToken,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        onload: function(response) {
-            console.log(`Erweiterung in Gebäude ${buildingId} gebaut. Response:`, response);
-            fetchBuildingsAndRender(); // Aktualisiert die Liste nach dem Bauen
-        },
-        onerror: function(error) {
-            console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingId}.`, error);
-        }
-    });
-}
+        const buildUrl = `/buildings/${buildingId}/extension/${currency}/${extensionId}`;
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: buildUrl,
+            headers: {
+                'X-CSRF-Token': csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            onload: function(response) {
+                console.log(`Erweiterung in Gebäude ${buildingCaption} gebaut. Response:`, response);
+                alert(`Erweiterung in Gebäude ${buildingCaption} gebaut.`);
+                fetchBuildingsAndRender(); // Aktualisiert die Liste nach dem Bauen
+            },
+            onerror: function(error) {
+                console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingCaption}.`, error);
+                alert(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingCaption}.`);
+            }
+        });
+    }
 
     // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen nach Bestätigung
     async function confirmAndBuildAllExtensions(buildingType, group) {
