@@ -16,7 +16,6 @@
 // ToDo-Liste
 
 // Prüfen ob ein limitierter Ausbau gebaut werden kann
-// Prüfen ob bei Nichtpremium User bereits das Limit an Erweiterugen vorhanden ist, wenn ja, dann Button deaktivieren, wenn nein, dann normal lassen.
 // Lagerräume einbauen
 
 
