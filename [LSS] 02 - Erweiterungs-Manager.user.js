@@ -435,8 +435,12 @@
             if (!menuButton) {
                 const divider = profileMenu.querySelector('li.divider');
                 menuButton = document.createElement('li');
-                menuButton.setAttribute('role', 'presentation');
-                menuButton.innerHTML = '<a href="#" id="open-extension-helper">Erweiterungshelfer</a>';
+                menuButton.setAttribute('role', 'presentation'); 
+                menuButton.innerHTML = `
+                    <a href="#" id="open-extension-helper">
+                        <span class="glyphicon glyphicon-wrench"></span>&nbsp;&nbsp; Erweiterungshelfer
+                    </a>
+            `;
                 if (divider) {
                     profileMenu.insertBefore(menuButton, divider);
                 } else {
