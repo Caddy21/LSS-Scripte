@@ -60,7 +60,7 @@
         ],
 
         '2_normal': [ // Rettungswache
-            { id: 0, name: 'Großwache', cost: 1000000, coins: 50 }
+            { id: 0, name: 'Großwache', cost: 1000000, coins: 50 },
         ],
 
         '3_normal': [ // Rettungsschule
@@ -83,7 +83,7 @@
         ],
 
         '5_normal': [ // Rettungshubschrauber-Station
-            { id: 0, name: 'Windenrettung', cost: 200000, coins: 15 }
+            { id: 0, name: 'Windenrettung', cost: 200000, coins: 15 },
         ],
 
         '6_normal': [ // Polizeiwache
@@ -131,7 +131,7 @@
         '10_normal': [ // THW-Bundesschule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 }
+            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
 
         '11_normal': [ // Bereitschaftspolizei
@@ -145,7 +145,7 @@
             { id: 7, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
             { id: 8, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
             { id: 9, name: 'Reiterstaffel', cost: 300000, coins: 25},
-            { id: 10, name: 'Lautsprecherkraftwagen', cost: 100000, coins: 10}
+            { id: 10, name: 'Lautsprecherkraftwagen', cost: 100000, coins: 10},
         ],
 
         '12_normal': [ // SEG
@@ -154,12 +154,12 @@
             { id: 2, name: 'Wasserrettung', cost: 500000, coins: 25 },
             { id: 3, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
             { id: 4, name: 'SEG-Drohne', cost: 50000, coins: 15 },
-            { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 }
+            { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 },
         ],
 
         '13_normal': [ // Polizeihubschrauberstation
             { id: 0, name: 'Außenlastbehälter', cost: 200000, coins: 15 },
-            { id: 1, name: 'Windenrettung', cost: 200000, coins: 15 }
+            { id: 1, name: 'Windenrettung', cost: 200000, coins: 15 },
         ],
 
         '17_normal': [ // Polizeisondereinheit
@@ -167,7 +167,7 @@
             { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
             { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
             { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
-            { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 }
+            { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
         ],
         '0_small': [ // Feuerwehr (Kleinwache)
             { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
@@ -182,16 +182,16 @@
             { id: 9, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
             { id: 10, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
             { id: 11, name: 'Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 12, name: 'Bahnrettung', cost: 125000, coins: 25 }
+            { id: 12, name: 'Bahnrettung', cost: 125000, coins: 25 },
         ],
 
         '6_small': [ // Polizei (Kleinwache)
             { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
             { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
-            //            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            //            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            //            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            //            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
+            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
+            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
+            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
         ],
 
         '24_normal': [ // Reiterstaffel
@@ -213,7 +213,7 @@
         '27_normal': [ // Schule für Seefahrt und Seenotrettung
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 }
+            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
 
     };
@@ -359,6 +359,7 @@
        cursor: pointer;
        border-radius: 4px;
    }
+
    `;
 
     // Fügt die Stile hinzu
@@ -415,7 +416,7 @@
 
             if (!user_premium) {
                 console.warn("Der Nutzer hat keinen Premium-Account.");
-                alert("Hinweis: Als Nicht-Premium-Nutzer kannst du maximal 2 Ausbauten pro Gebäude starten:\n\n- 1 Ausbau aktiv\n- 1 Ausbau in der Warteschlange\n\nBei Kleinwachen kannst du maximal einen Ausbau haben");
+                alert("Hallo\n\nDa du keinen Premium-Acount hast könntest du ein paar Einschränkungen haben was den Wachenausbau angeht. Jenachdem wie dein Spielstiel ist.\n\nBeim THW als Beispiel oder anderen Wachen kannst du nicht alle Ausbauten in die Warteschlange legen sondern immer nur zwei.\n\nDies kann dieses Script allerdings nicht unterscheiden daher prüfe die Ausbauten oder passe die Erweiterungen vorher an im Script\n\nBei weiteren Fragen gern im Forum melden oder mir direkt eine Nachricht zu kommen lassen.\n\nLG\nChris");
             } else {
                 console.log("Der Nutzer hat einen Premium-Account.");
             }
@@ -466,30 +467,87 @@
     // Initial den Button hinzufügen
     addMenuButton();
 
-    // Funktion zur Prüfung von limitierten Ausbauten (Kleinwachen)
     function isExtensionLimitReached(building, extensionId) {
+    const fireStationSmallAlwaysAllowed = [1, 2, 10, 11];
+    const fireStationSmallLimited = [0, 3, 4, 5, 6, 7, 8, 9, 12];
 
-        const fireStationSmallAlwaysAllowed = [1, 2, 10, 11];
-        const fireStationSmallLimited = [0, 3, 4, 5, 6, 7, 8, 9, 12];
+    const policeStationSmallAlwaysAllowed = [0, 1];
+    const policeStationSmallLimited = [10, 11, 12, 13];
 
-        const policeStationSmallAlwaysAllowed = [0, 1];
-        const policeStationSmallLimited = [10, 11, 12, 13];
+    const thwRequiredFirst = [0, 1]; // THW: Diese müssen zuerst gebaut werden
+    const thwRestrictedUntilFirstTwo = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13]; // THW: Benötigen ID 0 & 1
+    const thwAlwaysAllowed = [11]; // THW: Diese ist immer erlaubt
 
-        if (building.building_type === 0 && building.small_building) {
-            // Feuerwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
-            if (fireStationSmallAlwaysAllowed.includes(extensionId)) return false;
-            return building.extensions.some(ext => fireStationSmallLimited.includes(ext.type_id));
-        }
+    const bpolAlwaysAllowed = [0, 3, 4, 6, 8, 9, 10]; // BPol: Diese dürfen immer gebaut werden
+    const bpolConditional = {
+        1: 0, // ID 1 erst, wenn ID 0 fertig ist
+        2: 1, // ID 2 erst, wenn ID 1 fertig ist
+        5: 4, // ID 5 erst, wenn ID 4 fertig ist
+        7: 8  // ID 7 erst, wenn ID 8 fertig ist
+    };
 
-        if (building.building_type === 6 && building.small_building) {
-            // Polizeiwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
-            if (policeStationSmallAlwaysAllowed.includes(extensionId)) return false;
-            return building.extensions.some(ext => policeStationSmallLimited.includes(ext.type_id));
+    const polSonderEinheitAlwaysAllowed = [0, 2, 4]; // PolSonderEinheit: ID 0, 2, 4 können sofort gebaut werden
+    const polSonderEinheitConditional = {
+        1: 0, // ID 1 erst, wenn ID 0 fertig ist
+        3: 1  // ID 3 erst, wenn ID 1 fertig ist
+    };
+
+    if (building.building_type === 0 && building.small_building) {
+        // Feuerwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
+        if (fireStationSmallAlwaysAllowed.includes(extensionId)) return false;
+        return building.extensions.some(ext => fireStationSmallLimited.includes(ext.type_id));
+    }
+
+    if (building.building_type === 6 && building.small_building) {
+        // Polizeiwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
+        if (policeStationSmallAlwaysAllowed.includes(extensionId)) return false;
+        return building.extensions.some(ext => policeStationSmallLimited.includes(ext.type_id));
+    }
+
+    if (building.building_type === 9) {
+        // THW (Technisches Hilfswerk)
+        if (thwAlwaysAllowed.includes(extensionId)) return false; // ID 11 ist immer erlaubt
+
+        const hasRequiredFirstExtensions = thwRequiredFirst.every(reqId =>
+                                                                      building.extensions.some(ext => ext.type_id === reqId)
+                                                                     );
+
+        if (thwRestrictedUntilFirstTwo.includes(extensionId) && !hasRequiredFirstExtensions) {
+            return true; // ID 2-10, 12, 13 sind blockiert, wenn ID 0 oder ID 1 fehlt
         }
 
         return false;
     }
 
+    if (building.building_type === 11) {
+        // BPol (Behörden und Organisationen mit Sicherheitsaufgaben)
+        if (bpolAlwaysAllowed.includes(extensionId)) return false; // Direkt baubare Erweiterungen
+
+        if (bpolConditional[extensionId] !== undefined) {
+            // Prüfen, ob die erforderliche Erweiterung bereits existiert
+            return !building.extensions.some(ext => ext.type_id === bpolConditional[extensionId]);
+        }
+
+        return false;
+    }
+
+    if (building.building_type === 17) {
+        // PolSonderEinheit (Gebäude ID 17)
+        if (polSonderEinheitAlwaysAllowed.includes(extensionId)) return false; // Direkt baubare Erweiterungen
+
+        if (polSonderEinheitConditional[extensionId] !== undefined) {
+            // Prüfen, ob die erforderliche Erweiterung bereits existiert
+            return !building.extensions.some(ext => ext.type_id === polSonderEinheitConditional[extensionId]);
+        }
+
+        return false;
+    }
+
+    return false;
+}
+
+
+    // Funktion um die Tabellen zu füllen
     function renderMissingExtensions(buildings) {
         const list = document.getElementById('extension-list');
         list.innerHTML = '';
@@ -509,13 +567,17 @@
             if (!extensions) return;
 
             const existingExtensions = new Set(building.extensions.map(e => e.type_id));
-            const missingExtensions = extensions.filter(extension => !existingExtensions.has(extension.id));
 
-            if (missingExtensions.length > 0) {
+            // Hier wird gefiltert, ob die Erweiterung gebaut werden darf
+            const allowedExtensions = extensions.filter(extension =>
+                                                        !existingExtensions.has(extension.id) && !isExtensionLimitReached(building, extension.id)
+                                                       );
+
+            if (allowedExtensions.length > 0) {
                 if (!buildingGroups[buildingTypeKey]) {
                     buildingGroups[buildingTypeKey] = [];
                 }
-                buildingGroups[buildingTypeKey].push({ building, missingExtensions });
+                buildingGroups[buildingTypeKey].push({ building, missingExtensions: allowedExtensions });
             }
         });
 
@@ -545,7 +607,6 @@
             const group = buildingGroups[groupKey];
             const buildingType = buildingTypeNames[groupKey] || 'Unbekannt';
 
-            // Überschrift für den Gebäudetyp
             const buildingHeader = document.createElement('h4');
             buildingHeader.textContent = `Typ: ${buildingType}`;
             list.appendChild(buildingHeader);
@@ -561,12 +622,10 @@
             spoilerButton.classList.add('spoiler-button');
             list.appendChild(spoilerButton);
 
-            // Wrapper für Tabelle und Suchleiste
             const contentWrapper = document.createElement('div');
             contentWrapper.className = 'spoiler-content';
             contentWrapper.style.display = 'none';
 
-            // Suchleiste (wird erst sichtbar, wenn man auf "Details anzeigen" klickt)
             const searchInput = document.createElement('input');
             searchInput.type = "text";
             searchInput.placeholder = "🔍 Nach Wachennamen oder Erweiterungen suchen...";
@@ -574,30 +633,28 @@
             searchInput.style.marginBottom = "10px";
             searchInput.style.padding = "5px";
             searchInput.style.fontSize = "14px";
-            searchInput.style.display = 'none'; // Anfangs versteckt
+            searchInput.style.display = 'none';
 
-            // Event-Listener für den Spoiler-Button
             spoilerButton.addEventListener('click', () => {
                 const isHidden = contentWrapper.style.display === 'none';
                 contentWrapper.style.display = isHidden ? 'block' : 'none';
-                searchInput.style.display = isHidden ? 'block' : 'none'; // Suchleiste ein-/ausblenden
+                searchInput.style.display = isHidden ? 'block' : 'none';
                 spoilerButton.textContent = isHidden ? 'Details ausblenden' : 'Details anzeigen';
             });
 
-            // Tabelle erstellen
             const table = document.createElement('table');
             table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Wache</th>
-                    <th>Fehlende Erweiterung</th>
-                    <th>Credits</th>
-                    <th>Coins</th>
-                    <th>Aktion</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        `;
+        <thead>
+            <tr>
+                <th>Wache</th>
+                <th>Fehlende Erweiterung</th>
+                <th>Credits</th>
+                <th>Coins</th>
+                <th>Aktion</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
             const tbody = table.querySelector('tbody');
 
             group.forEach(({ building, missingExtensions }) => {
@@ -624,7 +681,9 @@
                     const buildButton = document.createElement('button');
                     buildButton.textContent = 'Bauen';
                     buildButton.classList.add('extension-button');
-                    buildButton.disabled = isExtensionLimitReached(building, extension.id) || !missingExtensions.includes(extension);
+
+                    // Hier wird geprüft, ob die Erweiterung erlaubt ist
+                    buildButton.disabled = isExtensionLimitReached(building, extension.id);
                     buildButton.onclick = () => {
                         if (!buildButton.disabled) {
                             showCurrencySelection(building.id, extension.id, extension.cost, extension.coins);
@@ -637,20 +696,17 @@
                 });
             });
 
-            // Elemente in den Content-Wrapper packen
             contentWrapper.appendChild(searchInput);
             contentWrapper.appendChild(table);
-
-            // Alles in die Liste setzen
             list.appendChild(contentWrapper);
 
-            // Event-Listener für die Suchleiste
             searchInput.addEventListener("input", function() {
                 const searchTerm = searchInput.value.toLowerCase();
                 filterTable(tbody, searchTerm);
             });
         });
     }
+
 
     // Funktion zur Filterung der Tabelle
     function filterTable(tbody, searchTerm) {
@@ -669,7 +725,7 @@
     }
 
     // Funktion, um die Auswahl der Zahlungsmethode anzuzeigen
-    function showCurrencySelection(buildingId, extensionId, cost, coins) {
+    function showCurrencySelection(buildingId, extensionId, cost, coins, buildingCaption, progressText, progressFill) {
         const selectionDiv = document.createElement('div');
         selectionDiv.className = 'currency-selection';
 
@@ -677,15 +733,18 @@
         creditsButton.className = 'currency-button credits-button';
         creditsButton.textContent = `Credits: ${formatNumber(cost)}`;
         creditsButton.onclick = () => {
-            confirmAndBuildExtension(buildingId, extensionId, cost, 'credits');
+            buildExtension(buildingId, extensionId, 'credits', buildingCaption, progressText, progressFill);
             document.body.removeChild(selectionDiv);
         };
+
+        // Debugging: Überprüfen, ob die Auswahlbox erstellt wurde
+    console.log("Pop-up wird angezeigt!");
 
         const coinsButton = document.createElement('button');
         coinsButton.className = 'currency-button coins-button';
         coinsButton.textContent = `Coins: ${coins}`;
         coinsButton.onclick = () => {
-            confirmAndBuildExtension(buildingId, extensionId, coins);
+            buildExtension(buildingId, extensionId, 'coins', buildingCaption, progressText, progressFill);
             document.body.removeChild(selectionDiv);
         };
 
@@ -700,6 +759,9 @@
         selectionDiv.appendChild(coinsButton);
         selectionDiv.appendChild(cancelButton);
 
+
+// Debugging: Überprüfen, ob das Pop-up dem Body hinzugefügt wird
+    console.log("Pop-up wird dem Body hinzugefügt.");
         document.body.appendChild(selectionDiv);
     }
 
@@ -826,17 +888,34 @@
         });
     }
 
-    // Funktion, um eine Erweiterung in allen Gebäuden eines Typs zu bauen nach Bestätigung
+    // Funktion um eine Erweiterung in allen Gebäuden zu bauen
     async function confirmAndBuildAllExtensions(buildingType, group) {
         try {
             const userInfo = await getUserCredits();
-            const totalCost = group.reduce((sum, { missingExtensions }) => {
-                return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.cost, 0);
-            }, 0);
 
-            const totalCoins = group.reduce((sum, { missingExtensions }) => {
-                return sum + missingExtensions.reduce((extSum, ext) => extSum + ext.coins, 0);
-            }, 0);
+            // Nur THW (ID 9) und BPel (ID 11) berücksichtigen
+            const isRestrictedType = buildingType === 9 || buildingType === 11;
+
+            let totalCost = 0;
+            let totalCoins = 0;
+            const filteredGroup = [];
+
+            group.forEach(({ building, missingExtensions }) => {
+                const allowedExtensions = missingExtensions.filter(ext =>
+                                                                   !isRestrictedType || !isExtensionLimitReached(building, ext.id)
+                                                                  );
+
+                if (allowedExtensions.length > 0) {
+                    totalCost += allowedExtensions.reduce((sum, ext) => sum + ext.cost, 0);
+                    totalCoins += allowedExtensions.reduce((sum, ext) => sum + ext.coins, 0);
+                    filteredGroup.push({ building, missingExtensions: allowedExtensions });
+                }
+            });
+
+            if (filteredGroup.length === 0) {
+                alert('Keine erlaubten Erweiterungen verfügbar.');
+                return;
+            }
 
             const selectionDiv = document.createElement('div');
             selectionDiv.className = 'currency-selection';
@@ -849,7 +928,7 @@
                     alert(`Nicht genügend Credits. Benötigt: ${formatNumber(totalCost)}, Verfügbar: ${formatNumber(userInfo.credits)}`);
                     return;
                 }
-                buildAllExtensions(buildingType, group, 'credits');
+                buildAllExtensions(buildingType, filteredGroup, 'credits');
                 document.body.removeChild(selectionDiv);
             };
 
@@ -861,7 +940,7 @@
                     alert(`Nicht genügend Coins. Benötigt: ${totalCoins}, Verfügbar: ${userInfo.coins}`);
                     return;
                 }
-                buildAllExtensions(buildingType, group, 'coins');
+                buildAllExtensions(buildingType, filteredGroup, 'coins');
                 document.body.removeChild(selectionDiv);
             };
 
