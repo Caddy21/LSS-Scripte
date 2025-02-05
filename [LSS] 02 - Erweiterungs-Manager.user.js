@@ -923,7 +923,7 @@
         progressContainer.style.top = '50%';
         progressContainer.style.left = '50%';
         progressContainer.style.transform = 'translate(-50%, -50%)';
-        progressContainer.style.background = getCurrentMode() === 'dark' ? '#333' : '#fff';  // Darkmode oder Lightmode anpassen
+        progressContainer.style.background = '#333';  // Immer Darkmode
         progressContainer.style.padding = '20px';
         progressContainer.style.border = '1px solid #ccc';
         progressContainer.style.borderRadius = '10px';
@@ -934,10 +934,13 @@
 
         const progressText = document.createElement('p');
         progressText.textContent = `0 / ${totalExtensions} Erweiterungen gebaut`;
+        progressText.style.color = '#fff'; // Helle Schriftfarbe für den Text
+        progressText.style.fontWeight = 'bold'; // Fettschrift für bessere Lesbarkeit
+        progressText.style.fontSize = '16px'; // Größere Schrift für bessere Sichtbarkeit
 
         const progressBar = document.createElement('div');
         progressBar.style.width = '100%';
-        progressBar.style.background = getCurrentMode() === 'dark' ? '#555' : '#eee';  // Progressbar für Darkmode und Lightmode
+        progressBar.style.background = '#555';  // Dunklerer Hintergrund für die Progressbar
         progressBar.style.borderRadius = '5px';
         progressBar.style.marginTop = '10px';
 
