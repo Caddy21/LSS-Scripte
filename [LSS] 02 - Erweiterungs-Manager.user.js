@@ -12,13 +12,10 @@
 // @run-at       document-end
 // ==/UserScript==
 
-
 // ToDo-Liste
 
 // Prüfen ob ein limitierter Ausbau gebaut werden kann
-// Prüfen ob bei Nichtpremium User bereits das Limit an Erweiterugen vorhanden ist, wenn ja, dann Button deaktivieren, wenn nein, dann normal lassen.
-// Lagerräume einbauen
-
+// Lagerausbau hinzufügen
 
 
 (function() {
@@ -191,10 +188,10 @@
         '6_small': [ // Polizei (Kleinwache)
             { id: 0, name: 'Zelle', cost: 25000, coins: 5 },
             { id: 1, name: 'Zelle', cost: 25000, coins: 5 },
-            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            //            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
+            //            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
+            //            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
+            //            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
         ],
 
         '24_normal': [ // Reiterstaffel
@@ -469,6 +466,7 @@
     // Initial den Button hinzufügen
     addMenuButton();
 
+    // Funktion zur Prüfung von limitierten Ausbauten (Kleinwachen)
     function isExtensionLimitReached(building, extensionId) {
 
         const fireStationSmallAlwaysAllowed = [1, 2, 10, 11];
@@ -492,12 +490,10 @@
         return false;
     }
 
-
     function renderMissingExtensions(buildings) {
         const list = document.getElementById('extension-list');
         list.innerHTML = '';
 
-        // Sortiere die Gebäude nach Typ und dann nach Name
         buildings.sort((a, b) => {
             if (a.building_type === b.building_type) {
                 return a.caption.localeCompare(b.caption);
@@ -512,9 +508,7 @@
             const extensions = manualExtensions[buildingTypeKey];
             if (!extensions) return;
 
-            // Liste der vorhandenen Erweiterungen im Gebäude
             const existingExtensions = new Set(building.extensions.map(e => e.type_id));
-
             const missingExtensions = extensions.filter(extension => !existingExtensions.has(extension.id));
 
             if (missingExtensions.length > 0) {
@@ -551,6 +545,7 @@
             const group = buildingGroups[groupKey];
             const buildingType = buildingTypeNames[groupKey] || 'Unbekannt';
 
+            // Überschrift für den Gebäudetyp
             const buildingHeader = document.createElement('h4');
             buildingHeader.textContent = `Typ: ${buildingType}`;
             list.appendChild(buildingHeader);
@@ -566,18 +561,30 @@
             spoilerButton.classList.add('spoiler-button');
             list.appendChild(spoilerButton);
 
-            const tableWrapper = document.createElement('div');
-            tableWrapper.className = 'spoiler-content';
-            tableWrapper.style.display = 'none'; // Tabelle initial verstecken
+            // Wrapper für Tabelle und Suchleiste
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'spoiler-content';
+            contentWrapper.style.display = 'none';
+
+            // Suchleiste (wird erst sichtbar, wenn man auf "Details anzeigen" klickt)
+            const searchInput = document.createElement('input');
+            searchInput.type = "text";
+            searchInput.placeholder = "🔍 Nach Wachennamen oder Erweiterungen suchen...";
+            searchInput.style.width = "100%";
+            searchInput.style.marginBottom = "10px";
+            searchInput.style.padding = "5px";
+            searchInput.style.fontSize = "14px";
+            searchInput.style.display = 'none'; // Anfangs versteckt
 
             // Event-Listener für den Spoiler-Button
             spoilerButton.addEventListener('click', () => {
-                console.log('Vorheriger Zustand:', tableWrapper.style.display);
-                tableWrapper.style.display = tableWrapper.style.display === 'none' ? 'block' : 'none';
-                spoilerButton.textContent = tableWrapper.style.display === 'none' ? 'Details anzeigen' : 'Details ausblenden';
-                console.log('Neuer Zustand:', tableWrapper.style.display);
+                const isHidden = contentWrapper.style.display === 'none';
+                contentWrapper.style.display = isHidden ? 'block' : 'none';
+                searchInput.style.display = isHidden ? 'block' : 'none'; // Suchleiste ein-/ausblenden
+                spoilerButton.textContent = isHidden ? 'Details ausblenden' : 'Details anzeigen';
             });
 
+            // Tabelle erstellen
             const table = document.createElement('table');
             table.innerHTML = `
             <thead>
@@ -614,7 +621,6 @@
                     row.appendChild(coinsCell);
 
                     const actionCell = document.createElement('td');
-
                     const buildButton = document.createElement('button');
                     buildButton.textContent = 'Bauen';
                     buildButton.classList.add('extension-button');
@@ -631,8 +637,34 @@
                 });
             });
 
-            tableWrapper.appendChild(table);
-            list.appendChild(tableWrapper);
+            // Elemente in den Content-Wrapper packen
+            contentWrapper.appendChild(searchInput);
+            contentWrapper.appendChild(table);
+
+            // Alles in die Liste setzen
+            list.appendChild(contentWrapper);
+
+            // Event-Listener für die Suchleiste
+            searchInput.addEventListener("input", function() {
+                const searchTerm = searchInput.value.toLowerCase();
+                filterTable(tbody, searchTerm);
+            });
+        });
+    }
+
+    // Funktion zur Filterung der Tabelle
+    function filterTable(tbody, searchTerm) {
+        const rows = tbody.querySelectorAll("tr");
+
+        rows.forEach(row => {
+            const wachenName = row.cells[0]?.textContent.toLowerCase() || "";
+            const erweiterung = row.cells[1]?.textContent.toLowerCase() || "";
+
+            if (wachenName.includes(searchTerm) || erweiterung.includes(searchTerm)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
         });
     }
 
@@ -714,6 +746,7 @@
             list.innerHTML = 'Fehler beim Laden der Gebäudedaten.';
         });
     }
+
     // Funktion, um den Namen eines Gebäudes anhand der ID zu bekommen
     function getBuildingCaption(buildingId) {
 
@@ -747,7 +780,7 @@
 
                 const buildingCaption = getBuildingCaption(buildingId); // Holen des Gebäudenamens
                 console.log('Gefundener Gebäudename:', buildingCaption); // Ausgabe des abgerufenen Gebäudennamens
-                buildExtension(buildingId, extensionId, currency, buildingCaption);
+                buildExtension(buildingId, extensionId, currency, buildingCaption, true); // Hier setzen wir showPopup auf true für das manuelle Bauen
             }
         } catch (error) {
             console.error('Fehler beim Überprüfen der Credits und Coins:', error);
@@ -755,8 +788,7 @@
         }
     }
 
-    function buildExtension(buildingId, extensionId, currency, buildingCaption) {
-
+    function buildExtension(buildingId, extensionId, currency, buildingCaption, progressText, progressFill) {
         const csrfToken = getCSRFToken();
         console.log(`CSRF Token: ${csrfToken}`);
         console.log(`Building Extension: Building ID=${buildingId}, Extension ID=${extensionId}, Currency=${currency}`);
@@ -770,15 +802,26 @@
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             onload: function(response) {
-
                 console.log(`Erweiterung in Gebäude ${buildingCaption} gebaut. Response:`, response);
-                alert(`Erweiterung in Gebäude ${buildingCaption} gebaut.`);
-                fetchBuildingsAndRender(); // Aktualisiert die Liste nach dem Bauen
+
+                completedExtensions++;  // Erhöhe den Zähler für den Fortschritt
+
+                // Fortschrittsanzeige aktualisieren, wenn sie existiert
+                if (progressText && progressFill) {
+                    updateProgress(progressText, progressFill);  // Fortschritt aktualisieren
+                }
+
+                fetchBuildingsAndRender(); // Liste nach dem Bauen aktualisieren
             },
             onerror: function(error) {
-
                 console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingCaption}.`, error);
-                alert(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingCaption}.`);
+
+                completedExtensions++;  // Auch bei Fehlern erhöhen wir den Zähler
+                if (progressText && progressFill) {
+                    updateProgress(progressText, progressFill);  // Fortschritt aktualisieren
+                }
+
+                fetchBuildingsAndRender(); // Liste nach dem Bauen aktualisieren
             }
         });
     }
@@ -840,17 +883,85 @@
         }
     }
 
+    let completedExtensions = 0;  // Globale Variable zur Verfolgung des Fortschritts
+    let totalExtensions = 0;      // Gesamtanzahl der Erweiterungen
+    let progressContainer = null; // Fortschrittscontainer global definiert
+
+    // Funktion zum Überprüfen des aktuellen Modus (Light- oder Darkmode)
+    function getCurrentMode() {
+        return document.body.classList.contains('dark-mode') || window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    // Funktion zum Aktualisieren des Fortschrittsbalkens
+    function updateProgress(progressText, progressFill) {
+        progressText.textContent = `${completedExtensions} / ${totalExtensions} Erweiterungen gebaut`;
+        progressFill.style.width = `${(completedExtensions / totalExtensions) * 100}%`;
+
+        // Wenn alle Erweiterungen gebaut wurden, schließe die Anzeige nach 1 Sekunde
+        if (completedExtensions === totalExtensions) {
+            setTimeout(() => {
+                alert('Alle Erweiterungen wurden erfolgreich gebaut!');
+                if (progressContainer) {
+                    document.body.removeChild(progressContainer); // Fortschrittsanzeige schließen
+                }
+            }, 2000);
+        }
+    }
+
+    // Funktion zum Starten des Bauens aller Erweiterungen
     function buildAllExtensions(buildingType, group, currency) {
+        totalExtensions = group.reduce((sum, { missingExtensions }) => sum + missingExtensions.length, 0);
+        completedExtensions = 0;  // Reset the progress count
+
+        // Überprüfen, ob totalExtensions korrekt berechnet wird
+        console.log("Total Extensions:", totalExtensions);
+
+        // Fortschrittsanzeige erstellen
+        progressContainer = document.createElement('div'); // Globale Referenz setzen
+        progressContainer.className = 'progress-container';
+        progressContainer.style.position = 'fixed';
+        progressContainer.style.top = '50%';
+        progressContainer.style.left = '50%';
+        progressContainer.style.transform = 'translate(-50%, -50%)';
+        progressContainer.style.background = getCurrentMode() === 'dark' ? '#333' : '#fff';  // Darkmode oder Lightmode anpassen
+        progressContainer.style.padding = '20px';
+        progressContainer.style.border = '1px solid #ccc';
+        progressContainer.style.borderRadius = '10px';
+        progressContainer.style.boxShadow = '0px 0px 10px rgba(0,0,0,0.2)';
+        progressContainer.style.width = '300px';
+        progressContainer.style.textAlign = 'center';
+        progressContainer.style.zIndex = '10002'; // Sicherstellen, dass der Fortschrittsbalken oben bleibt
+
+        const progressText = document.createElement('p');
+        progressText.textContent = `0 / ${totalExtensions} Erweiterungen gebaut`;
+
+        const progressBar = document.createElement('div');
+        progressBar.style.width = '100%';
+        progressBar.style.background = getCurrentMode() === 'dark' ? '#555' : '#eee';  // Progressbar für Darkmode und Lightmode
+        progressBar.style.borderRadius = '5px';
+        progressBar.style.marginTop = '10px';
+
+        const progressFill = document.createElement('div');
+        progressFill.style.width = '0%';
+        progressFill.style.height = '20px';
+        progressFill.style.background = '#4caf50';
+        progressFill.style.borderRadius = '5px';
+
+        progressBar.appendChild(progressFill);
+        progressContainer.appendChild(progressText);
+        progressContainer.appendChild(progressBar);
+        document.body.appendChild(progressContainer);
+
+        // Alle Erweiterungen bauen mit Fortschrittsupdate
         group.forEach(({ building, missingExtensions }, index) => {
             missingExtensions.forEach((extension, extIndex) => {
                 setTimeout(() => {
-                    buildExtension(building.id, extension.id, currency);
-                }, (index * missingExtensions.length + extIndex) * 3000); // 3000ms Verzögerung
+                    buildExtension(building.id, extension.id, currency, building.caption, progressText, progressFill);
+                }, (index * missingExtensions.length + extIndex) * 1000); // 1000ms Verzögerung
             });
         });
     }
 
-    // Initial den Button hinzufügen
-    addMenuButton();
-
 })();
+
+//Aktuellste Version
