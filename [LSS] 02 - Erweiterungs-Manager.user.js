@@ -416,7 +416,7 @@
 
             if (!user_premium) {
                 console.warn("Der Nutzer hat keinen Premium-Account.");
-                alert("Hallo\n\nDa du keinen Premium-Acount hast könntest du ein paar Einschränkungen haben was den Wachenausbau angeht. Jenachdem wie dein Spielstiel ist.\n\nBeim THW als Beispiel oder anderen Wachen kannst du nicht alle Ausbauten in die Warteschlange legen sondern immer nur zwei.\n\nDies kann dieses Script allerdings nicht unterscheiden daher prüfe die Ausbauten oder passe die Erweiterungen vorher an im Script\n\nBei weiteren Fragen gern im Forum melden oder mir direkt eine Nachricht zu kommen lassen.\n\nLG\nChris");
+                alert("Hallo\n\nDa du keinen Premium-Acount hast könntest du ein paar Einschränkungen haben was den Wachenausbau angeht. Je nach dem wie dein Spielstill ist.\n\nBeim THW als Beispiel oder anderen Wachen kannst du nicht alle Ausbauten in die Warteschlange legen sondern immer nur zwei.\n\nDies kann dieses Script allerdings nicht unterscheiden daher prüfe die Ausbauten oder passe die Erweiterungen vorher an im Script\n\nBei weiteren Fragen gern im Forum melden oder mir direkt eine Nachricht zu kommen lassen.\n\nLG\nChris");
             } else {
                 console.log("Der Nutzer hat einen Premium-Account.");
             }
@@ -467,85 +467,85 @@
     // Initial den Button hinzufügen
     addMenuButton();
 
+
+    // Funktion zum Ausblenden von Erweiterungen bei bestimmten Vorraussetzungen
     function isExtensionLimitReached(building, extensionId) {
-    const fireStationSmallAlwaysAllowed = [1, 2, 10, 11];
-    const fireStationSmallLimited = [0, 3, 4, 5, 6, 7, 8, 9, 12];
+        const fireStationSmallAlwaysAllowed = [1, 2, 10, 11];
+        const fireStationSmallLimited = [0, 3, 4, 5, 6, 7, 8, 9, 12];
 
-    const policeStationSmallAlwaysAllowed = [0, 1];
-    const policeStationSmallLimited = [10, 11, 12, 13];
+        const policeStationSmallAlwaysAllowed = [0, 1];
+        const policeStationSmallLimited = [10, 11, 12, 13];
 
-    const thwRequiredFirst = [0, 1]; // THW: Diese müssen zuerst gebaut werden
-    const thwRestrictedUntilFirstTwo = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13]; // THW: Benötigen ID 0 & 1
-    const thwAlwaysAllowed = [11]; // THW: Diese ist immer erlaubt
+        const thwAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // Alle THW-Erweiterungen
+        const bpolAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Alle BPol-Erweiterungen
+        const polSonderEinheitAllExtensions = [0, 1, 2, 3, 4]; // Alle PolSondereinheit-Erweiterungen
 
-    const bpolAlwaysAllowed = [0, 3, 4, 6, 8, 9, 10]; // BPol: Diese dürfen immer gebaut werden
-    const bpolConditional = {
-        1: 0, // ID 1 erst, wenn ID 0 fertig ist
-        2: 1, // ID 2 erst, wenn ID 1 fertig ist
-        5: 4, // ID 5 erst, wenn ID 4 fertig ist
-        7: 8  // ID 7 erst, wenn ID 8 fertig ist
-    };
+        // Falls Premium aktiv ist, gibt es keine Einschränkungen für THW, BPol und PolSondereinheit
+        if (typeof user_premium !== "undefined" && user_premium) {
+            if (building.building_type === 9 && thwAllExtensions.includes(extensionId)) return false;
+            if (building.building_type === 11 && bpolAllExtensions.includes(extensionId)) return false;
+            if (building.building_type === 17 && polSonderEinheitAllExtensions.includes(extensionId)) return false;
+        }
 
-    const polSonderEinheitAlwaysAllowed = [0, 2, 4]; // PolSonderEinheit: ID 0, 2, 4 können sofort gebaut werden
-    const polSonderEinheitConditional = {
-        1: 0, // ID 1 erst, wenn ID 0 fertig ist
-        3: 1  // ID 3 erst, wenn ID 1 fertig ist
-    };
+        if (building.building_type === 0 && building.small_building) {
+            // Feuerwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
+            if (fireStationSmallAlwaysAllowed.includes(extensionId)) return false;
+            return building.extensions.some(ext => fireStationSmallLimited.includes(ext.type_id));
+        }
 
-    if (building.building_type === 0 && building.small_building) {
-        // Feuerwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
-        if (fireStationSmallAlwaysAllowed.includes(extensionId)) return false;
-        return building.extensions.some(ext => fireStationSmallLimited.includes(ext.type_id));
-    }
+        if (building.building_type === 6 && building.small_building) {
+            // Polizeiwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
+            if (policeStationSmallAlwaysAllowed.includes(extensionId)) return false;
+            return building.extensions.some(ext => policeStationSmallLimited.includes(ext.type_id));
+        }
 
-    if (building.building_type === 6 && building.small_building) {
-        // Polizeiwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
-        if (policeStationSmallAlwaysAllowed.includes(extensionId)) return false;
-        return building.extensions.some(ext => policeStationSmallLimited.includes(ext.type_id));
-    }
+        if (building.building_type === 9) {
+            // THW (Technisches Hilfswerk)
+            const thwRequiredFirst = [0, 1];
+            const thwRestrictedUntilFirstTwo = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13];
+            const thwAlwaysAllowed = [11];
 
-    if (building.building_type === 9) {
-        // THW (Technisches Hilfswerk)
-        if (thwAlwaysAllowed.includes(extensionId)) return false; // ID 11 ist immer erlaubt
+            if (thwAlwaysAllowed.includes(extensionId)) return false;
 
-        const hasRequiredFirstExtensions = thwRequiredFirst.every(reqId =>
+            const hasRequiredFirstExtensions = thwRequiredFirst.every(reqId =>
                                                                       building.extensions.some(ext => ext.type_id === reqId)
                                                                      );
 
-        if (thwRestrictedUntilFirstTwo.includes(extensionId) && !hasRequiredFirstExtensions) {
-            return true; // ID 2-10, 12, 13 sind blockiert, wenn ID 0 oder ID 1 fehlt
+            if (thwRestrictedUntilFirstTwo.includes(extensionId) && !hasRequiredFirstExtensions) {
+                return true;
+            }
+
+            return false;
+        }
+
+        if (building.building_type === 11) {
+            // BPol (Behörden und Organisationen mit Sicherheitsaufgaben)
+            const bpolAlwaysAllowed = [0, 3, 4, 6, 8, 9, 10];
+            const bpolConditional = { 1: 0, 2: 1, 5: 4, 7: 8 };
+
+            if (bpolAlwaysAllowed.includes(extensionId)) return false;
+            if (bpolConditional[extensionId] !== undefined) {
+                return !building.extensions.some(ext => ext.type_id === bpolConditional[extensionId]);
+            }
+
+            return false;
+        }
+
+        if (building.building_type === 17) {
+            // PolSonderEinheit (Gebäude ID 17)
+            const polSonderEinheitAlwaysAllowed = [0, 2, 4];
+            const polSonderEinheitConditional = { 1: 0, 3: 1 };
+
+            if (polSonderEinheitAlwaysAllowed.includes(extensionId)) return false;
+            if (polSonderEinheitConditional[extensionId] !== undefined) {
+                return !building.extensions.some(ext => ext.type_id === polSonderEinheitConditional[extensionId]);
+            }
+
+            return false;
         }
 
         return false;
     }
-
-    if (building.building_type === 11) {
-        // BPol (Behörden und Organisationen mit Sicherheitsaufgaben)
-        if (bpolAlwaysAllowed.includes(extensionId)) return false; // Direkt baubare Erweiterungen
-
-        if (bpolConditional[extensionId] !== undefined) {
-            // Prüfen, ob die erforderliche Erweiterung bereits existiert
-            return !building.extensions.some(ext => ext.type_id === bpolConditional[extensionId]);
-        }
-
-        return false;
-    }
-
-    if (building.building_type === 17) {
-        // PolSonderEinheit (Gebäude ID 17)
-        if (polSonderEinheitAlwaysAllowed.includes(extensionId)) return false; // Direkt baubare Erweiterungen
-
-        if (polSonderEinheitConditional[extensionId] !== undefined) {
-            // Prüfen, ob die erforderliche Erweiterung bereits existiert
-            return !building.extensions.some(ext => ext.type_id === polSonderEinheitConditional[extensionId]);
-        }
-
-        return false;
-    }
-
-    return false;
-}
-
 
     // Funktion um die Tabellen zu füllen
     function renderMissingExtensions(buildings) {
@@ -707,7 +707,6 @@
         });
     }
 
-
     // Funktion zur Filterung der Tabelle
     function filterTable(tbody, searchTerm) {
         const rows = tbody.querySelectorAll("tr");
@@ -737,9 +736,6 @@
             document.body.removeChild(selectionDiv);
         };
 
-        // Debugging: Überprüfen, ob die Auswahlbox erstellt wurde
-    console.log("Pop-up wird angezeigt!");
-
         const coinsButton = document.createElement('button');
         coinsButton.className = 'currency-button coins-button';
         coinsButton.textContent = `Coins: ${coins}`;
@@ -759,9 +755,6 @@
         selectionDiv.appendChild(coinsButton);
         selectionDiv.appendChild(cancelButton);
 
-
-// Debugging: Überprüfen, ob das Pop-up dem Body hinzugefügt wird
-    console.log("Pop-up wird dem Body hinzugefügt.");
         document.body.appendChild(selectionDiv);
     }
 
@@ -842,7 +835,9 @@
 
                 const buildingCaption = getBuildingCaption(buildingId); // Holen des Gebäudenamens
                 console.log('Gefundener Gebäudename:', buildingCaption); // Ausgabe des abgerufenen Gebäudennamens
-                buildExtension(buildingId, extensionId, currency, buildingCaption, true); // Hier setzen wir showPopup auf true für das manuelle Bauen
+
+                // Hier übergeben wir showPopup korrekt als true
+                buildExtension(buildingId, extensionId, currency, buildingCaption, null, null, true); // Fortschrittswerte null, da sie nicht benötigt werden
             }
         } catch (error) {
             console.error('Fehler beim Überprüfen der Credits und Coins:', error);
@@ -850,10 +845,15 @@
         }
     }
 
-    function buildExtension(buildingId, extensionId, currency, buildingCaption, progressText, progressFill) {
+    function buildExtension(buildingId, extensionId, currency, buildingCaption, progressText, progressFill, showPopup = true) {
         const csrfToken = getCSRFToken();
         console.log(`CSRF Token: ${csrfToken}`);
         console.log(`Building Extension: Building ID=${buildingId}, Extension ID=${extensionId}, Currency=${currency}`);
+        console.log("Show popup:", showPopup); // Überprüfen, ob showPopup true ist
+
+        if (showPopup) {
+            showBuildPopup(buildingCaption, extensionId);
+        }
 
         const buildUrl = `/buildings/${buildingId}/extension/${currency}/${extensionId}`;
         GM_xmlhttpRequest({
@@ -874,6 +874,11 @@
                 }
 
                 fetchBuildingsAndRender(); // Liste nach dem Bauen aktualisieren
+
+                // Popup nur anzeigen, wenn showPopup true ist
+                if (showPopup) {
+                    showBuildPopup(buildingCaption, extensionId);
+                }
             },
             onerror: function(error) {
                 console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${buildingCaption}.`, error);
@@ -884,9 +889,75 @@
                 }
 
                 fetchBuildingsAndRender(); // Liste nach dem Bauen aktualisieren
-            }
+
+                // Fehler-Popup anzeigen, nur wenn showPopup true ist
+                if (showPopup) {
+                    const errorPopupContent = `Fehler beim Bauen der Erweiterung für das Gebäude ${buildingCaption}. Versuche es später erneut.`;
+                    showBuildPopup(buildingCaption, extensionId, errorPopupContent);
+                }
+            },
         });
     }
+
+    function showBuildPopup(buildingCaption, extensionName, content = null) {
+        // Sicherstellen, dass nur ein Pop-Up gleichzeitig angezeigt wird
+        const existingPopup = document.querySelector('.popup');  // Suche nach einem bestehenden Pop-Up
+        if (existingPopup) {
+            console.log("Ein Pop-Up existiert bereits. Entferne es.");
+            existingPopup.remove();  // Entferne das existierende Pop-Up
+        }
+
+        const popupContent = content || `Die Erweiterung für das Gebäude wurde erfolgreich in Auftrag gegeben.`;
+
+        const popup = document.createElement('div');
+        popup.classList.add('popup'); // Klasse für das Pop-Up hinzufügen
+        popup.style.position = 'fixed';
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.backgroundColor = '#333'; // Dunkler Hintergrund
+        popup.style.color = 'white'; // Heller Text
+        popup.style.padding = '20px';
+        popup.style.border = '1px solid #444'; // Dunklere Border
+        popup.style.boxShadow = '0 0 15px rgba(0, 0, 0, 0.5)'; // Dunklerer Schatten
+        popup.style.zIndex = '10002';  // Sicherstellen, dass es oben auf anderen Elementen ist
+        popup.style.borderRadius = '8px'; // Abgerundete Ecken
+        popup.style.visibility = 'visible';  // Sicherstellen, dass es sichtbar ist
+        popup.innerHTML = popupContent;
+
+        // Container für den Schließen-Button hinzufügen
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.textAlign = 'center'; // Button mittig setzen
+        buttonContainer.style.marginTop = '20px'; // Button etwas weiter unten positionieren
+
+        // Popup-Schließen-Schaltfläche hinzufügen
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Schließen';
+        closeButton.style.backgroundColor = '#007bff'; // Blaue Schaltfläche
+        closeButton.style.color = 'white'; // Heller Text auf der Schaltfläche
+        closeButton.style.border = 'none';
+        closeButton.style.padding = '8px 15px'; // Etwas größere Schaltfläche
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.borderRadius = '4px';
+
+        // Schließen des Pop-Ups bei Klick
+        closeButton.onclick = () => {
+            console.log("Schließen-Klick erkannt");
+
+            // Entferne das Pop-Up aus dem DOM
+            popup.remove();  // Direktes Entfernen des Pop-Ups
+        };
+
+        // Füge den Schließen-Button zum Container hinzu
+        buttonContainer.appendChild(closeButton);
+
+        // Füge den Container zum Pop-Up hinzu
+        popup.appendChild(buttonContainer);
+
+        // Füge das Pop-Up zum Body hinzu
+        document.body.appendChild(popup);
+    }
+
 
     // Funktion um eine Erweiterung in allen Gebäuden zu bauen
     async function confirmAndBuildAllExtensions(buildingType, group) {
@@ -928,7 +999,7 @@
                     alert(`Nicht genügend Credits. Benötigt: ${formatNumber(totalCost)}, Verfügbar: ${formatNumber(userInfo.credits)}`);
                     return;
                 }
-                buildAllExtensions(buildingType, filteredGroup, 'credits');
+                buildAllExtensions(buildingType, filteredGroup, 'credits', false); // false für das Pop-Up
                 document.body.removeChild(selectionDiv);
             };
 
@@ -940,7 +1011,7 @@
                     alert(`Nicht genügend Coins. Benötigt: ${totalCoins}, Verfügbar: ${userInfo.coins}`);
                     return;
                 }
-                buildAllExtensions(buildingType, filteredGroup, 'coins');
+                buildAllExtensions(buildingType, filteredGroup, 'coins', false); // false für das Pop-Up
                 document.body.removeChild(selectionDiv);
             };
 
@@ -987,13 +1058,9 @@
         }
     }
 
-    // Funktion zum Starten des Bauens aller Erweiterungen
-    function buildAllExtensions(buildingType, group, currency) {
+    function buildAllExtensions(buildingType, group, currency, showPopup = false) {
         totalExtensions = group.reduce((sum, { missingExtensions }) => sum + missingExtensions.length, 0);
         completedExtensions = 0;  // Reset the progress count
-
-        // Überprüfen, ob totalExtensions korrekt berechnet wird
-        console.log("Total Extensions:", totalExtensions);
 
         // Fortschrittsanzeige erstellen
         progressContainer = document.createElement('div'); // Globale Referenz setzen
@@ -1038,7 +1105,7 @@
         group.forEach(({ building, missingExtensions }, index) => {
             missingExtensions.forEach((extension, extIndex) => {
                 setTimeout(() => {
-                    buildExtension(building.id, extension.id, currency, building.caption, progressText, progressFill);
+                    buildExtension(building.id, extension.id, currency, building.caption, progressText, progressFill, showPopup);
                 }, (index * missingExtensions.length + extIndex) * 1000); // 1000ms Verzögerung
             });
         });
