@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] Erweiterungs-Manager
+// @name         [LSS] Erweiterungs-Manager (Betaversion)
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      0.5 (Beta)
 // @description  Listet Wachen auf, bei denen bestimmte Erweiterungen fehlen und ermöglicht das Hinzufügen dieser Erweiterungen.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
