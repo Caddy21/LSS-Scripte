@@ -29,16 +29,16 @@
         button.style.border = "none"; // Kein Rand für modernes Design
 
         if (isActive) {
-            button.innerText = "Einblenden";
+            button.innerText = "Ausblenden";
             button.classList.remove("inactive");
             button.classList.add("active");
-            button.style.backgroundColor = theme === "dark" ? "#2ECC71" : "#27AE60"; // Grün
+            button.style.backgroundColor = theme === "dark" ? "#E74C3C" : "#C0392B"; // Rot
             button.style.color = "#FFFFFF";
         } else {
-            button.innerText = "Ausblenden";
+            button.innerText = "Einblenden";
             button.classList.remove("active");
             button.classList.add("inactive");
-            button.style.backgroundColor = theme === "dark" ? "#E74C3C" : "#C0392B"; // Rot
+            button.style.backgroundColor = theme === "dark" ? "#2ECC71" : "#27AE60"; // Grün
             button.style.color = "#FFFFFF";
         }
 
