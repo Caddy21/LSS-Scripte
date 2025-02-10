@@ -29,13 +29,13 @@
         button.style.border = "none"; // Kein Rand für modernes Design
 
         if (isActive) {
-            button.innerText = "Aktiv";
+            button.innerText = "Einblenden";
             button.classList.remove("inactive");
             button.classList.add("active");
             button.style.backgroundColor = theme === "dark" ? "#2ECC71" : "#27AE60"; // Grün
             button.style.color = "#FFFFFF";
         } else {
-            button.innerText = "Inaktiv";
+            button.innerText = "Ausblenden";
             button.classList.remove("active");
             button.classList.add("inactive");
             button.style.backgroundColor = theme === "dark" ? "#E74C3C" : "#C0392B"; // Rot
