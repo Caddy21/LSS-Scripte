@@ -56,8 +56,6 @@
         const editUrl = `https://www.leitstellenspiel.de/aao_categorys/${categoryId}/edit`;
 
         try {
-
-
             const response = await fetch(editUrl);
             const text = await response.text();
             const parser = new DOMParser();
@@ -75,7 +73,6 @@
             const newStatus = !hiddenCheckbox.checked;
             hiddenCheckbox.checked = newStatus;
 
-
             // Formulardaten sammeln
             const formData = new FormData(form);
             formData.set("aao_category[hidden]", newStatus ? "1" : "0");
@@ -90,8 +87,6 @@
             });
 
             if (saveResponse.ok) {
-
-
                 // Button sofort aktualisieren
                 updateButtonStyle(button, !newStatus);
             } else {
@@ -105,14 +100,12 @@
     function addStatusButtons() {
         const table = document.getElementById("aao_category_index_table");
         if (!table) {
-
             return;
         }
 
         const rows = table.getElementsByTagName("tr");
 
         if (table.querySelector(".status-column")) {
-
             return;
         }
 
@@ -120,7 +113,7 @@
         const headerRow = table.querySelector("thead tr");
         if (headerRow) {
             const th = document.createElement("th");
-            th.innerText = "Aktiv/Inaktiv";
+            th.innerText = "Ein- / Ausblenden";
             th.classList.add("status-column");
             headerRow.appendChild(th);
         }
