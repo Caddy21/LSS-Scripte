@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 12 - Freie Stellplätze
+// @name         [LSS] Freie Stellplätze
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Findet freie Stellplätze in Wachen
@@ -27,6 +27,10 @@
         0: 1, 1: 4, 2: 3, 3: 2, 4: 1, 5: 10
     };
 
+    const PolSonderExtensions = {
+        0: 5, 1: 5, 2: 5, 3: 5, 4: 3
+    };
+
 
     // Liste der Gebäude-Typen ohne Stellplätze
     const noSlotBuildingTypes = { 1: "Feuerwehrschule", 3: "Rettungsschule", 4: "Krankenhaus", 7: "Leitstelle", 8: "Polizeischule", 10: "THW-Schule", 27: "Schule für Seefahrt und Seenotrettung" };
@@ -42,6 +46,7 @@
 
                 console.log(`[API] Gebäude geladen: ${building.caption} (ID: ${building.id}), Typ: ${building.building_type}`);
 
+                // Berechnung für THW
                 if (building.building_type === 9) { // Falls es ein THW-Gebäude ist
                     parkingLots = 1; // Basis-Stellplatz
 
@@ -61,8 +66,9 @@
                     }
                 }
 
+                // Berechnung für Bundespolizei
                  if (building.building_type === 11) { // Falls es ein BPol-Gebäude ist
-                    parkingLots = 4; // Basis-Stellplatz
+                    parkingLots = 2; // Basis-Stellplatz
 
                     if (building.extensions) {
                         console.log(`[DEBUG] Erweiterungen für ${building.caption}:`, building.extensions);
@@ -80,6 +86,7 @@
                     }
                 }
 
+                // Berechnung für Schnelleinsatzgruppe
                 if (building.building_type === 12) { // Falls es eine SEG-Wache ist
                     parkingLots = 1; // Basis-Stellplatz
 
@@ -91,6 +98,26 @@
 
                             // Berücksichtige alle Erweiterungen, unabhängig von ihrem "enabled" oder "available"-Status
                             const additionalSlots = THWExtensions[extension.type_id] || 0; // Falls keine spezielle Zuweisung, 0 Stellplätze
+                            console.log(`[DEBUG] -> Erweiterung gibt Stellplätze: ${additionalSlots}`);
+                            parkingLots += additionalSlots;
+                        });
+                    } else {
+                        console.log(`[WARN] Keine Erweiterungen für ${building.caption} gefunden!`);
+                    }
+                }
+
+                // Berechnung für Polizei-Sondereinheit
+                if (building.building_type === 17) { // Falls es ein THW-Gebäude ist
+                    parkingLots = 0; // Basis-Stellplatz
+
+                    if (building.extensions) {
+                        console.log(`[DEBUG] Erweiterungen für ${building.caption}:`, building.extensions);
+
+                        building.extensions.forEach((extension, index) => {
+                            console.log(`[DEBUG] Erweiterung ${index}: ${extension.caption}, type_id: ${extension.type_id}, enabled: ${extension.enabled}, available: ${extension.available}`);
+
+                            // Berücksichtige alle Erweiterungen, unabhängig von ihrem "enabled" oder "available"-Status
+                            const additionalSlots = PolSonderExtensions[extension.type_id] || 0; // Falls keine spezielle Zuweisung, 0 Stellplätze
                             console.log(`[DEBUG] -> Erweiterung gibt Stellplätze: ${additionalSlots}`);
                             parkingLots += additionalSlots;
                         });
@@ -156,4 +183,38 @@
     }
 
     highlightFreeSlots();
+
+    // Funktion um die makierten Gebäude nach oben zu holen
+    function sortBuildings() {
+    let buildingList = document.querySelector("#building_list"); // Hauptliste aller Gebäude
+    if (!buildingList) {
+        console.warn("[Tampermonkey] Gebäude-Liste nicht gefunden!");
+        return;
+    }
+
+    let buildings = Array.from(buildingList.querySelectorAll(".building_list_li")); // Alle Wachen-Elemente (li) abrufen
+    let freeSlotBuildings = []; // Gebäude mit freien Stellplätzen
+    let otherBuildings = []; // Andere Gebäude
+
+    buildings.forEach(building => {
+        let captionDiv = building.querySelector(".building_list_caption"); // Inneres Element mit Name
+        if (captionDiv && captionDiv.style.backgroundColor === "green") {
+            freeSlotBuildings.push(building);
+        } else {
+            otherBuildings.push(building);
+        }
+    });
+
+    // Liste neu anordnen: Erst freie Stellplätze, dann andere Gebäude
+    buildingList.innerHTML = "";
+    freeSlotBuildings.forEach(building => buildingList.appendChild(building));
+    otherBuildings.forEach(building => buildingList.appendChild(building));
+
+    console.log("[Tampermonkey] Gebäude mit freien Stellplätzen nach oben sortiert!");
+}
+
+// Nach dem Highlighting die Gebäude sortieren
+highlightFreeSlots().then(() => sortBuildings());
+
+
 })();
