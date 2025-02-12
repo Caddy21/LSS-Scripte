@@ -68,7 +68,7 @@
 
                 // Berechnung für Bundespolizei
                  if (building.building_type === 11) { // Falls es ein BPol-Gebäude ist
-                    parkingLots = 2; // Basis-Stellplatz
+                    parkingLots = 4; // Basis-Stellplatz
 
                     if (building.extensions) {
                         console.log(`[DEBUG] Erweiterungen für ${building.caption}:`, building.extensions);
