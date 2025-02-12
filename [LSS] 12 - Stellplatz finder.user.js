@@ -1,11 +1,10 @@
 // ==UserScript==
-// @name         [LSS] Stellplätze Finder
-// @namespace    https://leitstellenspiel.de/
+// @name         [LSS] Freie Stellplätze 
+// @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Findet freie Stellplätze in Wachen
 // @author       Caddy21
-// @match        https://www.leitstellenspiel.de/
-// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
+// @match        https://www.leitstellenspiel.de/*
 // @grant        none
 // ==/UserScript==
 
@@ -14,20 +13,18 @@
 
     console.log("[Tampermonkey] API-gestützter Stellplatzfinder gestartet...");
 
-    // Liste der Gebäude-Typen ohne Stellplätze
-    const noSlotBuildingTypes = {
-        3: "Schule",        // Keine Stellplätze
-        4: "Krankenhaus",   // Betten statt Stellplätze
-        7: "Leitstelle",    // Keine Stellplätze
-        8: "Schule",
-       10: "Schule",
-       27: "Schule",
+    // Mapping der Stellplätze für jede Erweiterung anhand der type_id
+    const THWExtensions = {
+        0: 2, 1: 1, 2: 4, 3: 5, 4: 1, 5: 2, 6: 1, 7: 2, 8: 4, 9: 1, 10: 2, 11: 2, 12: 1, 13: 5
     };
 
-    /**
-     * Holt alle Gebäude und deren Level aus der API
-     * @returns {Promise<Object>} Ein Objekt mit building_id als Key und Gebäude-Daten als Value
-     */
+    const BPolExtensions = {
+        0: 4, 1: 5, 2: 1, 3: 4, 4: 5, 5: 5, 6: 5, 7: 5, 8: 3, 9: 6, 10: 1
+    };
+
+    // Liste der Gebäude-Typen ohne Stellplätze
+    const noSlotBuildingTypes = { 3: "Schule", 4: "Krankenhaus", 7: "Leitstelle" };
+
     async function fetchBuildings() {
         try {
             const response = await fetch("https://www.leitstellenspiel.de/api/buildings");
@@ -35,14 +32,52 @@
 
             let buildingData = {};
             buildings.forEach(building => {
-                buildingData[building.id] = {
-                    name: building.caption,
-                    level: building.level,
-                    type: building.building_type // Korrigiert: building_type statt building_type_id
-                };
+                let parkingLots = building.level + 1; // Standard: Level + 1 Stellplatz
+
+                console.log(`[API] Gebäude geladen: ${building.caption} (ID: ${building.id}), Typ: ${building.building_type}`);
+
+                if (building.building_type === 9) { // Falls es ein THW-Gebäude ist
+                    parkingLots = 1; // Basis-Stellplatz
+
+                    if (building.extensions) {
+                        console.log(`[DEBUG] Erweiterungen für ${building.caption}:`, building.extensions);
+
+                        building.extensions.forEach((extension, index) => {
+                            console.log(`[DEBUG] Erweiterung ${index}: ${extension.caption}, type_id: ${extension.type_id}, enabled: ${extension.enabled}, available: ${extension.available}`);
+
+                            // Berücksichtige alle Erweiterungen, unabhängig von ihrem "enabled" oder "available"-Status
+                            const additionalSlots = THWExtensions[extension.type_id] || 0; // Falls keine spezielle Zuweisung, 0 Stellplätze
+                            console.log(`[DEBUG] -> Erweiterung gibt Stellplätze: ${additionalSlots}`);
+                            parkingLots += additionalSlots;
+                        });
+                    } else {
+                        console.log(`[WARN] Keine Erweiterungen für ${building.caption} gefunden!`);
+                    }
+                }
+
+                 if (building.building_type === 11) { // Falls es ein THW-Gebäude ist
+                    parkingLots = 4; // Basis-Stellplatz
+
+                    if (building.extensions) {
+                        console.log(`[DEBUG] Erweiterungen für ${building.caption}:`, building.extensions);
+
+                        building.extensions.forEach((extension, index) => {
+                            console.log(`[DEBUG] Erweiterung ${index}: ${extension.caption}, type_id: ${extension.type_id}, enabled: ${extension.enabled}, available: ${extension.available}`);
+
+                            // Berücksichtige alle Erweiterungen, unabhängig von ihrem "enabled" oder "available"-Status
+                            const additionalSlots = BPolExtensions[extension.type_id] || 0; // Falls keine spezielle Zuweisung, 0 Stellplätze
+                            console.log(`[DEBUG] -> Erweiterung gibt Stellplätze: ${additionalSlots}`);
+                            parkingLots += additionalSlots;
+                        });
+                    } else {
+                        console.log(`[WARN] Keine Erweiterungen für ${building.caption} gefunden!`);
+                    }
+                }
+
+                buildingData[building.id] = { name: building.caption, level: building.level, type: building.building_type, maxSlots: parkingLots };
+                console.log(`[RESULT] ${building.caption} hat insgesamt ${parkingLots} Stellplätze.`);
             });
 
-            console.log("[API] Gebäude erfolgreich geladen:", buildingData);
             return buildingData;
         } catch (error) {
             console.error("[API] Fehler beim Abrufen der Gebäude:", error);
@@ -50,10 +85,6 @@
         }
     }
 
-    /**
-     * Holt alle Fahrzeuge und zählt sie pro Wache
-     * @returns {Promise<Object>} Ein Objekt mit building_id als Key und Anzahl Fahrzeuge als Value
-     */
     async function fetchVehicles() {
         try {
             const response = await fetch("https://www.leitstellenspiel.de/api/vehicles");
@@ -72,35 +103,28 @@
         }
     }
 
-    /**
-     * Berechnet die freien Stellplätze und markiert Wachen
-     */
     async function highlightFreeSlots() {
         let buildings = await fetchBuildings();
         let vehicles = await fetchVehicles();
 
         Object.keys(buildings).forEach(buildingID => {
-            let { level, name, type } = buildings[buildingID];
+            let { name, type, maxSlots } = buildings[buildingID];
             let vehicleCount = vehicles[buildingID] || 0;
 
-            // Falls das Gebäude keine Stellplätze hat, überspringen
             if (noSlotBuildingTypes[type]) {
                 console.log(`[Tampermonkey] ${name} (${noSlotBuildingTypes[type]}) hat keine Stellplätze.`);
                 return;
             }
 
-            // Berechnung der maximalen Stellplätze: Level + 1, max. 40 Stellplätze
-            let maxSlots = Math.min(level + 1, 40); // +1 da Level 0 bereits ein Stellplatz ist
             let freeSlots = maxSlots - vehicleCount;
 
-            // Wenn freie Stellplätze vorhanden sind, wird die Wache grün hinterlegt
-            if (freeSlots > 0) {
-                console.log(`[Tampermonkey] ${name} hat ${freeSlots} freie Stellplätze.`);
+            console.log(`[Tampermonkey] Gebäude: ${name} (ID: ${buildingID}), Typ: ${type}, Max. Stellplätze: ${maxSlots}, Fahrzeuge: ${vehicleCount}`);
+            console.log(`[Tampermonkey] ${name} hat ${freeSlots} freie Stellplätze.`);
 
-                // HTML-Element der Wache finden und Hintergrundfarbe ändern
+            if (freeSlots > 0) {
                 let buildingElement = document.getElementById(`building_list_caption_${buildingID}`);
                 if (buildingElement) {
-                    buildingElement.style.backgroundColor = 'green'; // Wache grün hinterlegen
+                    buildingElement.style.backgroundColor = 'green';
                 }
             }
         });
