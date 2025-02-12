@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Einsatzkategorienfilter
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Filtert die Einsatzliste nach Kategorien
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -67,11 +67,21 @@
         return Object.values(categoryGroups).some(group => group.includes(category));
     }
 
-    // Funktion zur Überwachung der Einsatzliste
-    function observeMissionList() {
-        const missionList = document.getElementById("mission_list");
+    // Funktion zur Überwachung der Einsatzlisten
+    function observeMissionLists() {
+    const missionListIds = [
+        "mission_list",
+        "mission_list_krankentransporte",
+        "mission_list_alliance",
+        "mission_list_sicherheitswache_alliance",
+        "mission_list_alliance_event",
+        "mission_list_sicherheitswache"
+    ];
+
+    missionListIds.forEach(id => {
+        const missionList = document.getElementById(id);
         if (!missionList) {
-            console.error("Einsatzliste nicht gefunden!");
+            console.error(`Einsatzliste ${id} nicht gefunden!`);
             return;
         }
 
@@ -79,7 +89,6 @@
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType === 1 && node.classList.contains("missionSideBarEntry")) {
-                        //                        console.log("Neuer Einsatz erkannt:", node);
                         updateSingleMissionVisibility(node);
                     }
                 });
@@ -87,33 +96,30 @@
         });
 
         observer.observe(missionList, { childList: true });
+    });
+}
+
+// Funktion um neue Einsätze Ihrer Kategorie zu zuordnen und ein- oder auszublenden
+function updateSingleMissionVisibility(missionElement) {
+    if (activeFilters.length === 0) {
+        missionElement.style.display = "";
+        return;
     }
 
-    // Funktion um neue Einsätze Ihrer Kategorie zu zuordnen und ein- oder auszublenden
-    function updateSingleMissionVisibility(missionElement) {
-        if (activeFilters.length === 0) {
-            missionElement.style.display = "";
-            return;
-        }
-
-        const missionId = missionElement.getAttribute("mission_type_id");
-        if (!missionId || !missionCategoryMap.has(missionId)) {
-            missionElement.style.display = "none";
-            return;
-        }
-
-        const missionCategories = missionCategoryMap.get(missionId);
-        const match = activeFilters.some(category => missionCategories.includes(category));
-
-        if (match) {
-            missionElement.style.display = "";
-        } else {
-            missionElement.style.display = "none";
-        }
+    const missionId = missionElement.getAttribute("mission_type_id");
+    if (!missionId || !missionCategoryMap.has(missionId)) {
+        missionElement.style.display = "none";
+        return;
     }
 
-    // Observer starten
-    observeMissionList();
+    const missionCategories = missionCategoryMap.get(missionId);
+    const match = activeFilters.some(category => missionCategories.includes(category));
+
+    missionElement.style.display = match ? "" : "none";
+}
+
+// Aufruf der Funktion, um die Überwachung zu starten
+observeMissionLists();
 
     // Funktion zum laden der Einsatzdaten aus der API oder dem Cache, wenn sie nicht veraltet sind.
     async function loadMissionData() {
@@ -437,6 +443,67 @@
         }
         activeCategoryButton = null;
     }
+
+    // Funktion zum Überprüfen des "Alarmieren und weiter"-Buttons in allen iFrames
+    function debugAlertNextButtonInIframe() {
+        // Suche alle iFrames, deren id mit "lightbox_iframe_" beginnt
+        const iframes = document.querySelectorAll('[id^="lightbox_iframe_"]');
+
+        // Durchlaufe alle iFrames und suche nach dem Button
+        for (let iframe of iframes) {
+            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+            if (!iframeDocument) {
+                console.log(`❌ Kein Zugriff auf das iFrame-Dokument von ${iframe.id}!`);
+                continue;
+            }
+
+            const alertNextButton = iframeDocument.querySelector('.alert_next');
+
+            if (alertNextButton) {
+                console.log(`✅ "Alarmieren und weiter"-Button im iFrame ${iframe.id} gefunden!`);
+                alertNextButton.addEventListener('click', function () {
+                    console.log(`🚨 "Alarmieren und weiter"-Button im iFrame ${iframe.id} wurde geklickt!`);
+                });
+                return true; // Button gefunden, Schleife beenden
+            } else {
+                console.log(`❌ "Alarmieren und weiter"-Button nicht im iFrame ${iframe.id} gefunden!`);
+            }
+        }
+
+        return false; // Button in keinem der iFrames gefunden
+    }
+
+    // Beobachtet Änderungen im DOM (Lightbox-Öffnung)
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1 && node.id.startsWith('lightbox_iframe_')) {
+                        console.log(`🟢 Neuer iFrame mit id ${node.id} erkannt! Überprüfe Buttons...`);
+                        // Wiederholt die Überprüfung alle 1 Sekunde, bis der Button gefunden wird
+                        const intervalId = setInterval(() => {
+                            if (debugAlertNextButtonInIframe()) {
+                                clearInterval(intervalId); // Stoppt die Schleife, wenn der Button gefunden wurde
+                            }
+                        }, 1000); // 1 Sekunde
+                    }
+                });
+            }
+        });
+    });
+
+    // Starte den Observer
+    observer.observe(document.body, {
+        childList: true, // Beobachte das Hinzufügen von neuen Knoten
+        subtree: true // Beobachte auch alle Kindknoten des gesamten Dokuments
+    });
+
+
+    // Starte den Observer für den Body (überwacht neue Elemente)
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    console.log("🔍 Debugging-Observer für iFrame-Alarmmaske gestartet.");
 
     //    console.log("Starte das Script...");
     loadMissionData();
