@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Stellplatz finder
+// @name         [LSS] Stellplatzfinder
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Findet freie Stellplätze in Wachen
