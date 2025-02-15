@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] 13 - Alarmstichworte
+// @name         [LSS] Alarmstichworte
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.0
 // @description  Setzt eigene Alarmstichworte in der Einsatzliste
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
