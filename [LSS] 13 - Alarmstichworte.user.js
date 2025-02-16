@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Alarmstichworte
+// @name         [LSS] 13 - Alarmstichworte
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Setzt eigene Alarmstichworte in der Einsatzliste
@@ -15,8 +15,10 @@
     // Hier könnt Ihr eure eigenen Alarmstichworte erstellen und die entpsrechende ID des Einsatzes hinzufügen.
     // Finden könnt Ihr sämtliche Einsatz IDs hier > https://www.leitstellenspiel.de/einsaetze.json
     // Dies ist nur ein Beispiel, denn wie Ihr euch denken könnt, ist das je nach Region/Bundesland/Persönliches Empfinden alles unterschiedlich.
-    
+
+    // Funktion um eigene Alarmstichwochte zu erstellen
     const einsatzMapping = new Map([
+        
         ["B: Klein", [0, 1, 2, ]],
         ["B: Mittel", [3, 4, 5]],
         ["B: Groß", [6, 7, 8]],
@@ -24,6 +26,7 @@
         ["U: Gefahrgut", [12, 13, 14]],
         ["RD: Notfall", [20, 21, 22]],
         ["P: Polizei", [30, 31, 32]],
+    
     ]);
 
     const idZuStichwort = new Map();
@@ -31,6 +34,7 @@
         ids.forEach(id => idZuStichwort.set(id, stichwort));
     });
 
+    // Funktion um die Einsatzname zu aktuallisieren
     function updateMissionName(element) {
         const parent = element.closest('.missionSideBarEntry');
         if (!parent) return;
@@ -47,6 +51,7 @@
         }
     }
 
+    // Funktion um alle Einsätze zu aktuallisieren
     function updateAllMissions() {
         document.querySelectorAll('[id^="mission_caption_"]').forEach(updateMissionName);
     }
