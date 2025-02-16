@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Fahrzeuge löschen
+// @name         [LSS] 06 - Fahrzeuge löschen
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Löscht alle Fahrzeuge einer Wache oder gezielt ausgewählte Fahrzeuge
@@ -169,53 +169,113 @@
         return { progressBar, vehicleCount, overlay };
     }
 
-    // Funktion, um Fahrzeuge gezielt basierend auf Checkbox-Auswahl zu löschen
-    async function deleteSelectedVehicles() {
-        const selectedCheckboxes = Array.from(document.querySelectorAll('.vehicle-checkbox-end:checked'));
-        if (selectedCheckboxes.length === 0) {
-            alert('Keine Fahrzeuge ausgewählt!');
-            return;
-        }
+    // Funktion zum Abrufen des CSRF-Tokens von der Seite
+function getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+        return metaTag.content;
+    }
 
-        const vehicleIds = selectedCheckboxes.map(checkbox => checkbox.dataset.vehicleId);
-        const { progressBar, vehicleCount, overlay } = createOverlay();
+    const tokenInput = document.querySelector('input[name="authenticity_token"]');
+    if (tokenInput) {
+        return tokenInput.value;
+    }
 
-        let deletedCount = 0;
-        for (const vehicleId of vehicleIds) {
-            const vehicleUrl = `https://www.leitstellenspiel.de/vehicles/${vehicleId}`;
-            try {
-                const response = await fetch(vehicleUrl);
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
+    console.error("CSRF-Token nicht gefunden!");
+    return null;
+}
 
-                const deleteButton = doc.querySelector('a[data-method="delete"]');
-                if (deleteButton) {
-                    await fetch(deleteButton.href, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: '_method=delete'
-                    });
-                }
-            } catch (error) {
-                console.error(`Fehler beim Löschen des Fahrzeugs ${vehicleId}:`, error);
+// Funktion, um Fahrzeuge gezielt basierend auf Checkbox-Auswahl zu löschen
+async function deleteSelectedVehicles() {
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+        alert("CSRF-Token nicht gefunden. Fahrzeuglöschung nicht möglich.");
+        return;
+    }
+
+    const selectedCheckboxes = Array.from(document.querySelectorAll('.vehicle-checkbox-end:checked'));
+    if (selectedCheckboxes.length === 0) {
+        alert('Keine Fahrzeuge ausgewählt!');
+        return;
+    }
+
+    // Overlay und Progressbar erstellen (falls noch nicht vorhanden)
+    let overlay = document.getElementById('delete-overlay');
+    let progressBar = document.getElementById('delete-progress-bar');
+    let vehicleCount = document.getElementById('delete-count');
+
+    if (!overlay) {
+        // Falls das Overlay noch nicht existiert, erstellen wir es
+        ({ progressBar, vehicleCount, overlay } = createOverlay());
+    }
+
+    // Die maximale Anzahl der Fahrzeuge für die Progressbar
+    const totalVehicles = selectedCheckboxes.length;
+    let processedVehicles = 0;
+
+    console.log(`[DEBUG] Starte das Löschen von ${totalVehicles} Fahrzeugen...`);
+
+    for (const checkbox of selectedCheckboxes) {
+        const vehicleId = checkbox.dataset.vehicleId;
+        console.log(`[DEBUG] Suche Fahrzeug-ID: ${vehicleId}`);
+
+        // Direkt zur Fahrzeugseite gehen
+        const vehicleUrl = `https://www.leitstellenspiel.de/vehicles/${vehicleId}`;
+        console.log(`[DEBUG] Rufe Fahrzeugseite auf: ${vehicleUrl}`);
+
+        try {
+            const response = await fetch(vehicleUrl, { credentials: "include" });
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Suche den Lösch-Button
+            const deleteButton = doc.querySelector('a[data-method="delete"]');
+            if (!deleteButton) {
+                console.error(`[ERROR] Lösch-Button für Fahrzeug ${vehicleId} nicht gefunden!`);
+                continue;
             }
 
-            deletedCount++;
-            const progress = (deletedCount / vehicleIds.length) * 100;
-            progressBar.style.width = `${progress}%`;
-            vehicleCount.textContent = `Gelöschte Fahrzeuge: ${deletedCount} von ${vehicleIds.length}`;
+            console.log(`[DEBUG] Lösch-Button gefunden, sende DELETE-Request...`);
 
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Verzögerung zwischen Löschvorgängen
+            // Löschen über einen Fetch-Request simulieren
+            await fetch(deleteButton.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': csrfToken // CSRF-Token mitsenden
+                },
+                body: '_method=delete'
+            });
+
+            console.log(`[DEBUG] Fahrzeug ${vehicleId} erfolgreich gelöscht!`);
+
+            // Entferne das Fahrzeug direkt aus der Tabelle
+            const row = checkbox.closest('tr');
+            if (row) {
+                row.remove();
+                console.log(`[DEBUG] Fahrzeug ${vehicleId} aus der Tabelle entfernt.`);
+            }
+
+            // Fortschritt aktualisieren
+            processedVehicles++;
+            const progress = (processedVehicles / totalVehicles) * 100;
+            progressBar.style.width = `${progress}%`;
+            vehicleCount.textContent = `Gelöschte Fahrzeuge: ${processedVehicles} von ${totalVehicles}`;
+
+        } catch (error) {
+            console.error(`[ERROR] Fehler beim Löschen von Fahrzeug ${vehicleId}:`, error);
         }
 
-        alert('Ausgewählte Fahrzeuge wurden gelöscht!');
-        document.body.removeChild(overlay);
-        location.reload();
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Vermeidet zu schnelle Requests
     }
+
+    console.log("[DEBUG] Alle Fahrzeuge wurden verarbeitet.");
+
+    overlay.remove();
+console.log("[DEBUG] Progressbar entfernt, alle Fahrzeuge wurden gelöscht.");
+}
 
     // Funktion, um alle Fahrzeuge zu löschen
     async function deleteAllVehicles() {
