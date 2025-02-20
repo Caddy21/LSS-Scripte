@@ -40,5 +40,22 @@ Chris
 Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nicht** aus und werden nicht berücksichtigt in erster Linie.
   
 # Meine Scripte
-Hier habt Ihr eine Liste meiner bisher erstellten Scripte
-Davon sind noch nicht alle veröffentlicht worden im LSS-Forum
+
+<details>
+  <summary> Hier findet Ihr eine Übersicht meiner Scripte </summary>
+  
+    - Fahne in der Einsatzliste entfernen (veröffentlicht)
+    - (Beta) Erweiterungs-Manager
+    - Alle LST umschalten (veröffentlicht)
+    - Fahrzeuge im S6 auflisten (veröffentlicht)
+    - SNR-Einsätze filtern (veröffentlicht)
+    - Fahrzeuge löschen 
+    - Sprechwunsch Sortierer (veröffentlicht)
+    - Design Switcher
+    - Einsatzkategorienfilter (veröffentlicht)
+    - Auszeichnungsverwalter (veröffentlicht)
+    - AAO Kategorien Ein und Ausblenden (veröffentlicht)
+    - Stellplatzfinder (veröffentlicht)
+    - Alarmstichworte (veröffentlicht)
+    
+</details>
