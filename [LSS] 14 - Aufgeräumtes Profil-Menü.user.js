@@ -11,9 +11,6 @@
 
 (function() {
     'use strict';
-
-    // Einstellungen: True/False für das Ausblenden der jeweiligen Elemente
-
     // True - Anzeigen
     // False - Ausblenden
     const settings = {
