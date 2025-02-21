@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 14 - Aufgeräumtes Profil-Menü
+// @name         [LSS] Aufgeräumtes Profil-Menü
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Ausblenden von bestimmten Bereichen im Profil-Menü
