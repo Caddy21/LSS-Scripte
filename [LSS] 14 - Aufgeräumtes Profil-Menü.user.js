@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Aufgeräumtes Profil-Menü
+// @name         [LSS] 14 - Aufgeräumtes Profil-Menü
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Ausblenden von bestimmten Bereichen im Profil-Menü
@@ -13,24 +13,38 @@
     'use strict';
 
     // Einstellungen: True/False für das Ausblenden der jeweiligen Elemente
-    
+
     // True - Anzeigen
     // False - Ausblenden
     const settings = {
-        "profile": true,         // Profil (href="/profile
-        "tasks": true,            // Aufgaben (href="/tasks/index")
-        "level": false,            // Level (href="/level")
-        "auszeichnungen": true,   // Auszeichnungen (href="/auszeichnungen")
-        "premiumaccount": true,   // Premium Account (href="/premiumaccount")
-        "account": false,    // Profil bearbeiten (href=/user/edit")
-        "weiterempfehlen": false,  // Spiel weiterempfehlen (href="/referrals")
-        "notizen": false,          // Notizen (href="/note")
-        "aao": true,              // AAO (href="/aaos")
-        "geschwindigkeit": false,  // Einsatzgeschwindigkeit (href="/settings/index?mission_speed=true")
-        "grafik": false,           // Grafiksets (href="/vehicle_graphics")
-        "setting": false,          // Einstellungen (href="/settings/index")
-        "logout": true,       // Auslogen (href="/users/sign_out")
-        "divider": true,       // Trennlinien
+        "profile": true,
+        // Profil
+        "tasks": true,
+        // Aufgaben und Events
+        "level": true,
+        // Dienstgrad
+        "auszeichnungen": true,
+        // Auszeichnungen
+        "premiumaccount": true,
+        // Premium Account
+        "account": true,
+        // Profil bearbeiten
+        "weiterempfehlen": true,
+        // Spiel weiterempfehlen
+        "notizen": true,
+        // Notizen
+        "aao": true,
+        // Alarm und Ausrückeordnung
+        "geschwindigkeit": true,
+        // Einsatzgeschwindigkeit
+        "grafik": true,
+        // Grafiksets
+        "setting": true,
+        // Einstellungen
+        "logout": true,
+        // Auslogen
+        "divider": true,
+        // Trennlinien
     };
 
     // Warten, bis das DOM vollständig geladen ist
