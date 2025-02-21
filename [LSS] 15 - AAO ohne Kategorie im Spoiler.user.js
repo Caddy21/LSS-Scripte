@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Spoiler für AAOs ohne Kategorie
 // @namespace    https://www.leitstellenspiel.de/
-// @version      2.3
+// @version      1.0
 // @description  Fügt einen Spoiler-Button für AAO-Einträge ohne Kategorie ein
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
