@@ -13,21 +13,24 @@
     'use strict';
 
     // Einstellungen: True/False für das Ausblenden der jeweiligen Elemente
+    
+    // True - Anzeigen
+    // False - Ausblenden
     const settings = {
-        "profile": true,           // Profil (href="/profile
-        "tasks": true,             // Aufgaben (href="/tasks/index")
-        "level": true,             // Level (href="/level")
-        "auszeichnungen": true,    // Auszeichnungen (href="/auszeichnungen")
-        "premiumaccount": true,    // Premium Account (href="/premiumaccount")
-        "account": true,           // Profil bearbeiten (href=/user/edit")
-        "weiterempfehlen": true,   // Spiel weiterempfehlen (href="/referrals")
-        "notizen": true,           // Notizen (href="/note")
-        "aao": true,               // AAO (href="/aaos")
-        "geschwindigkeit": true,   // Einsatzgeschwindigkeit (href="/settings/index?mission_speed=true")
-        "grafik": true,            // Grafiksets (href="/vehicle_graphics")
-        "setting": true,           // Einstellungen (href="/settings/index")
-        "logout": true,            // Auslogen (href="/users/sign_out")
-        "divider": true,           // Trennlinien
+        "profile": true,         // Profil (href="/profile
+        "tasks": true,            // Aufgaben (href="/tasks/index")
+        "level": false,            // Level (href="/level")
+        "auszeichnungen": true,   // Auszeichnungen (href="/auszeichnungen")
+        "premiumaccount": true,   // Premium Account (href="/premiumaccount")
+        "account": false,    // Profil bearbeiten (href=/user/edit")
+        "weiterempfehlen": false,  // Spiel weiterempfehlen (href="/referrals")
+        "notizen": false,          // Notizen (href="/note")
+        "aao": true,              // AAO (href="/aaos")
+        "geschwindigkeit": false,  // Einsatzgeschwindigkeit (href="/settings/index?mission_speed=true")
+        "grafik": false,           // Grafiksets (href="/vehicle_graphics")
+        "setting": false,          // Einstellungen (href="/settings/index")
+        "logout": true,       // Auslogen (href="/users/sign_out")
+        "divider": true,       // Trennlinien
     };
 
     // Warten, bis das DOM vollständig geladen ist
