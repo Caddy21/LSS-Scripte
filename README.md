@@ -57,5 +57,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - AAO Kategorien Ein und Ausblenden (veröffentlicht)
     - Stellplatzfinder (veröffentlicht)
     - Alarmstichworte (veröffentlicht)
+    - Aufgeräumtes Profil-Menü
     
 </details>
