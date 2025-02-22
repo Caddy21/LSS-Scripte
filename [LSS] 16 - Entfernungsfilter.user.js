@@ -2,10 +2,9 @@
 // @name         [LSS] Entfernungsfilter
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Blendet Krankenhäuser & Gefängnisse aus, die weiter als XX km entfernt sind.
+// @description  Blendet Krankenhäuser & Gefängnisse aus, die weiter als XX Kilometer entfernt sind.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
-// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
