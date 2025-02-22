@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] Entfernungsfilter
+// @name         [LSS] Entfernungs- und Abgabenfilter
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Blendet Krankenhäuser & Gefängnisse aus, die weiter als XX Kilometer entfernt sind.
+// @description  Blendet Krankenhäuser aus, die weiter als XX km entfernt sind oder eine Abgabe über 0% haben. Gefängnisse über XX km werden ebenfalls ausgeblendet.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -24,12 +24,16 @@
             let rows = table.querySelectorAll("tbody tr");
             rows.forEach(row => {
                 let distanceCell = Array.from(row.querySelectorAll('.hidden-xs')).find(cell => cell.innerText.includes("km"));
+                let feeCell = Array.from(row.querySelectorAll('.hidden-xs')).find(cell => cell.innerText.includes("%")); // Abgabenzelle suchen
 
-                if (distanceCell) {
-                    let match = distanceCell.innerText.match(/(\d+[\.,]?\d*)\s*km/);
-                    if (match && parseFloat(match[1].replace(",", ".")) > 50) {
-                        row.style.display = "none";
-                    }
+                let distanceMatch = distanceCell ? distanceCell.innerText.match(/(\d+[\.,]?\d*)\s*km/) : null;
+                let feeMatch = feeCell ? feeCell.innerText.match(/(\d+)\s*%/) : null;
+
+                let distance = distanceMatch ? parseFloat(distanceMatch[1].replace(",", ".")) : 0;
+                let fee = feeMatch ? parseInt(feeMatch[1]) : 0; // Abgabe als Zahl umwandeln
+
+                if (distance > 30 || fee > 0) { // Krankenhaus ausblenden, wenn Entfernung > 50 km oder Abgabe > 0%
+                    row.style.display = "none";
                 }
             });
         });
@@ -39,12 +43,12 @@
         let prisonBox = document.querySelector('[data-transport-request="true"][data-transport-request-type="prisoner"]');
         if (!prisonBox) return;
 
-        let buttons = prisonBox.querySelectorAll('.btn.btn-success'); // Alle Buttons holen
+        let buttons = prisonBox.querySelectorAll('.btn.btn-success');
         buttons.forEach(button => {
-            let match = button.innerText.match(/Entfernung:\s*(\d+[\.,]?\d*)\s*km/); // Entfernung extrahieren
+            let match = button.innerText.match(/Entfernung:\s*(\d+[\.,]?\d*)\s*km/);
 
             if (match && parseFloat(match[1].replace(",", ".")) > 10) {
-                button.style.display = "none"; // Button ausblenden
+                button.style.display = "none";
             }
         });
     }
