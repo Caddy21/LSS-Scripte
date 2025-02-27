@@ -18,7 +18,7 @@
 
     // Hier könnt Ihr auswählen welche Erweiterung in der Tabelle angezeigt werden soll, dafür die nicht benötigten einfach mit // ausklammern.
     const manualExtensions = {
-        '0_normal': [ // Feuerwache (normal)
+        '0_normal': [ // Feuerwache (Normal)
             { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
             { id: 1, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
             { id: 2, name: 'AB-Stellplatz', cost: 100000, coins: 20 },
@@ -80,7 +80,7 @@
             { id: 0, name: 'Windenrettung', cost: 200000, coins: 15 },
         ],
 
-        '6_normal': [ // Polizeiwache
+        '6_normal': [ // Polizeiwache (Normal)
             { id: 0, name: '1te Zelle', cost: 25000, coins: 5 },
             { id: 1, name: '2te Zelle', cost: 25000, coins: 5 },
             { id: 2, name: '3te Zelle', cost: 25000, coins: 5 },
