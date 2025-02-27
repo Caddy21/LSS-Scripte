@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Stellplatzfinder
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.5
+// @version      1.1
 // @description  Findet freie Stellplätze inklusive farblicher Unterscheidung zwischen Klein- und Normalwachen oder blendet volle Wachen aus.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
