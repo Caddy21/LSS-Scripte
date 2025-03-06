@@ -2,7 +2,7 @@
 // @name         [LSS] Entfernungs- und Abgabenfilter mit Fachabteilung
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Blendet Krankenhäuser und Zwischenstationen aus, die weiter als XX km entfernt sind, eine Abgabe über YY% haben oder keine passende Fachabteilung haben. Gefängnisse über ZZ km werden ebenfalls ausgeblendet.
+// @description  Blendet Krankenhäuser, Zellen und mögliche Übergabeorte nach Kriterien aus.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -13,55 +13,13 @@
     'use strict';
 
     const maxDistanceHospital = 50; // Maximale Krankenhausentfernung in km
+    const maxFeeHospital = 0; // Maximale Abgabe für Krankenhäuser in %
+    let requiredDepartment = "Ja"; // Mögliche Fachabteilungen: "Ja", "Nein", "Beides"
+
+    const maxDistancePrison = 5; // Maximale Zellenentfernung in km
+    const maxFeePrison = 0; // Maximale Abgabe für Gefängnisse in %
+
     const maxDistanceIntermediate = 30; // Maximale Entfernung für Übergabeorte in km
-    const maxDistancePrison = 5; // Maximale Gefängnisentfernung in km
-    let requiredDepartment = "Ja"; // Mögliche Werte: "Ja", "Nein", "Beides"
-    let maxFeeHospital = 0; // Maximale Abgabe in %
-    let maxFeePrison = 0; // Maximale Abgabe in % für Gefängnisse
-
-    // Dynamisches Eingabefeld für den max. Abgabewert in %
-    let feeInputContainer = document.createElement('div');
-    feeInputContainer.style.position = 'fixed';
-    feeInputContainer.style.top = '10px';
-    feeInputContainer.style.left = '10px';
-    feeInputContainer.style.padding = '10px';
-    feeInputContainer.style.backgroundColor = '#fff';
-    feeInputContainer.style.border = '1px solid #ccc';
-    feeInputContainer.style.zIndex = '9999';
-
-    let feeLabel = document.createElement('label');
-    feeLabel.innerText = 'Maximale Abgabe für Krankenhäuser in %: ';
-    feeInputContainer.appendChild(feeLabel);
-
-    let feeInput = document.createElement('input');
-    feeInput.type = 'number';
-    feeInput.value = 0;
-    feeInput.min = 0;
-    feeInput.max = 100;
-    feeInput.style.width = '50px';
-    feeInput.addEventListener('input', function() {
-        maxFeeHospital = parseInt(feeInput.value);
-        filterAll();
-    });
-    feeInputContainer.appendChild(feeInput);
-
-    let feeLabelPrison = document.createElement('label');
-    feeLabelPrison.innerText = 'Maximale Abgabe für Gefängnisse in %: ';
-    feeInputContainer.appendChild(feeLabelPrison);
-
-    let feeInputPrison = document.createElement('input');
-    feeInputPrison.type = 'number';
-    feeInputPrison.value = 0;
-    feeInputPrison.min = 0;
-    feeInputPrison.max = 100;
-    feeInputPrison.style.width = '50px';
-    feeInputPrison.addEventListener('input', function() {
-        maxFeePrison = parseInt(feeInputPrison.value);
-        filterAll();
-    });
-    feeInputContainer.appendChild(feeInputPrison);
-
-    document.body.appendChild(feeInputContainer);
 
     function filterHospitals() {
         let transportBox = document.querySelector('[data-transport-request="true"][data-transport-request-type="patient"]');
@@ -83,7 +41,7 @@
                 let department = departmentCell ? departmentCell.innerText.trim() : "Nein";
 
                 let distance = distanceMatch ? parseFloat(distanceMatch[1].replace(",", ".")) : 0;
-                let fee = feeMatch ? parseInt(feeMatch[1]) : 0;
+                let fee = feeMatch ? parseInt(feeMatch[1].replace(/\D/g, "")) : 0; // Entferne nicht-digitale Zeichen
 
                 let hideByDepartment = (requiredDepartment === "Ja" && department !== "Ja") || (requiredDepartment === "Nein" && department !== "Nein");
                 if (distance > maxDistanceHospital || fee > maxFeeHospital || hideByDepartment) {
@@ -131,9 +89,9 @@
             }
 
             // Gefängnis Abgabe-Filterung (wenn Prozent vorhanden)
-            let feeMatch = button.innerText.match(/Abgabe:\s*(\d+)\s*%/);
+            let feeMatch = button.innerText.match(/Abgabe an Besitzer:\s*(\d+)\s*%/);
             if (feeMatch) {
-                let fee = parseInt(feeMatch[1]);
+                let fee = parseInt(feeMatch[1].replace(/\D/g, "")); // Entferne nicht-digitale Zeichen
                 if (fee > maxFeePrison) {
                     button.style.display = "none";
                 }
