@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Entfernungs- und Abgabenfilter mit Fachabteilung
+// @name         [LSS] Entfernungs- und Abgabenfilter
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Blendet Krankenhäuser, Zellen und mögliche Übergabeorte nach Kriterien aus.
@@ -12,6 +12,8 @@
 (function() {
     'use strict';
 
+    // Hier könnt Ihr eure gewünschten Werte eintragen
+
     const maxDistanceHospital = 50; // Maximale Krankenhausentfernung in km
     const maxFeeHospital = 0; // Maximale Abgabe für Krankenhäuser in %
     let requiredDepartment = "Ja"; // Mögliche Fachabteilungen: "Ja", "Nein", "Beides"
@@ -20,6 +22,8 @@
     const maxFeePrison = 0; // Maximale Abgabe für Gefängnisse in %
 
     const maxDistanceIntermediate = 30; // Maximale Entfernung für Übergabeorte in km
+
+    // Ab hier dann nichts mehr bitte ändern
 
     // Funktion zum Filtern der Krankenhäuser
     function filterHospitals() {
