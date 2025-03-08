@@ -21,6 +21,7 @@
 
     const maxDistanceIntermediate = 30; // Maximale Entfernung für Übergabeorte in km
 
+    // Funktion zum Filtern der Krankenhäuser
     function filterHospitals() {
         let transportBox = document.querySelector('[data-transport-request="true"][data-transport-request-type="patient"]');
         if (!transportBox) return;
@@ -51,6 +52,7 @@
         });
     }
 
+    // Funktion zur Filterung der Übergabeorte
     function filterIntermediateStations() {
         let transportBox = document.querySelector('[data-transport-request="true"][data-transport-request-type="patient-intermediate"]');
         if (!transportBox) return;
@@ -77,6 +79,7 @@
         });
     }
 
+    // Funktion zur Filterung der Zellen
     function filterPrisons() {
         let prisonBox = document.querySelector('[data-transport-request="true"][data-transport-request-type="prisoner"]');
         if (!prisonBox) return;
@@ -99,10 +102,30 @@
         });
     }
 
+    // Funktion zum Ausblenden voller Krankenhäuser und Zellen
+    function hideDangerButtons() {
+        let selectors = [
+            '[data-transport-request="true"][data-transport-request-type="patient-intermediate"]',
+            '[data-transport-request="true"][data-transport-request-type="prisoner"]'
+        ];
+
+        selectors.forEach(selector => {
+            let section = document.querySelector(selector);
+            if (!section) return;
+
+            let dangerButtons = section.querySelectorAll('.btn.btn-danger');
+            dangerButtons.forEach(button => {
+                button.style.display = "none";
+            });
+        });
+    }
+
+    // Funktion zur Anwendung der Filtereinstellungen
     function filterAll() {
         filterHospitals();
         filterIntermediateStations();
         filterPrisons();
+        hideDangerButtons(); // Neue Funktion aufrufen
     }
 
     // MutationObserver für dynamisch geladene Inhalte
