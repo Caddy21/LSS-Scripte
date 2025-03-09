@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Entfernungs- und Abgabenfilter
+// @name         [LSS] Zielortfilter
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Blendet Krankenhäuser, Zellen und mögliche Übergabeorte nach Kriterien aus.
