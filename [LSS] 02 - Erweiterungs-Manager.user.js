@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Listet Wachen auf, bei denen Erweiterungen fehlen und ermöglicht das hinzufügen dieser Erweiterungen.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -489,15 +489,19 @@
             <div id="extension-lightbox-content">
                 <button id="close-extension-helper">Schließen</button>
                 <h2>Erweiterungs-Manager<br><h5>
-                <br>Über Feedback jeglicher Art bin ich dankbar, da dies noch eine Beta-Version ist steht hier auch noch kein Finaler Text.
+                <br>In den unteren Tabellen könnt Ihr eure Erweiterungen verwalten und über die verschiedenen Möglichkeiten in Auftraug geben.
+                <br>Feedback jeglicher Art könnt Ihr gern im Forum im entsprechenden Thread hinterlassen.
+                <br>
                 <br>
                 <br>
                 <div id="extension-list">
                 Bitte habe einen Moment Geduld!
                 <br>
+                <br>
                 Lade Gebäudedaten und erstelle die Tabellen...</div>
             </div>
         `;
+
     document.body.appendChild(lightbox);
 
     const lightboxContent = lightbox.querySelector('#extension-lightbox-content');
@@ -560,6 +564,32 @@
 
     // Initial den Button hinzufügen
     addMenuButton();
+
+    // Globale Variable definieren
+    var user_premium = false;
+
+    // Funktion, um den Premium-Status zu überprüfen
+    function checkPremiumStatus() {
+        // Suchen Sie nach dem Skript-Tag, das die Variable user_premium setzt
+        var scripts = document.getElementsByTagName('script');
+        for (var i = 0; i < scripts.length; i++) {
+            var scriptContent = scripts[i].textContent;
+            var premiumMatch = scriptContent.match(/var user_premium\s*=\s*(true|false);/);
+            if (premiumMatch) {
+                user_premium = (premiumMatch[1] === 'true');
+                break;
+            }
+        }
+
+        // Fallback, falls die Variable nicht gefunden wird
+        if (typeof user_premium === 'undefined') {
+            console.error("Die Variable 'user_premium' ist nicht definiert. Bitte prüfen Sie die HTML-Struktur.");
+            user_premium = false; // Standardwert setzen
+        }
+    }
+
+    // Rufen Sie die Funktion auf, um den Status zu überprüfen
+    checkPremiumStatus();
 
     // Funktion zur Prüfung von Premium und Hinweis
     async function checkPremiumAndShowHint() {
@@ -638,7 +668,6 @@
     let buildingsData = []; // Globale Variable, um die abgerufenen Gebäudedaten zu speichern
     let buildingGroups = {}; // Globale Definition
 
-
     // Funktion zum Abrufen der Gebäudedaten
     function fetchBuildingsAndRender() {
         fetch('https://www.leitstellenspiel.de/api/buildings')
@@ -685,6 +714,7 @@
         }
     }
 
+    // Funktion um die Tabellen mit Daten zu füllen
     async function renderMissingExtensions(buildings) {
         const userInfo = await getUserCredits();
         const list = document.getElementById('extension-list');
@@ -714,14 +744,14 @@
                 }
 
                 // Spezifische Erweiterungen ausblenden, wenn bereits eine der relevanten Erweiterungen vorhanden ist
-                if (building.building_type === 6 && building.small_building) {  // Polizeiwache (Kleinwache)
+                if (building.building_type === 6 && building.small_building) { // Polizeiwache (Kleinwache)
                     const forbiddenExtensions = [10, 11, 12, 13];
                     if (forbiddenExtensions.some(id => existingExtensions.has(id))) {
                         return !forbiddenExtensions.includes(extension.id);
                     }
                 }
 
-                if (building.building_type === 0 && building.small_building) {  // Feuerwache (Kleinwache)
+                if (building.building_type === 0 && building.small_building) { // Feuerwache (Kleinwache)
                     const forbiddenExtensions = [0, 6, 8, 13, 14, 16, 18, 19, 25];
                     if (forbiddenExtensions.some(id => existingExtensions.has(id))) {
                         return !forbiddenExtensions.includes(extension.id);
@@ -747,14 +777,14 @@
             '3_normal': 'Rettungsschule',
             '4_normal': 'Krankenhaus',
             '5_normal': 'Rettungshubschrauber-Station',
-            '6_normal': 'Polizeiwache',
-            '6_small': 'Polizeiwache (Klein)',
+            '6_normal': 'Polizeiwache (Normal)',
+            '6_small': 'Polizeiwache (Kleinwache)',
             '8_normal': 'Polizeischule',
-            '9_normal': 'Technisches Hilfswwerk',
-            '10_normal': 'Technisches Hilfswoche Bundesschule',
+            '9_normal': 'Technisches Hilfswerk',
+            '10_normal': 'Technisches Hilfswerk - Bundesschule',
             '11_normal': 'Bereitschaftspolizei',
             '12_normal': 'Schnelleinsatzgruppe (SEG)',
-            '13_normal': 'Polizeihubschrauberstation',
+            '13_normal': 'Polizeihubschrauber-Station',
             '17_normal': 'Polizei-Sondereinheiten',
             '24_normal': 'Reiterstaffel',
             '25_normal': 'Bergrettungswache',
@@ -947,6 +977,7 @@
     // Initial den Button hinzufügen
     addMenuButton();
 
+    // Funktion zur Filterungen der Tabelleninhalten
     function filterTable(tbody, searchTerm) {
         const rows = tbody.querySelectorAll("tr");
 
@@ -957,7 +988,7 @@
             const isBuilt = row.classList.contains("built"); // Prüft, ob bereits gebaut
 
             if (isBuilt) {
-                row.style.display = "none";  // Gebaute Zeilen bleiben unsichtbar
+                row.style.display = "none"; // Gebaute Zeilen bleiben unsichtbar
             } else if (leitstelle.includes(searchTerm) || wachenName.includes(searchTerm) || erweiterung.includes(searchTerm)) {
                 row.style.display = "";
             } else {
@@ -975,12 +1006,12 @@
         const policeStationSmallLimited = [10, 11, 12, 13];
 
         const thwAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // Alle THW-Erweiterungen
-        const bpolAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];            // Alle BPol-Erweiterungen
-        const polSonderEinheitAllExtensions = [0, 1, 2, 3, 4];                   // Alle PolSondereinheit-Erweiterungen
-        const KhAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];                  // Alle Krankenhaus-Erweiterungen
+        const bpolAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Alle BPol-Erweiterungen
+        const polSonderEinheitAllExtensions = [0, 1, 2, 3, 4]; // Alle PolSondereinheit-Erweiterungen
+        const KhAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Alle Krankenhaus-Erweiterungen
 
         // Falls Premium aktiv ist, gibt es keine Einschränkungen für THW, B-Pol, Schulen und Pol-Sondereinheit
-        if (typeof user_premium !== "undefined" && user_premium) {
+        if (typeof !user_premium !== "undefined" && user_premium) {
             return false; // Keine Einschränkungen für Premium-Nutzer
         }
 
@@ -1136,8 +1167,8 @@
                         }
 
                         if (row) {
-                            row.classList.add("built");  // Markiert die Zeile als gebaut
-                            row.style.display = "none";  // Blendet sie weiterhin aus
+                            row.classList.add("built"); // Markiert die Zeile als gebaut
+                            row.style.display = "none"; // Blendet sie weiterhin aus
                         }
 
                         row.style.display = 'none'; // Die ausgebaute Zeile wird ausgeblendet
@@ -1236,9 +1267,6 @@
             selectedExtensionsByBuilding[buildingId].push(parseInt(extensionId, 10));
         });
 
-        const userInfo = await getUserCredits();  // Holt die User-Daten
-        const isPremium = userInfo?.premium ?? false;  // Stellt sicher, dass isPremium definiert ist
-
         for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
             const building = buildingsData.find(b => String(b.id) === String(buildingId));
 
@@ -1257,8 +1285,6 @@
                         document.querySelector('.select-all-checkbox').checked = false;
                         updateBuildSelectedButton();
                         return;
-
-
 
                     }
                 }
@@ -1280,7 +1306,17 @@
             }
         }
 
-        if (!isPremium) {
+        const userInfo = await getUserCredits(); // Holt die User-Daten
+
+        // Beispiel zur Verwendung der Variable
+        if (user_premium) {
+            console.log("User is a premium member.");
+        } else {
+            console.log("User is not a premium member.");
+        }
+
+        // Fahren Sie mit der Verarbeitung fort, abhängig vom Premium-Status des Benutzers
+        if (!user_premium) {
             for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
                 if (extensions.length > 2) {
                     alert(`Zu viele Erweiterungen für Gebäude ${getBuildingCaption(buildingId)} ausgewählt.\n\nDa du keinen Premium-Account hast, kannst du maximal 2 Ausbauten auswählen.`);
@@ -1288,12 +1324,12 @@
                     // Master-Checkbox entmarkieren & Button deaktivieren
                     document.querySelector('.select-all-checkbox').checked = false;
                     updateBuildSelectedButton();
-
                     return;
                 }
             }
         }
 
+        // Der Rest der Verarbeitung bleibt unverändert
         let totalCredits = 0;
         let totalCoins = 0;
 
@@ -1319,6 +1355,7 @@
         setTimeout(updateBuildSelectedButton, 100);
     }
 
+    // Funktiom um eine Fehlermeldung auszugeben
     function showError(message) {
         // Verstecke den Währungscontainer, falls er existiert
         const currencyContainer = document.getElementById('currency-container');
@@ -1330,7 +1367,7 @@
         const errorMessageDiv = document.getElementById('error-message');
 
         if (errorMessageDiv) {
-            errorMessageDiv.textContent = message;  // Fehlermeldung setzen
+            errorMessageDiv.textContent = message; // Fehlermeldung setzen
             errorMessageDiv.style.display = 'block'; // Sichtbar machen
         } else {
             alert(message); // Falls das Element nicht existiert, nutze ein Alert
