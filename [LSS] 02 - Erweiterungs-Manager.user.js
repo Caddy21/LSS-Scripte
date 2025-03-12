@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  Listet Wachen auf, bei denen Erweiterungen fehlen und ermöglicht das hinzufügen dieser Erweiterungen.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -14,6 +14,8 @@
 
 // To-Do
 // Lagererweiterungen einbauen
+// manualExtensions verbessern um etliches Ausklammern zu verhindern und dem User weniger Arbeit zu machen
+// Suche verbessern
 
 (function() {
     'use strict';
@@ -242,17 +244,8 @@
             max-height: 90vh;
             overflow-y: auto;
             position: relative;
-            text-align: center
-        }
-        #extension-lightbox #extension-lightbox-content.dark {
-            background: #2c2f33;
-            color: #ffffff;
-            border-color: #23272a;
-        }
-        #extension-lightbox #extension-lightbox-content.light {
-            background: #ffffff;
-            color: #000000;
-            border-color: #dddddd;
+            text-align: center;
+            border-radius: 10px; /* Abgerundete Ecken */
         }
         #extension-lightbox #close-extension-helper {
             position: absolute;
@@ -261,13 +254,17 @@
             background: red;
             color: white;
             border: none;
-            padding: 5px;
+            padding: 5px 10px;
             cursor: pointer;
+            border-radius: 4px;
         }
         :root {
-            --background-color: #f2f2f2;  /* Standard Light Mode Hintergrund */
-            --text-color: #000;           /* Standard Light Mode Textfarbe */
-            --border-color: #ccc;         /* Standard Light Mode Randfarbe */
+            --background-color: #f2f2f2;
+            --text-color: #000;
+            --border-color: #ccc;
+            --button-background-color: #007bff;
+            --button-text-color: #ffffff;
+            --button-hover-background-color: #0056b3;
         }
         #extension-lightbox table {
             width: 100%;
@@ -275,72 +272,70 @@
             margin-top: 10px;
             font-size: 16px;
         }
-        #extension-lightbox table th,
+        #extension-lightbox th {
+            text-align: center;
+            vertical-align: middle;
+        }
         #extension-lightbox table td {
             background-color: var(--background-color);
             color: var(--text-color);
             border: 1px solid var(--border-color);
-            padding: 8px;
-            text-align: left;
+            padding: 10px;
+            text-align: center; /* Text in der Mitte */
+            vertical-align: middle;
         }
-        #extension-lightbox table th {
+        #extension-lightbox thead {
+            background-color: #f2f2f2;
             font-weight: bold;
+            border-bottom: 2px solid #ccc;
         }
-        #extension-lightbox .extension-button {
-            background-color: var(--button-background-color, #007bff);
-            color: var(--button-text-color, #ffffff);
+        #extension-lightbox .extension-button,
+        #extension-lightbox .build-selected-button,
+        #extension-lightbox .build-all-button,
+        #extension-lightbox .spoiler-button {
+            color: var(--button-text-color);
             border: none;
             padding: 5px 10px;
             cursor: pointer;
             border-radius: 4px;
+            font-size: 14px;
+            transition: background-color 0.2s ease-in-out;
         }
-        #extension-lightbox .extension-button:disabled {
-            background-color: gray !important; /* Erzwingt die graue Hintergrundfarbe */
-            cursor: not-allowed;
+        #extension-lightbox .extension-button {
+            background-color: var(--button-background-color);
         }
         #extension-lightbox .extension-button:hover:enabled {
-            background-color: var(--button-hover-background-color, #0056b3);
+            background-color: var(--button-hover-background-color);
         }
         #extension-lightbox .build-selected-button {
             background-color: blue;
-            color: var(--button-text-color, #ffffff);
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        #extension-lightbox .build-selected-button:disabled {
-            background-color: gray;
-            cursor: not-allowed;
-        }
-        #extension-lightbox .build-selected-button:hover:enabled {
-            background-color: blue; /* Behalte die gleiche Farbe beim Hover */
         }
         #extension-lightbox .build-all-button {
-            background-color: red; /* Always red */
-            color: var(--button-text-color, #ffffff);
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 4px;
+            background-color: red;
         }
-        #extension-lightbox .extension-button:disabled {
-            background-color: gray; /* Ändert die Hintergrundfarbe des deaktivierten Buttons zu grau */
-            cursor: not-allowed;
-        }
+        #extension-lightbox .build-selected-button:hover:enabled,
         #extension-lightbox .build-all-button:hover:enabled {
-            background-color: red; /* Keep it red on hover */
+            filter: brightness(90%);
         }
         #extension-lightbox .spoiler-button {
             background-color: green;
-            color: #ffffff;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 4px;
+        }
+        #extension-lightbox .extension-button:disabled,
+        #extension-lightbox .build-selected-button:disabled,
+        #extension-lightbox .build-all-button:disabled {
+            background-color: gray !important;
+            cursor: not-allowed;
         }
         #extension-lightbox .spoiler-content {
             display: none;
+        }
+        #extension-lightbox .extension-search {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
         }
         .currency-selection {
             position: fixed;
@@ -354,6 +349,8 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
         }
         .currency-button {
             padding: 10px 20px;
@@ -377,23 +374,8 @@
             border-radius: 4px;
         }
         #open-extension-helper {
-            cursor: pointer; /* Set cursor to pointer */
+            cursor: pointer;
         }
-        th {
-           text-align: center; /* Zentriert den Text in der Überschriften-Zeile */
-           vertical-align: middle; /* Stellt sicher, dass der Text vertikal mittig bleibt */
-        }
-        thead {
-           background-color: #f2f2f2; /* Heller Hintergrund */
-           font-weight: bold; /* Fettschrift */
-           border-bottom: 2px solid #ccc; /* Trennlinie */
-       }
-       th {
-         padding: 10px;
-         text-align: center;
-         vertical-align: middle;
-       }
-
     `;
 
     // Funktion zum Abrufen der Benutzereinstellungen vom API
