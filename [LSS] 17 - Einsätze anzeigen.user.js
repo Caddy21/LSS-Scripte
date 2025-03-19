@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 17 - Einsätze anzeigen
+// @name         [LSS] Einsätze anzeigen
 // @namespace    http://tampermonkey.net/
 // @version      1.1
 // @description  Blendet Einsätze basierend auf individuellen Kategorien aus unter "Mögliche Einsätze"
