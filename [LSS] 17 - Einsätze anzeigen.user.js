@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.1
 // @description  Blendet Einsätze basierend auf individuellen Kategorien aus unter "Mögliche Einsätze"
-// @match        https://www.leitstellenspiel.de/einsaetze
+// @match        https://www.leitstellenspiel.de/einsaetze*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
@@ -14,7 +14,7 @@
     const hideSuccess = true;  // Erfolgreiche Einsätze ausblenden
     // Konfigurierbare Optionen (true = ausblenden, false = anzeigen)
     const filterOptions = {
-        feuerwachen: false,
+        feuerwachen: true,
         rettungswachen: false,
         wasserrettungswachen: false,
         polizeiwachen: false,
@@ -45,7 +45,8 @@
         reiterstaffel: false,
         bahnrettung: false,
         lüfter: false,
-        windenrettung: false
+        windenrettung: false,
+        werkfeuerwehr: false
     };
 
     // Schlagwörter und zugehörige Optionen
@@ -81,7 +82,8 @@
         "Reiterstaffel": filterOptions.reiterstaffel,
         "Bahnrettungs-Erweiterung": filterOptions.bahnrettung,
         "Lüfter-Erweiterung": filterOptions.lüfter,
-        "Windenrettungs-Erweiterungen": filterOptions.windenrettung
+        "Windenrettungs-Erweiterungen": filterOptions.windenrettung,
+        "Werkfeuerwehr": filterOptions.werkfeuerwehr
     };
 
     function hideMissions() {
