@@ -50,6 +50,8 @@
             { id: 23, name: '4te Anhänger Stellplatz', cost: 75000, coins: 15 },
             { id: 24, name: '5te Anhänger Stellplatz', cost: 75000, coins: 15 },
             { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
+            { id: 26, name: '11te Ab-Stellplatz', cost: 150000, coins: 20 },
+            { id: 27, name: '12te Ab-Stellplatz', cost: 150000, coins: 20 },
         ],
 
         '1_normal': [ // Feuerwehrschule
