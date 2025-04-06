@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LSS Einsatzdaten-Kopierer
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      3.0
 // @description  Fügt für jede Mission einen Button zum Kopieren der Einsatzdaten hinzu (Einsatzname, EinsatzID, Mission Type ID)
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -72,7 +72,7 @@
             // Klick-Event zum Kopieren
             button.addEventListener('click', () => {
                 // Text zum Kopieren: Einsatzname, EinsatzID und Mission Type ID
-                const textToCopy = `Einsatzname: ${missionName}\tEinsatzID: ${einsatzId}\tMission Type ID: ${missionTypeId}`;
+                const textToCopy = `${missionName}\t ${einsatzId}\t ${missionTypeId}`;
                 console.log(`[📋 LSS-Kopierer] 📎 Kopiere: "${textToCopy}"`);
                 GM_setClipboard(textToCopy);
                 alert('✅ Einsatzdaten kopiert:\n' + textToCopy);
