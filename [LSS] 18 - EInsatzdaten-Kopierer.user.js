@@ -24,15 +24,13 @@
         missionEntries.forEach((missionEntry) => {
             // Überprüfen, ob der Button bereits existiert
             if (missionEntry.querySelector('#copyMissionBtn')) return;
-
-            // Versuch, die Mission ID aus dem Mission Panel zu extrahieren
+            
             const missionId = missionEntry.id.replace('mission_panel_heading_', '');
             if (!missionId) {
                 console.warn('[📋 LSS-Kopierer] Keine Mission ID gefunden für Mission:', missionEntry);
                 return;
             }
 
-            // Die Mission Type ID aus dem entsprechenden mission_list-Element extrahieren
             const missionListElement = document.querySelector(`#mission_${missionId}`);
             if (!missionListElement) {
                 console.warn('[📋 LSS-Kopierer] Kein mission_list-Element für Mission gefunden:', missionId);
