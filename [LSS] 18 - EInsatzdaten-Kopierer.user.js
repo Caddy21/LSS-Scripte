@@ -64,7 +64,7 @@
             // Button erstellen
             const button = document.createElement('button');
             button.id = 'copyMissionBtn';
-            button.textContent = '📋 Einsatz kopieren';
+            button.textContent = '📋 Daten kopieren';
             button.classList.add('btn', 'btn-primary', 'btn-xs'); // Die Klassen für einen kleinen Button hinzufügen
             button.style.marginLeft = '10px';
             button.style.cursor = 'pointer';
