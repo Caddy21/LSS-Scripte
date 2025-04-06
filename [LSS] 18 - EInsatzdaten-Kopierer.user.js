@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         LSS Einsatzdaten-Kopierer
+// @name         LSS Einsatzdaten-Kopierer (für jede Mission, btn-xs)
 // @namespace    http://tampermonkey.net/
-// @version      3.0
-// @description  Fügt für jede Mission einen Button zum Kopieren der Einsatzdaten hinzu (Einsatzname, EinsatzID, Mission Type ID)
+// @version      1.0
+// @description  Fügt für jede Mission einen Button zum Kopieren der Einsatzdaten hinzu (Einsatzname, EinsatzID, Mission Type ID) im Stil von btn-xs
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @grant        GM_setClipboard
@@ -10,8 +10,6 @@
 
 (function () {
     'use strict';
-
-    console.log('[📋 LSS-Kopierer] Skript gestartet');
 
     // Funktion zum Einfügen des Kopier-Buttons
     function insertCopyButtonForEachMission() {
@@ -46,8 +44,6 @@
                 return;
             }
 
-            console.log(`[📋 LSS-Kopierer] Mission Type ID aus mission_list extrahiert: ${missionTypeId}`);
-
             // EinsatzID extrahieren
             const alarmButton = missionEntry.querySelector('[id^="alarm_button_"]');
             if (!alarmButton) {
@@ -73,36 +69,26 @@
             button.addEventListener('click', () => {
                 // Text zum Kopieren: Einsatzname, EinsatzID und Mission Type ID
                 const textToCopy = `${missionName}\t ${einsatzId}\t ${missionTypeId}`;
-                console.log(`[📋 LSS-Kopierer] 📎 Kopiere: "${textToCopy}"`);
                 GM_setClipboard(textToCopy);
                 alert('✅ Einsatzdaten kopiert:\n' + textToCopy);
             });
 
             // Button direkt neben den Alarm-Button einfügen
             alarmButton.parentNode.appendChild(button);
-            console.log(`[📋 LSS-Kopierer] ✅ Button für Mission ${einsatzId} eingefügt`);
         });
     }
 
-    // Überprüfen, ob Missionseinträge bereits vorhanden sind
-    const missionEntries = document.querySelectorAll('[id^="mission_panel_heading_"]');
-    if (missionEntries.length > 0) {
-        console.log('[📋 LSS-Kopierer] Missionseinträge gefunden!');
-        insertCopyButtonForEachMission();
-    } else {
-        // Warten auf Änderungen im DOM, um sicherzustellen, dass Missionen geladen werden
-        const observer = new MutationObserver(() => {
-            const missionEntries = document.querySelectorAll('[id^="mission_panel_heading_"]');
-            if (missionEntries.length > 0) {
-                console.log('[📋 LSS-Kopierer] Missionseinträge gefunden!');
+    // Überwacht dynamisch neu erstellte Einsätze
+    const observer = new MutationObserver(() => {
+        const missionEntries = document.querySelectorAll('[id^="mission_panel_heading_"]');
+        missionEntries.forEach((missionEntry) => {
+            // Button nur hinzufügen, wenn er noch nicht existiert
+            if (!missionEntry.querySelector('#copyMissionBtn')) {
                 insertCopyButtonForEachMission();
-                observer.disconnect(); // Beobachtung stoppen, wenn alle Buttons eingefügt wurden
             }
         });
+    });
 
-        // Beobachtungsoptionen für MutationObserver
-        observer.observe(document.body, { childList: true, subtree: true });
-        console.log('[📋 LSS-Kopierer] ⏱ Warten auf Missionseinträge...');
-    }
-
+    // Beobachtungsoptionen für MutationObserver
+    observer.observe(document.body, { childList: true, subtree: true });
 })();
