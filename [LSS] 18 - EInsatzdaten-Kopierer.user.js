@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         LSS Einsatzdaten-Kopierer (für jede Mission, btn-xs)
+// @name         LSS Einsatzdaten-Kopierer
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Fügt für jede Mission einen Button zum Kopieren der Einsatzdaten hinzu (Einsatzname, EinsatzID, Mission Type ID) im Stil von btn-xs
+// @description  Fügt für jede Mission einen Button zum Kopieren der Einsatzdaten hinzu (Einsatzname, EinsatzID, Mission Type ID)
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -52,15 +52,15 @@
 
             const einsatzId = alarmButton.id.replace('alarm_button_', '');
 
-            // Einsatzname extrahieren (aus dem Caption-Tag), ohne die Adresse zu kopieren
+            // Einsatzname extrahieren (aus dem Caption-Tag)
             const missionNameElement = missionEntry.querySelector('[id^="mission_caption_"]');
-            const missionName = missionNameElement ? missionNameElement.textContent.split(',')[0].trim() : 'Unbekannter Einsatzname'; // Nur den Einsatznamen ohne die Adresse
+            const missionName = missionNameElement ? missionNameElement.textContent.split(',')[0].trim() : 'Unbekannter Einsatzname';
 
             // Button erstellen
             const button = document.createElement('button');
             button.id = 'copyMissionBtn';
             button.textContent = '📋 Daten kopieren';
-            button.classList.add('btn', 'btn-primary', 'btn-xs'); // Die Klassen für einen kleinen Button hinzufügen
+            button.classList.add('btn', 'btn-primary', 'btn-xs');
             button.style.marginLeft = '10px';
             button.style.cursor = 'pointer';
 
