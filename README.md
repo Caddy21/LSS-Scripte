@@ -37,7 +37,7 @@ Chris
 - Verwendete Desings im Leitestellenspiel.de > Standart und Fensterdesign Dunkel.
 - Jedes Script wird für sich allein getestet.
 
-Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nicht** aus und werden nicht berücksichtigt in erster Linie.
+Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nicht** aus und werden nicht berücksichtigt da jedes Script für sich allein getestet wird.
   
 # Meine Scripte
 
@@ -45,10 +45,10 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
   <summary> Hier findet Ihr eine Übersicht meiner Scripte </summary>
   
     - Fahne in der Einsatzliste entfernen (veröffentlicht)
-    - (Beta) Erweiterungs-Manager
+    - Erweiterungs-Manager (veröffentlicht)
     - Alle LST umschalten (veröffentlicht)
     - Fahrzeuge im S6 auflisten (veröffentlicht)
-    - SNR-Einsätze filtern (veröffentlicht)
+    - SNR-Einsätze filtern (veröffentlicht) - EOL
     - Fahrzeuge löschen 
     - Sprechwunsch Sortierer (veröffentlicht)
     - Design Switcher
@@ -58,5 +58,9 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Stellplatzfinder (veröffentlicht)
     - Alarmstichworte (veröffentlicht)
     - Aufgeräumtes Profil-Menü (veröffentlicht)
+    - Spoiler für AAO-NoCategory
+    - Zielortfilter (veröffentlicht)
+    - Einsätze anzeigen (veröffentlicht)
+    - Einsatzdaten-Kopierer
     
 </details>
