@@ -13,25 +13,29 @@
     'use strict';
 
     // === KONFIGURATION ===
-    const ENABLE_AAO_SPOILER = true;                        // Einzelfahrzeuge (AAO ohne Kategorie) via Button ein-/ausblendbar machen
-    const ENABLE_VEHICLE_SPOILER = true;                    // Fahrzeug-Tabelle & Anfahrende Fahrzeuge per Button ein-/ausblenden
-    const ENABLE_PATIENT_SPOILER = true;                    // Patientenbereich ab X Patienten ein-/ausblenden
-    const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = true;     // "Freie Fahrzeugliste" in Lightbox per Button sichtbar
-    const ENABLE_SUCCESS_ALERT = true;                      // Grüne Erfolgs-Meldung automatisch ausblenden
-    const ENABLE_MISSING_ALERT = false;                     // Rote Warnung ("Fehlende Fahrzeuge") automatisch ausblenden
-    const ENABLE_TABS_SPOILER = false;                       // Tabs und Tab-Inhalte (AAO-Tabs) per Button versteckbar
-    const PATIENT_SPOILER_MIN_COUNT = 3;                    // Ab wie vielen Patienten der Button erscheinen soll
+    // true = Spoiler aktiv (Bereich beim Laden ausgeblendet)
+    // false = Spoiler deaktiviert (Bereich beim Laden sichtbar)
+    const ENABLE_SUCCESS_ALERT = true;                      // Erfolgs-Meldungen ausblenden
+    const ENABLE_MISSING_ALERT = true;                      // Fehlermeldungen (fehlende Fahrzeuge) ausblenden
+    const ENABLE_PATIENT_SPOILER = true;                    // Spoiler für Patientenbereich (ab X Patienten)
+    const ENABLE_AAO_SPOILER = true;                        // Spoiler für AAO-Einträge ohne Kategorie
+    const ENABLE_TABS_SPOILER = true;                       // Spoiler für AAO-Tabs & Inhalte
+    const ENABLE_VEHICLE_SPOILER = true;                    // Spoiler für Fahrzeug-Tabelle und anfahrende Fahrzeuge
+    const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = true;     // Spoiler für "Freie Fahrzeugliste" (Lightbox)
+
+    const PATIENT_SPOILER_MIN_COUNT = 10;                    // Spoiler ab dieser Patientenanzahl aktiv
     // ======================
 
-    // Funktion: Fügt Spoiler-Button im iFrame hinzu, um AAO-Einträge ohne Kategorie ein-/auszublenden
+    // Fügt Spoiler-Button für Einzelfahrzeuge (AAO ohne Kategorie) im Lightbox-iFrame ein
     function addSpoilerButtonToAAO(iframe) {
         let iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (!iframeDoc) return;
 
         let target = iframeDoc.getElementById("mission_aao_no_category");
         if (!target || target.dataset.spoilerAdded) return;
-
         target.dataset.spoilerAdded = "true";
+
+        if (!ENABLE_AAO_SPOILER) return;
 
         let button = document.createElement("button");
         button.classList.add("btn", "btn-xl", "btn-primary");
@@ -49,13 +53,12 @@
         target.parentNode.insertBefore(button, target);
     }
 
-    // Funktion: Fügt Button hinzu, um Fahrzeug-Tabelle unter dem Einsatz per Button ein-/auszublenden
+    // Spoiler-Button für Fahrzeug-Tabelle unter dem Einsatz
     function addSpoilerButtonForVehicleTable() {
         if (!ENABLE_VEHICLE_SPOILER) return false;
 
         let vehicleTable = document.getElementById('mission_vehicle_at_mission');
         if (!vehicleTable || vehicleTable.dataset.spoilerAdded) return false;
-
         vehicleTable.dataset.spoilerAdded = "true";
 
         let button = document.createElement("button");
@@ -76,13 +79,12 @@
         return true;
     }
 
-    // Funktion: Fügt Button hinzu, um anfahrende Fahrzeuge unter dem Einsatz ein-/auszublenden
+    // Spoiler für anfahrende Fahrzeuge
     function addSpoilerButtonForDrivingVehicles() {
         if (!ENABLE_VEHICLE_SPOILER) return false;
 
         let drivingBlock = document.getElementById('mission_vehicle_driving');
         if (!drivingBlock || drivingBlock.dataset.spoilerAdded) return false;
-
         drivingBlock.dataset.spoilerAdded = "true";
 
         let button = document.createElement("button");
@@ -99,11 +101,10 @@
         });
 
         drivingBlock.parentNode.insertBefore(button, drivingBlock);
-
         return true;
     }
 
-    // Funktion: Fügt Button hinzu, um Patientenblöcke bei vielen Patienten sichtbar zu machen
+    // Spoiler für Patienten-Blöcke bei Überschreitung eines bestimmten Limits
     function addSpoilerButtonForPatientBlocks() {
         if (!ENABLE_PATIENT_SPOILER) return;
 
@@ -132,19 +133,21 @@
         parent.insertBefore(wrapper, patientBlocks[0]);
     }
 
-    // Funktion: Blendet automatisch bestimmte Meldungs-Bereiche aus (z. B. grüne & rote Alerts)
+    // Versteckt automatische Systemmeldungen je nach Konfiguration
     function hideOptionalElements() {
-        if (!ENABLE_SUCCESS_ALERT) {
-            document.querySelectorAll('.alert-success.fade.in').forEach(el => el.style.display = "none");
+        if (ENABLE_SUCCESS_ALERT) {
+            document.querySelectorAll('.alert-success').forEach(el => el.style.display = "none");
         }
 
-        if (!ENABLE_MISSING_ALERT) {
-            let missingText = document.getElementById('missing_text');
-            if (missingText) missingText.style.display = "none";
+        if (ENABLE_MISSING_ALERT) {
+            const missingTextElement = document.getElementById('missing_text');
+            if (missingTextElement && missingTextElement.classList.contains('alert-danger') && missingTextElement.classList.contains('alert-missing-vehicles')) {
+                missingTextElement.style.display = "none";
+            }
         }
     }
 
-    // Funktion: Fügt Button hinzu, um AAO-Tabs und Inhalte ein-/auszublenden
+    // Spoiler für AAO-Tabs und Tab-Inhalte
     function addSpoilerButtonForTabs() {
         if (!ENABLE_TABS_SPOILER) return;
 
@@ -170,17 +173,18 @@
         tabs.parentNode.insertBefore(button, tabs);
     }
 
-    // Funktion: Fügt grünen Button hinzu, um "Freie Fahrzeugliste" (in Lightbox) ein-/auszublenden
+    // Spoiler für „Freie Fahrzeugliste“ in Lightbox
     function addSpoilerButtonForVehicleListStep() {
         if (!ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER) return;
 
         const vehicleListStep = document.getElementById('vehicle_list_step');
-        if (!vehicleListStep || document.getElementById('toggleVehicleListStepButton')) return;
+        const dispatchButtons = document.getElementById('dispatch_buttons');
+
+        if (!vehicleListStep || !dispatchButtons || document.getElementById('toggleVehicleListStepButton')) return;
 
         const button = document.createElement('button');
         button.id = 'toggleVehicleListStepButton';
-        button.classList.add('btn', 'btn-xl', 'btn-success');
-        button.style.marginBottom = '10px';
+        button.classList.add('btn', 'btn-success');
         button.innerText = 'Freie Fahrzeugliste anzeigen';
 
         vehicleListStep.style.display = 'none';
@@ -192,10 +196,10 @@
             button.innerText = visible ? 'Freie Fahrzeugliste anzeigen' : 'Freie Fahrzeugliste ausblenden';
         });
 
-        vehicleListStep.parentNode.insertBefore(button, vehicleListStep);
+        dispatchButtons.insertBefore(button, dispatchButtons.firstChild);
     }
 
-    // Funktion: Fügt alle relevanten Spoiler-Buttons ein, wenn Lightbox oder Seite geladen wird
+    // Initiale Prüfung auf Seite/Lightbox und Hinzufügen der Spoiler
     function checkForLightboxAndAddButton() {
         let iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
         if (ENABLE_AAO_SPOILER && iframes.length > 0) {
@@ -208,12 +212,11 @@
 
         addSpoilerButtonForDrivingVehicles();
         addSpoilerButtonForPatientBlocks();
-        hideOptionalElements();
         addSpoilerButtonForTabs();
         addSpoilerButtonForVehicleListStep();
     }
 
-    // Funktion: Wartet auf Klick auf eine Lightbox, und führt Spoiler-Aktionen nach kurzem Delay aus
+    // Beobachtet Klicks auf Lightbox-Buttons und aktiviert Spoiler nach kurzer Verzögerung
     function observeLightbox() {
         const openButtons = document.querySelectorAll('.lightbox-open');
         openButtons.forEach(button => {
@@ -225,20 +228,22 @@
         });
     }
 
-    // Initialer Check bei Ladezeit
+    // Intervall, um Fahrzeug-Tabelle bei Ladezeit zu erkennen
     let vehicleTableCheckInterval = setInterval(() => {
         if (addSpoilerButtonForVehicleTable()) {
             clearInterval(vehicleTableCheckInterval);
         }
     }, 1000);
 
-    // Beobachtet DOM-Änderungen (z. B. neue Tabs oder Inhalte) und wendet Spoiler automatisch an
+    // DOM-Änderungen beobachten (z.B. bei AJAX-Content)
     let observer = new MutationObserver(() => {
         checkForLightboxAndAddButton();
+        hideOptionalElements();
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
+    // Initialer Aufruf beim Laden
     checkForLightboxAndAddButton();
     observeLightbox();
 })();
