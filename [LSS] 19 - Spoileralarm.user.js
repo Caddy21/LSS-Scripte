@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         [LSS] Spoileralarm
+// @name         [LSS] 15 - Spoiler für AAOs, Fahrzeuge und Patientenbereich (konfigurierbar)
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.0
-// @description  Fügt optional Spoiler-Buttons für AAO-Einträge ohne Kategorie, Fahrzeuge auf Anfahrt oder am Einsatort, Freie Fahrzeuge sowie Patienten ein.
+// @version      1.7
+// @description  Fügt Spoiler-Buttons für AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere hinzu – alles individuell ein-/ausblendbar.
 // @author       Caddy21
-// @match        https://www.leitstellenspiel.de/
+// @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
@@ -12,34 +12,35 @@
 (function () {
     'use strict';
 
-    // === KONFIGURATION === \\ true = Spoiler da, false = Spoiler weg
-    const ENABLE_AAO_SPOILER = true;
-    const ENABLE_VEHICLE_SPOILER = true;
-    const ENABLE_PATIENT_SPOILER = true;
-    const ENABLE_VEHICLE_LIST_SPOILER = true;
-    const PATIENT_SPOILER_MIN_COUNT = 10;
-    // ==== Ende der Konfiguration === \\
+    // === KONFIGURATION ===
+    const ENABLE_AAO_SPOILER = true;                        // Einzelfahrzeuge (AAO ohne Kategorie) via Button ein-/ausblendbar machen
+    const ENABLE_VEHICLE_SPOILER = true;                    // Fahrzeug-Tabelle & Anfahrende Fahrzeuge per Button ein-/ausblenden
+    const ENABLE_PATIENT_SPOILER = true;                    // Patientenbereich ab X Patienten ein-/ausblenden
+    const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = true;     // "Freie Fahrzeugliste" in Lightbox per Button sichtbar
+    const ENABLE_SUCCESS_ALERT = true;                      // Grüne Erfolgs-Meldung automatisch ausblenden
+    const ENABLE_MISSING_ALERT = false;                     // Rote Warnung ("Fehlende Fahrzeuge") automatisch ausblenden
+    const ENABLE_TABS_SPOILER = false;                       // Tabs und Tab-Inhalte (AAO-Tabs) per Button versteckbar
+    const PATIENT_SPOILER_MIN_COUNT = 3;                    // Ab wie vielen Patienten der Button erscheinen soll
+    // ======================
 
-    // === AAO-Spoiler in Lightbox ===
+    // Funktion: Fügt Spoiler-Button im iFrame hinzu, um AAO-Einträge ohne Kategorie ein-/auszublenden
     function addSpoilerButtonToAAO(iframe) {
-        if (!ENABLE_AAO_SPOILER) return;
-
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        let iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (!iframeDoc) return;
 
-        const target = iframeDoc.getElementById("mission_aao_no_category");
+        let target = iframeDoc.getElementById("mission_aao_no_category");
         if (!target || target.dataset.spoilerAdded) return;
 
         target.dataset.spoilerAdded = "true";
 
-        const button = document.createElement("button");
+        let button = document.createElement("button");
         button.classList.add("btn", "btn-xl", "btn-primary");
         button.style.marginBottom = "10px";
         button.innerText = "Einzelfahrzeuge anzeigen";
 
         target.style.display = "none";
 
-        button.addEventListener("click", () => {
+        button.addEventListener("click", function () {
             const visible = target.style.display !== "none";
             target.style.display = visible ? "none" : "block";
             button.innerText = visible ? "Einzelfahrzeuge anzeigen" : "Einzelfahrzeuge ausblenden";
@@ -48,174 +49,196 @@
         target.parentNode.insertBefore(button, target);
     }
 
-    // === Fahrzeuge am Einsatzort ===
+    // Funktion: Fügt Button hinzu, um Fahrzeug-Tabelle unter dem Einsatz per Button ein-/auszublenden
     function addSpoilerButtonForVehicleTable() {
         if (!ENABLE_VEHICLE_SPOILER) return false;
 
-        const table = document.getElementById("mission_vehicle_at_mission");
-        if (!table || table.dataset.spoilerAdded) return false;
+        let vehicleTable = document.getElementById('mission_vehicle_at_mission');
+        if (!vehicleTable || vehicleTable.dataset.spoilerAdded) return false;
 
-        table.dataset.spoilerAdded = "true";
+        vehicleTable.dataset.spoilerAdded = "true";
 
-        const button = document.createElement("button");
+        let button = document.createElement("button");
         button.classList.add("btn", "btn-xl", "btn-primary");
         button.style.marginBottom = "10px";
-        button.innerText = "Fahrzeuge am Einsatzort anzeigen";
+        button.innerText = "Fahrzeug-Tabelle anzeigen";
 
-        table.style.display = "none";
+        vehicleTable.style.display = "none";
 
-        button.addEventListener("click", () => {
-            const visible = table.style.display !== "none";
-            table.style.display = visible ? "none" : "table";
-            button.innerText = visible ? "Fahrzeuge am Einsatzort anzeigen" : "Fahrzeuge am Einsatzort ausblenden";
+        button.addEventListener("click", function () {
+            const visible = vehicleTable.style.display !== "none";
+            vehicleTable.style.display = visible ? "none" : "table";
+            button.innerText = visible ? "Fahrzeug-Tabelle anzeigen" : "Fahrzeug-Tabelle ausblenden";
         });
 
-        table.parentNode.insertBefore(button, table);
+        vehicleTable.parentNode.insertBefore(button, vehicleTable);
+
         return true;
     }
 
-    // === Fahrzeuge auf Anfahrt ===
+    // Funktion: Fügt Button hinzu, um anfahrende Fahrzeuge unter dem Einsatz ein-/auszublenden
     function addSpoilerButtonForDrivingVehicles() {
         if (!ENABLE_VEHICLE_SPOILER) return false;
 
-        const block = document.getElementById("mission_vehicle_driving");
-        if (!block || block.dataset.spoilerAdded) return false;
+        let drivingBlock = document.getElementById('mission_vehicle_driving');
+        if (!drivingBlock || drivingBlock.dataset.spoilerAdded) return false;
 
-        block.dataset.spoilerAdded = "true";
+        drivingBlock.dataset.spoilerAdded = "true";
 
-        const button = document.createElement("button");
+        let button = document.createElement("button");
         button.classList.add("btn", "btn-xl", "btn-primary");
         button.style.marginBottom = "10px";
         button.innerText = "Anfahrende Fahrzeuge anzeigen";
 
-        block.style.display = "none";
+        drivingBlock.style.display = "none";
 
-        button.addEventListener("click", () => {
-            const visible = block.style.display !== "none";
-            block.style.display = visible ? "none" : "block";
+        button.addEventListener("click", function () {
+            const visible = drivingBlock.style.display !== "none";
+            drivingBlock.style.display = visible ? "none" : "block";
             button.innerText = visible ? "Anfahrende Fahrzeuge anzeigen" : "Anfahrende Fahrzeuge ausblenden";
         });
 
-        block.parentNode.insertBefore(button, block);
+        drivingBlock.parentNode.insertBefore(button, drivingBlock);
+
         return true;
     }
 
-    // === Patienten-Spoiler ===
+    // Funktion: Fügt Button hinzu, um Patientenblöcke bei vielen Patienten sichtbar zu machen
     function addSpoilerButtonForPatientBlocks() {
         if (!ENABLE_PATIENT_SPOILER) return;
 
-        const blocks = document.querySelectorAll(".mission_patient");
-        if (blocks.length < PATIENT_SPOILER_MIN_COUNT) return;
+        let patientBlocks = document.querySelectorAll('.mission_patient');
+        if (patientBlocks.length < PATIENT_SPOILER_MIN_COUNT) return;
+        if (document.getElementById('togglePatientBlockButton')) return;
 
-        if (document.getElementById("togglePatientBlockButton")) return;
-
-        const parent = blocks[0].parentNode;
-
-        const wrapper = document.createElement("div");
+        let parent = patientBlocks[0].parentNode;
+        let wrapper = document.createElement("div");
         wrapper.style.marginBottom = "10px";
 
-        const button = document.createElement("button");
+        let button = document.createElement("button");
         button.id = "togglePatientBlockButton";
         button.classList.add("btn", "btn-xl", "btn-primary");
         button.innerText = "Patienten anzeigen";
 
-        blocks.forEach(b => b.style.display = "none");
+        patientBlocks.forEach(block => block.style.display = "none");
 
-        button.addEventListener("click", () => {
-            const visible = blocks[0].style.display !== "none";
-            blocks.forEach(b => b.style.display = visible ? "none" : "block");
+        button.addEventListener("click", function () {
+            const visible = patientBlocks[0].style.display !== "none";
+            patientBlocks.forEach(block => block.style.display = visible ? "none" : "block");
             button.innerText = visible ? "Patienten anzeigen" : "Patienten ausblenden";
         });
 
         wrapper.appendChild(button);
-        parent.insertBefore(wrapper, blocks[0]);
+        parent.insertBefore(wrapper, patientBlocks[0]);
     }
 
-    // === Freie Fahrzeugliste (oben rechts) ===
-    function addSpoilerButtonForVehicleList() {
-        if (!ENABLE_VEHICLE_LIST_SPOILER) return false;
-
-        const vehicleList = document.getElementById("vehicle_list_step");
-        const dispatchButtons = document.getElementById("dispatch_buttons");
-
-        if (!vehicleList || !dispatchButtons) return false;
-        if (document.getElementById("toggleFreeVehicleListButton")) return true;
-
-        const button = document.createElement("button");
-        button.id = "toggleFreeVehicleListButton";
-        button.classList.add("btn", "btn-success", "btn-xl");
-        button.style.marginRight = "0";
-        button.innerText = "Fahrzeugliste anzeigen";
-        button.type = 'button';
-
-        // Unsichtbar machen (aber Platz behalten vermeiden wir per absolute)
-        vehicleList.style.visibility = "hidden";
-        vehicleList.style.position = "absolute";
-
-        button.addEventListener("click", (e) => {
-            e.stopPropagation();
-
-            const isVisible = vehicleList.style.visibility === "hidden";
-
-            if (isVisible) {
-                vehicleList.style.visibility = "visible";
-                vehicleList.style.position = "static";
-                button.innerText = "Fahrzeugliste ausblenden";
-            } else {
-                vehicleList.style.visibility = "hidden";
-                vehicleList.style.position = "absolute";
-                button.innerText = "Fahrzeugliste anzeigen";
-            }
-        });
-
-        const parent = dispatchButtons.closest(".pull-right");
-        if (parent) {
-            parent.insertBefore(button, dispatchButtons);
-            return true;
+    // Funktion: Blendet automatisch bestimmte Meldungs-Bereiche aus (z. B. grüne & rote Alerts)
+    function hideOptionalElements() {
+        if (!ENABLE_SUCCESS_ALERT) {
+            document.querySelectorAll('.alert-success.fade.in').forEach(el => el.style.display = "none");
         }
 
-        return false;
+        if (!ENABLE_MISSING_ALERT) {
+            let missingText = document.getElementById('missing_text');
+            if (missingText) missingText.style.display = "none";
+        }
     }
 
-    // === Hauptfunktion zum Hinzufügen aller Spoilerbuttons ===
-    function checkForLightboxAndAddButton() {
-        const iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
+    // Funktion: Fügt Button hinzu, um AAO-Tabs und Inhalte ein-/auszublenden
+    function addSpoilerButtonForTabs() {
+        if (!ENABLE_TABS_SPOILER) return;
 
-        iframes.forEach(iframe => {
-            // Sofort prüfen, ob bereits geladen
-            if (iframe.contentDocument?.readyState === "complete") {
-                addSpoilerButtonToAAO(iframe);
-            }
+        let tabs = document.getElementById("aao-tabs");
+        let content = document.querySelector(".tab-content");
+        if (!tabs || !content || document.getElementById("toggleTabsButton")) return;
 
-            // Alternativ: auf "load"-Event warten
-            iframe.addEventListener("load", () => {
-                addSpoilerButtonToAAO(iframe);
-            });
+        let button = document.createElement("button");
+        button.id = "toggleTabsButton";
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "10px";
+        button.innerText = "AAO-Tabs anzeigen";
+
+        tabs.style.display = "none";
+        content.style.display = "none";
+
+        button.addEventListener("click", function () {
+            const visible = tabs.style.display !== "none";
+            tabs.style.display = content.style.display = visible ? "none" : "block";
+            button.innerText = visible ? "AAO-Tabs anzeigen" : "AAO-Tabs ausblenden";
         });
+
+        tabs.parentNode.insertBefore(button, tabs);
+    }
+
+    // Funktion: Fügt grünen Button hinzu, um "Freie Fahrzeugliste" (in Lightbox) ein-/auszublenden
+    function addSpoilerButtonForVehicleListStep() {
+        if (!ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER) return;
+
+        const vehicleListStep = document.getElementById('vehicle_list_step');
+        if (!vehicleListStep || document.getElementById('toggleVehicleListStepButton')) return;
+
+        const button = document.createElement('button');
+        button.id = 'toggleVehicleListStepButton';
+        button.classList.add('btn', 'btn-xl', 'btn-success');
+        button.style.marginBottom = '10px';
+        button.innerText = 'Freie Fahrzeugliste anzeigen';
+
+        vehicleListStep.style.display = 'none';
+
+        button.addEventListener('click', function (e) {
+            e.preventDefault();
+            const visible = vehicleListStep.style.display !== 'none';
+            vehicleListStep.style.display = visible ? 'none' : 'block';
+            button.innerText = visible ? 'Freie Fahrzeugliste anzeigen' : 'Freie Fahrzeugliste ausblenden';
+        });
+
+        vehicleListStep.parentNode.insertBefore(button, vehicleListStep);
+    }
+
+    // Funktion: Fügt alle relevanten Spoiler-Buttons ein, wenn Lightbox oder Seite geladen wird
+    function checkForLightboxAndAddButton() {
+        let iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
+        if (ENABLE_AAO_SPOILER && iframes.length > 0) {
+            iframes.forEach(iframe => addSpoilerButtonToAAO(iframe));
+        }
+
+        if (addSpoilerButtonForVehicleTable()) {
+            clearInterval(vehicleTableCheckInterval);
+        }
 
         addSpoilerButtonForDrivingVehicles();
         addSpoilerButtonForPatientBlocks();
-        addSpoilerButtonForVehicleList();
+        hideOptionalElements();
+        addSpoilerButtonForTabs();
+        addSpoilerButtonForVehicleListStep();
     }
 
-    // === Wiederholte Prüfung, ob Fahrzeuglisten sichtbar sind ===
-    let vehicleSpoilerCheckInterval = setInterval(() => {
-        const vehicleTableReady = addSpoilerButtonForVehicleTable();
-        const vehicleListReady = addSpoilerButtonForVehicleList();
+    // Funktion: Wartet auf Klick auf eine Lightbox, und führt Spoiler-Aktionen nach kurzem Delay aus
+    function observeLightbox() {
+        const openButtons = document.querySelectorAll('.lightbox-open');
+        openButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                setTimeout(() => {
+                    checkForLightboxAndAddButton();
+                }, 500);
+            });
+        });
+    }
 
-        if (vehicleTableReady && vehicleListReady) {
-            clearInterval(vehicleSpoilerCheckInterval);
+    // Initialer Check bei Ladezeit
+    let vehicleTableCheckInterval = setInterval(() => {
+        if (addSpoilerButtonForVehicleTable()) {
+            clearInterval(vehicleTableCheckInterval);
         }
     }, 1000);
 
-    // === DOM-Änderungen beobachten ===
+    // Beobachtet DOM-Änderungen (z. B. neue Tabs oder Inhalte) und wendet Spoiler automatisch an
     let observer = new MutationObserver(() => {
         checkForLightboxAndAddButton();
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // === Initialer Aufruf ===
     checkForLightboxAndAddButton();
-
+    observeLightbox();
 })();
