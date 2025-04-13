@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] 15 - Spoiler für AAOs, Fahrzeuge und Patientenbereich (konfigurierbar)
+// @name         [LSS] 15 - Multiausblender
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.7
-// @description  Fügt Spoiler-Buttons für AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere hinzu – alles individuell ein-/ausblendbar.
+// @version      1.0
+// @description  Blendet AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere Dinge individuell ein oder aus.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -13,18 +13,76 @@
     'use strict';
 
     // === KONFIGURATION ===
-    // true = Spoiler aktiv (Bereich beim Laden ausgeblendet)
-    // false = Spoiler deaktiviert (Bereich beim Laden sichtbar)
-    const ENABLE_SUCCESS_ALERT = true;                      // Erfolgs-Meldungen ausblenden
-    const ENABLE_MISSING_ALERT = true;                      // Fehlermeldungen (fehlende Fahrzeuge) ausblenden
+    // true = Spoilerbutton aktiv / Infobereiche beim Laden ausgeblendet
+    // false = Spoilerbutton deaktiviert / Infobereiche beim Laden sichtbar
+    const ENABLE_SUCCESS_ALERT = true;                      // Erfolgs-Meldungen ein- oder ausblenden
+    const ENABLE_MISSING_ALERT = true;                      // Fehlende Fahrzeuge ein- oder ausblenden
+    const ENABLE_CARE_AND_SUPPLY = false;                    // Betreuung und Verpflegung ein- oder ausblenden
     const ENABLE_PATIENT_SPOILER = true;                    // Spoiler für Patientenbereich (ab X Patienten)
     const ENABLE_AAO_SPOILER = true;                        // Spoiler für AAO-Einträge ohne Kategorie
-    const ENABLE_TABS_SPOILER = true;                       // Spoiler für AAO-Tabs & Inhalte
+    const ENABLE_TABS_SPOILER = false;                       // Spoiler für AAO-Tabs & Inhalte
     const ENABLE_VEHICLE_SPOILER = true;                    // Spoiler für Fahrzeug-Tabelle und anfahrende Fahrzeuge
     const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = true;     // Spoiler für "Freie Fahrzeugliste" (Lightbox)
 
     const PATIENT_SPOILER_MIN_COUNT = 10;                    // Spoiler ab dieser Patientenanzahl aktiv
     // ======================
+
+    function hideOptionalElements() {
+        // Erfolgsmeldungen ausblenden
+        if (ENABLE_SUCCESS_ALERT) {
+            document.querySelectorAll('.alert-success').forEach(el => {
+                el.style.display = "none";
+            });
+        }
+
+        // Fehlende Fahrzeuge ausblenden
+        if (ENABLE_MISSING_ALERT) {
+            const missingTextElement = document.getElementById('missing_text');
+            if (
+                missingTextElement &&
+                missingTextElement.classList.contains('alert-danger') &&
+                missingTextElement.classList.contains('alert-missing-vehicles')
+            ) {
+                missingTextElement.style.display = "none";
+            }
+        }
+
+        // Betreuung & Verpflegung ein-/ausblenden (eindeutig über Text identifiziert)
+        document.querySelectorAll('.alert.alert-danger').forEach(el => {
+            if (el.innerText.includes('Benötigte Betreuungs- und Verpflegungsausstattung')) {
+                el.style.display = ENABLE_CARE_AND_SUPPLY ? "block" : "none";
+            }
+        });
+    }
+
+    // Spoiler für Patienten-Blöcke bei Überschreitung eines bestimmten Limits
+    function addSpoilerButtonForPatientBlocks() {
+        if (!ENABLE_PATIENT_SPOILER) return;
+
+        let patientBlocks = document.querySelectorAll('.mission_patient');
+        if (patientBlocks.length < PATIENT_SPOILER_MIN_COUNT) return;
+        if (document.getElementById('togglePatientBlockButton')) return;
+
+        let parent = patientBlocks[0].parentNode;
+        let wrapper = document.createElement("div");
+        wrapper.style.marginBottom = "10px";
+
+        let button = document.createElement("button");
+        button.id = "togglePatientBlockButton";
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.innerText = "Patienten anzeigen";
+
+        patientBlocks.forEach(block => block.style.display = "none");
+
+        button.addEventListener("click", function () {
+            const visible = patientBlocks[0].style.display !== "none";
+            patientBlocks.forEach(block => block.style.display = visible ? "none" : "block");
+            button.innerText = visible ? "Patienten anzeigen" : "Patienten ausblenden";
+        });
+
+        wrapper.appendChild(button);
+        parent.insertBefore(wrapper, patientBlocks[0]);
+    }
 
     // Fügt Spoiler-Button für Einzelfahrzeuge (AAO ohne Kategorie) im Lightbox-iFrame ein
     function addSpoilerButtonToAAO(iframe) {
@@ -51,6 +109,32 @@
         });
 
         target.parentNode.insertBefore(button, target);
+    }
+
+    // Spoiler für AAO-Tabs und Tab-Inhalte
+    function addSpoilerButtonForTabs() {
+        if (!ENABLE_TABS_SPOILER) return;
+
+        let tabs = document.getElementById("aao-tabs");
+        let content = document.querySelector(".tab-content");
+        if (!tabs || !content || document.getElementById("toggleTabsButton")) return;
+
+        let button = document.createElement("button");
+        button.id = "toggleTabsButton";
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "10px";
+        button.innerText = "AAO-Tabs anzeigen";
+
+        tabs.style.display = "none";
+        content.style.display = "none";
+
+        button.addEventListener("click", function () {
+            const visible = tabs.style.display !== "none";
+            tabs.style.display = content.style.display = visible ? "none" : "block";
+            button.innerText = visible ? "AAO-Tabs anzeigen" : "AAO-Tabs ausblenden";
+        });
+
+        tabs.parentNode.insertBefore(button, tabs);
     }
 
     // Spoiler-Button für Fahrzeug-Tabelle unter dem Einsatz
@@ -102,75 +186,6 @@
 
         drivingBlock.parentNode.insertBefore(button, drivingBlock);
         return true;
-    }
-
-    // Spoiler für Patienten-Blöcke bei Überschreitung eines bestimmten Limits
-    function addSpoilerButtonForPatientBlocks() {
-        if (!ENABLE_PATIENT_SPOILER) return;
-
-        let patientBlocks = document.querySelectorAll('.mission_patient');
-        if (patientBlocks.length < PATIENT_SPOILER_MIN_COUNT) return;
-        if (document.getElementById('togglePatientBlockButton')) return;
-
-        let parent = patientBlocks[0].parentNode;
-        let wrapper = document.createElement("div");
-        wrapper.style.marginBottom = "10px";
-
-        let button = document.createElement("button");
-        button.id = "togglePatientBlockButton";
-        button.classList.add("btn", "btn-xl", "btn-primary");
-        button.innerText = "Patienten anzeigen";
-
-        patientBlocks.forEach(block => block.style.display = "none");
-
-        button.addEventListener("click", function () {
-            const visible = patientBlocks[0].style.display !== "none";
-            patientBlocks.forEach(block => block.style.display = visible ? "none" : "block");
-            button.innerText = visible ? "Patienten anzeigen" : "Patienten ausblenden";
-        });
-
-        wrapper.appendChild(button);
-        parent.insertBefore(wrapper, patientBlocks[0]);
-    }
-
-    // Versteckt automatische Systemmeldungen je nach Konfiguration
-    function hideOptionalElements() {
-        if (ENABLE_SUCCESS_ALERT) {
-            document.querySelectorAll('.alert-success').forEach(el => el.style.display = "none");
-        }
-
-        if (ENABLE_MISSING_ALERT) {
-            const missingTextElement = document.getElementById('missing_text');
-            if (missingTextElement && missingTextElement.classList.contains('alert-danger') && missingTextElement.classList.contains('alert-missing-vehicles')) {
-                missingTextElement.style.display = "none";
-            }
-        }
-    }
-
-    // Spoiler für AAO-Tabs und Tab-Inhalte
-    function addSpoilerButtonForTabs() {
-        if (!ENABLE_TABS_SPOILER) return;
-
-        let tabs = document.getElementById("aao-tabs");
-        let content = document.querySelector(".tab-content");
-        if (!tabs || !content || document.getElementById("toggleTabsButton")) return;
-
-        let button = document.createElement("button");
-        button.id = "toggleTabsButton";
-        button.classList.add("btn", "btn-xl", "btn-primary");
-        button.style.marginBottom = "10px";
-        button.innerText = "AAO-Tabs anzeigen";
-
-        tabs.style.display = "none";
-        content.style.display = "none";
-
-        button.addEventListener("click", function () {
-            const visible = tabs.style.display !== "none";
-            tabs.style.display = content.style.display = visible ? "none" : "block";
-            button.innerText = visible ? "AAO-Tabs anzeigen" : "AAO-Tabs ausblenden";
-        });
-
-        tabs.parentNode.insertBefore(button, tabs);
     }
 
     // Spoiler für „Freie Fahrzeugliste“ in Lightbox
