@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 15 - MultiSwitcher
+// @name         [LSS] 19 - MultiSwitcher
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Blendet im Einsatzfenster AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere Dinge individuell ein oder aus.
@@ -177,14 +177,14 @@
         let button = document.createElement("button");
         button.classList.add("btn", "btn-xl", "btn-primary");
         button.style.marginBottom = "10px";
-        button.innerText = "Fahrzeug-Tabelle anzeigen";
+        button.innerText = "Fahrzeuge anzeigen";
 
         vehicleTable.style.display = "none";
 
         button.addEventListener("click", function () {
             const visible = vehicleTable.style.display !== "none";
             vehicleTable.style.display = visible ? "none" : "table";
-            button.innerText = visible ? "Fahrzeug-Tabelle anzeigen" : "Fahrzeug-Tabelle ausblenden";
+            button.innerText = visible ? "Fahrzeuge anzeigen" : "Fahrzeuge ausblenden";
         });
 
         vehicleTable.parentNode.insertBefore(button, vehicleTable);
@@ -203,14 +203,14 @@
         let button = document.createElement("button");
         button.classList.add("btn", "btn-xl", "btn-primary");
         button.style.marginBottom = "10px";
-        button.innerText = "Anfahrende Fahrzeuge anzeigen";
+        button.innerText = "Fahrzeuge anzeigen";
 
         drivingBlock.style.display = "none";
 
         button.addEventListener("click", function () {
             const visible = drivingBlock.style.display !== "none";
             drivingBlock.style.display = visible ? "none" : "block";
-            button.innerText = visible ? "Anfahrende Fahrzeuge anzeigen" : "Anfahrende Fahrzeuge ausblenden";
+            button.innerText = visible ? "Fahrzeuge anzeigen" : "Fahrzeuge ausblenden";
         });
 
         drivingBlock.parentNode.insertBefore(button, drivingBlock);
@@ -229,7 +229,7 @@
         const button = document.createElement('button');
         button.id = 'toggleVehicleListStepButton';
         button.classList.add('btn', 'btn-success');
-        button.innerText = 'Freie Fahrzeugliste anzeigen';
+        button.innerText = 'Fahrzeugliste anzeigen';
 
         vehicleListStep.style.display = 'none';
 
@@ -237,7 +237,7 @@
             e.preventDefault();
             const visible = vehicleListStep.style.display !== 'none';
             vehicleListStep.style.display = visible ? 'none' : 'block';
-            button.innerText = visible ? 'Freie Fahrzeugliste anzeigen' : 'Freie Fahrzeugliste ausblenden';
+            button.innerText = visible ? 'Fahrzeuge anzeigen' : 'Fahrzeuge ausblenden';
         });
 
         dispatchButtons.insertBefore(button, dispatchButtons.firstChild);
