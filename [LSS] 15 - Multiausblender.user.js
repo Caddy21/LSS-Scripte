@@ -30,7 +30,7 @@
     const ENABLE_VEHICLE_SPOILER = true; // Spoiler für Fahrzeug-Tabelle und anfahrende Fahrzeuge
     const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = true; // Spoiler für "Freie Fahrzeugliste" rechte Seite
 
-    const PATIENT_SPOILER_MIN_COUNT = 10; // Spoiler ab dieser Patientenanzahl erstellen (Blendet ab 10 Patienten diese aus)
+    const PATIENT_SPOILER_MIN_COUNT = 10; // Aab dieser Patientenanzahl Spoiler erstellen (Blendet ab 10 Patienten diese aus)
     // ======================
 
     // Funktion um die Eventbox in der Einsatzliste ein- oder auszublenden
