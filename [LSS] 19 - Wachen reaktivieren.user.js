@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         [LSS] Wachen reaktivieren
 // @namespace    http://tampermonkey.net/
-// @version      1.3
-// @description  Zeigt deaktivierte Wachen kompakt an und erlaubt Umschalten direkt im Overlay ohne ID oder Typ-Anzeige.
-// @author       DeinName
+// @version      1.0
+// @description  Zeigt deaktivierte Wachen an und erlaubt das Umschalten dieser
+// @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @connect      www.leitstellenspiel.de
 // ==/UserScript==
 
