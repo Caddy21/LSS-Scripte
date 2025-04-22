@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 06 - Fahrzeuge löschen
+// @name         [LSS] Fahrzeuge löschen
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Löscht alle Fahrzeuge einer Wache oder gezielt ausgewählte Fahrzeuge
