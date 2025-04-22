@@ -22,7 +22,7 @@
         const s6Button = Array.from(buttons).find(btn => btn.textContent.includes('Fahrzeuge im S6'));
 
         const disabledButton = document.createElement('button');
-        disabledButton.textContent = 'Deaktivierte Wachen anzeigen';
+        disabledButton.textContent = 'Inaktive Wachen';
         disabledButton.classList.add('btn', 'btn-warning');
         disabledButton.style.marginLeft = '10px';
 
