@@ -10,7 +10,7 @@ Hier findet Ihr nützliche oder weniger nützliche Scripte für das Spiel www.le
 
 Die Nutzung dieser geschieht auf **eigene Gefahr**. 
 
-Es sind nur die Scripte **fehlerfrei und ausführlich getestet** worden die im offiziellen Forum von LST vorgestellt worden sind!
+Es sind nur die Scripte **fehlerfrei und ausführlich getestet** worden die im offiziellen Forum von LST vorgestellt worden sind! 
 Dieses könnt Ihr über www.leitstellenspiel.de/forum erreichen. Im Bereich [Scripte und Zusatzprogramme](https://forum.leitstellenspiel.de/index.php?board/22-scripte-und-zusatzprogramme/) stelle ich meine vor.
 Um die Scripte nutzen zu können braucht Ihr die Erweiterung [Tampermonkey](https://www.tampermonkey.net/)
 
@@ -46,10 +46,10 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
   
     - Fahne in der Einsatzliste entfernen (veröffentlicht)
     - Erweiterungs-Manager (veröffentlicht)
-    - Alle LST umschalten (veröffentlicht)
+    - Alle LST umschalten (veröffentlicht) - Aktuell außer Betrieb
     - Fahrzeuge im S6 auflisten (veröffentlicht)
     - SNR-Einsätze filtern (veröffentlicht) - EOL
-    - Fahrzeuge löschen 
+    - Fahrzeuge löschen (veröffentlicht)
     - Sprechwunsch Sortierer (veröffentlicht)
     - Design Switcher
     - Einsatzkategorienfilter (veröffentlicht)
@@ -58,7 +58,7 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Stellplatzfinder (veröffentlicht)
     - Alarmstichworte (veröffentlicht)
     - Aufgeräumtes Profil-Menü (veröffentlicht)
-    - Spoiler für AAO-NoCategory
+    - Multiausblender
     - Zielortfilter (veröffentlicht)
     - Einsätze anzeigen (veröffentlicht)
     - Einsatzdaten-Kopierer
