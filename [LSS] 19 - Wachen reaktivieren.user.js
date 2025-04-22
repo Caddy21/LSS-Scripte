@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         [LSS] Wachen reaktivieren
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Zeigt deaktivierte Wachen und erlaubt Umschalten direkt aus der Tabelle herraus
-// @author       Caddy21
+// @version      1.3
+// @description  Zeigt deaktivierte Wachen kompakt an und erlaubt Umschalten direkt im Overlay ohne ID oder Typ-Anzeige.
+// @author       DeinName
 // @match        https://www.leitstellenspiel.de/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
-// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @connect      www.leitstellenspiel.de
 // ==/UserScript==
 
@@ -43,6 +42,9 @@
                 const buildings = JSON.parse(response.responseText);
                 const disabled = buildings.filter(b => b.enabled === false);
 
+                // Alphabetische Sortierung der deaktivierten Wachen nach ihrem Namen (caption)
+                disabled.sort((a, b) => a.caption.localeCompare(b.caption));
+
                 // Overlay erstellen
                 const overlay = document.createElement('div');
                 overlay.style = `
@@ -69,7 +71,7 @@
                 table.innerHTML = `
                     <thead>
                         <tr>
-                            <th>Wache</th>
+                            <th>Name</th>
                             <th>Aktion</th>
                         </tr>
                     </thead>
@@ -78,6 +80,7 @@
 
                 const tbody = table.querySelector('tbody');
 
+                // Jede deaktivierte Wache zur Tabelle hinzufügen
                 disabled.forEach(building => {
                     const row = document.createElement('tr');
 
