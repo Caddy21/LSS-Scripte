@@ -1,130 +1,123 @@
 // ==UserScript==
-// @name         [LSS] Wachen reaktivieren
-// @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Zeigt deaktivierte Wachen an und erlaubt das Umschalten dieser
+// @name         [LSS] 19 - Wachenstatus
+// @namespace    https://www.leitstellenspiel.de/
+// @version      1.1
+// @description  Zeigt in der Gebäudeübersicht der LST den Status der Wachen an
 // @author       Caddy21
-// @match        https://www.leitstellenspiel.de/*
-// @grant        GM_xmlhttpRequest
-// @grant        GM_addStyle
-// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
-// @connect      www.leitstellenspiel.de
+// @match        https://www.leitstellenspiel.de/buildings/*
+// @grant        none
 // ==/UserScript==
 
 (function () {
     'use strict';
+    console.log('[Umschalten-Skript] Neu gestartet. Warte auf Tabelle...');
 
-    function insertButtons() {
-        const buildingPanelBody = document.querySelector('#building_panel_body');
-        if (!buildingPanelBody) return;
+    const buildingStatusMap = new Map();
 
-        const buttons = buildingPanelBody.querySelectorAll('button');
-        const s6Button = Array.from(buttons).find(btn => btn.textContent.includes('Fahrzeuge im S6'));
-
-        const disabledButton = document.createElement('button');
-        disabledButton.textContent = 'Inaktive Wachen anzeigen';
-        disabledButton.classList.add('btn', 'btn-danger');
-        disabledButton.style.marginLeft = '10px';
-
-        disabledButton.addEventListener('click', openDisabledBuildingsOverlay);
-
-        if (s6Button && s6Button.parentNode) {
-            s6Button.parentNode.insertBefore(disabledButton, s6Button.nextSibling);
-        } else {
-            buildingPanelBody.appendChild(disabledButton);
-        }
+    function updateButtonStyle(button, enabled) {
+        button.style.backgroundColor = enabled ? '#4CAF50' : '#f44336';
+        button.style.borderColor = enabled ? '#4CAF50' : '#f44336';
     }
 
-    function openDisabledBuildingsOverlay() {
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: 'https://www.leitstellenspiel.de/api/buildings',
-            onload: function (response) {
-                const buildings = JSON.parse(response.responseText);
-                const disabled = buildings.filter(b => b.enabled === false);
+    const observer = new MutationObserver(() => {
+        const table = document.querySelector('#lightbox_iframe_1, #lightbox_iframe_2, #lightbox_iframe_3')?.contentDocument?.querySelector('#building_table') ||
+                      document.querySelector('#building_table');
 
-                // Alphabetische Sortierung der deaktivierten Wachen nach ihrem Namen (caption)
-                disabled.sort((a, b) => a.caption.localeCompare(b.caption));
+        if (!table) return;
 
-                // Overlay erstellen
-                const overlay = document.createElement('div');
-                overlay.style = `
-                    position: fixed;
-                    top: 0; left: 0; width: 100%; height: 100%;
-                    background-color: rgba(0, 0, 0, 0.85);
-                    color: white;
-                    z-index: 10000;
-                    overflow: auto;
-                    padding: 20px;
-                `;
+        console.log('[Umschalten-Skript] Tabelle #building_table entdeckt:', table);
+        observer.disconnect();
 
-                // Schließen-Button
-                const closeButton = document.createElement('button');
-                closeButton.textContent = 'Schließen';
-                closeButton.classList.add('btn', 'btn-danger');
-                closeButton.style.marginBottom = '20px';
-                closeButton.addEventListener('click', () => overlay.remove());
-
-                // Tabelle
-                const table = document.createElement('table');
-                table.classList.add('table', 'table-striped', 'table-bordered');
-                table.style.color = 'white';
-                table.innerHTML = `
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Aktion</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                `;
-
-                const tbody = table.querySelector('tbody');
-
-                // Jede deaktivierte Wache zur Tabelle hinzufügen
-                disabled.forEach(building => {
-                    const row = document.createElement('tr');
-
-                    row.innerHTML = `
-                        <td>${building.caption}</td>
-                        <td>
-                            <button class="btn btn-default btn-xs" data-id="${building.id}">
-                                Umschalten
-                            </button>
-                        </td>
-                    `;
-
-                    const toggleButton = row.querySelector('button');
-                    toggleButton.addEventListener('click', () => {
-                        const id = toggleButton.getAttribute('data-id');
-                        toggleButton.disabled = true;
-                        toggleButton.textContent = 'Aktiviere...';
-
-                        GM_xmlhttpRequest({
-                            method: 'GET',
-                            url: `https://www.leitstellenspiel.de/buildings/${id}/active`,
-                            onload: () => {
-                                toggleButton.textContent = 'Aktiviert';
-                                toggleButton.classList.remove('btn-default');
-                                toggleButton.classList.add('btn-success');
-                                row.style.opacity = 0.5;
-                            },
-                            onerror: () => {
-                                toggleButton.textContent = 'Fehler!';
-                                toggleButton.classList.add('btn-danger');
-                            }
-                        });
-                    });
-
-                    tbody.appendChild(row);
-                });
-
-                overlay.appendChild(closeButton);
-                overlay.appendChild(table);
-                document.body.appendChild(overlay);
+        let checkCount = 0;
+        const interval = setInterval(() => {
+            const bodyRows = table.querySelectorAll('tbody tr');
+            if (bodyRows.length === 0 || bodyRows[0].children.length < 3) {
+                checkCount++;
+                if (checkCount > 10) clearInterval(interval);
+                return;
             }
-        });
-    }
 
-    window.addEventListener('load', insertButtons);
+            clearInterval(interval);
+            fetch('/api/buildings')
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(b => buildingStatusMap.set(b.id.toString(), b.enabled));
+                    injectButtons(table);
+                });
+        }, 300);
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    function injectButtons(table) {
+    const theadRow = table.querySelector('thead tr.tablesorter-headerRow');
+    if (!theadRow) return console.warn('[Umschalten-Skript] Kein Tabellenkopf gefunden.');
+
+    const newTh = document.createElement('th');
+    newTh.innerHTML = '<div class="tablesorter-header-inner">Status</div>';
+    newTh.setAttribute('scope', 'col');
+    newTh.style.whiteSpace = 'nowrap';
+
+    const ths = theadRow.querySelectorAll('th');
+    let insertBeforeTh = null;
+    ths.forEach(th => {
+        if (th.textContent.trim() === 'Ausbaustufe') {
+            insertBeforeTh = th;
+        }
+    });
+
+    theadRow.insertBefore(newTh, insertBeforeTh);
+    const allThs = theadRow.querySelectorAll('th');
+    const newColumnIndex = Array.from(allThs).indexOf(newTh);
+
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td');
+        const nameLink = row.querySelector('td a[href^="/buildings/"]');
+        if (!nameLink) return;
+
+        const buildingId = nameLink.getAttribute('href')?.split('/')[2];
+        const enabled = buildingStatusMap.get(buildingId);
+
+        const newTd = document.createElement('td');
+        newTd.setAttribute('data-sort-value', enabled ? '1' : '0');
+
+        const button = document.createElement('a');
+        button.href = '#';
+        button.textContent = enabled ? 'Deaktivieren' : 'Aktivieren';
+        button.className = 'btn btn-xs';
+        button.style.minWidth = '90px';
+        button.style.color = '#fff';
+        updateButtonStyle(button, enabled);
+
+        button.addEventListener('click', e => {
+            e.preventDefault();
+            fetch(`/buildings/${buildingId}/active`, {
+                method: 'GET',
+                credentials: 'include'
+            }).then(() => {
+                const newStatus = !buildingStatusMap.get(buildingId);
+                buildingStatusMap.set(buildingId, newStatus);
+                updateButtonStyle(button, newStatus);
+                button.textContent = newStatus ? 'Deaktivieren' : 'Aktivieren';
+                newTd.setAttribute('data-sort-value', newStatus ? '1' : '0');
+                $(table).trigger('update');
+            }).catch(err => {
+                console.warn(`[Umschalten-Skript] Fehler beim Umschalten von Gebäude ${buildingId}:`, err);
+            });
+        });
+
+        newTd.appendChild(button);
+        row.insertBefore(newTd, cells[2]);
+    });
+
+    // Tabel neu sortieren und auslösen
+    $(table).trigger('update');
+    $(table).tablesorter(); // Neu initialisieren
+    $(table).trigger("sorton", [[[newColumnIndex, 0]]]); // Optional: Nach Status sortieren (inaktive zuerst)
+}
+
 })();
