@@ -11,7 +11,6 @@
 
 (function () {
     'use strict';
-    console.log('[Umschalten-Skript] Neu gestartet. Warte auf Tabelle...');
 
     const buildingStatusMap = new Map();
 
@@ -25,8 +24,6 @@
                       document.querySelector('#building_table');
 
         if (!table) return;
-
-        console.log('[Umschalten-Skript] Tabelle #building_table entdeckt:', table);
         observer.disconnect();
 
         let checkCount = 0;
