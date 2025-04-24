@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Wachen reaktivieren
+// @name         [LSS] Wachen reaktivieren 
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Zeigt deaktivierte Wachen an und erlaubt das Umschalten dieser.
@@ -48,32 +48,19 @@
                     return;
                 }
 
-                // Alphabetische Sortierung der deaktivierten Wachen nach ihrem Namen (caption)
                 disabled.sort((a, b) => a.caption.localeCompare(b.caption));
 
-                // Overlay erstellen
                 const overlay = document.createElement('div');
-                overlay.style = `
-                    position: fixed;
-                    top: 0; left: 0; width: 100%; height: 100%;
-                    background-color: rgba(0, 0, 0, 0.85);
-                    color: white;
-                    z-index: 10000;
-                    overflow: auto;
-                    padding: 20px;
-                `;
+                overlay.classList.add('lss-darkmode-overlay');
 
-                // Schließen-Button
                 const closeButton = document.createElement('button');
                 closeButton.textContent = 'Schließen';
                 closeButton.classList.add('btn', 'btn-danger');
                 closeButton.style.marginBottom = '20px';
                 closeButton.addEventListener('click', () => overlay.remove());
 
-                // Tabelle
                 const table = document.createElement('table');
                 table.classList.add('table', 'table-striped', 'table-bordered');
-                table.style.color = 'white';
                 table.innerHTML = `
                     <thead>
                         <tr>
@@ -86,7 +73,6 @@
 
                 const tbody = table.querySelector('tbody');
 
-                // Jede deaktivierte Wache zur Tabelle hinzufügen
                 disabled.forEach(building => {
                     const row = document.createElement('tr');
 
@@ -131,5 +117,107 @@
         });
     }
 
-    window.addEventListener('load', insertButtons);
+    // Überprüfen, ob die Seite im Darkmode oder Whitemode ist
+    function getCurrentMode() {
+        const bodyClass = document.body.classList;
+
+        if (bodyClass.contains('dark')) {
+            return 'dark';
+        } else {
+            return 'light';
+        }
+    }
+
+    // Funktion, um das Styling entsprechend dem Modus anzupassen
+    function applyStyles(mode) {
+        GM_addStyle(`
+            .lss-darkmode-overlay {
+                position: fixed;
+                top: 0; left: 0; width: 100%; height: 100%;
+                z-index: 10000;
+                overflow: auto;
+                padding: 20px;
+            }
+
+            .lss-darkmode-overlay .table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .lss-darkmode-overlay th, .lss-darkmode-overlay td {
+                padding: 8px;
+                border: 1px solid #ccc;
+            }
+
+            .lss-darkmode-overlay button {
+                margin: 5px;
+            }
+
+            ${mode === 'dark' ? `
+                .lss-darkmode-overlay {
+                    background-color: rgba(0, 0, 0, 0.85);
+                    color: white;
+                }
+
+                .lss-darkmode-overlay tbody tr:nth-child(odd) {
+                    background-color: #2a2a2a;
+                }
+
+                .lss-darkmode-overlay tbody tr:nth-child(even) {
+                    background-color: #1e1e1e;
+                }
+
+                .lss-darkmode-overlay .btn.btn-danger {
+                    background-color: #dc3545;
+                    color: white;
+                }
+
+                .lss-darkmode-overlay .btn.btn-default {
+                    background-color: #f8f9fa;
+                    color: black;
+                }
+
+                .lss-darkmode-overlay .btn.btn-success {
+                    background-color: #28a745;
+                    color: white;
+                }
+            ` : `
+                .lss-darkmode-overlay {
+                    background-color: rgba(255, 255, 255, 0.95);
+                    color: black;
+                }
+
+                .lss-darkmode-overlay tbody tr:nth-child(odd) {
+                    background-color: #f9f9f9;
+                }
+
+                .lss-darkmode-overlay tbody tr:nth-child(even) {
+                    background-color: #ffffff;
+                }
+
+                .lss-darkmode-overlay .btn.btn-danger {
+                    background-color: #dc3545;
+                    color: white;
+                }
+
+                .lss-darkmode-overlay .btn.btn-default {
+                    background-color: #f8f9fa;
+                    color: black;
+                }
+
+                .lss-darkmode-overlay .btn.btn-success {
+                    background-color: #28a745;
+                    color: white;
+                }
+            `}
+        `);
+    }
+
+    // Anwendung starten
+    window.addEventListener('load', () => {
+        const mode = getCurrentMode();
+        applyStyles(mode);
+        insertButtons();
+    });
+
 })();
