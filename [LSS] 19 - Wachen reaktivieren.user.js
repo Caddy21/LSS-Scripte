@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] 19 - Wachen reaktivieren
+// @name         [LSS] Wachen reaktivieren
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Zeigt deaktivierte Wachen an und erlaubt das Umschalten dieser
+// @description  Zeigt deaktivierte Wachen an und erlaubt das Umschalten dieser.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @grant        GM_xmlhttpRequest
@@ -42,6 +42,11 @@
             onload: function (response) {
                 const buildings = JSON.parse(response.responseText);
                 const disabled = buildings.filter(b => b.enabled === false);
+
+                if (disabled.length === 0) {
+                    alert('Alle Wachen sind aktiv. Es gibt keine inaktiven Wachen.');
+                    return;
+                }
 
                 // Alphabetische Sortierung der deaktivierten Wachen nach ihrem Namen (caption)
                 disabled.sort((a, b) => a.caption.localeCompare(b.caption));
