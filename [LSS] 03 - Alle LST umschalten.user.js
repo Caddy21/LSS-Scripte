@@ -17,23 +17,19 @@
 
     // Funktion zum Umschalten einer Leitstelle
     function toggleBuilding(buildingId) {
-        const url = `https://www.leitstellenspiel.de/buildings/${buildingId}/active`;
-        return fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'active=true', // oder 'active=false', je nach Bedarf
-        })
-            .then((response) => {
-                if (response.ok) {
-                    console.log(`Leitstelle ${buildingId} erfolgreich umgeschaltet.`);
-                } else {
-                    console.error(`Fehler beim Umschalten von Leitstelle ${buildingId}.`);
-                }
-            })
-            .catch((error) => console.error(error));
-    }
+    const url = `https://www.leitstellenspiel.de/buildings/${buildingId}/active?active=true`; // oder false je nach Bedarf
+    return fetch(url, {
+        method: 'GET',
+    })
+    .then((response) => {
+        if (response.ok) {
+            console.log(`Leitstelle ${buildingId} erfolgreich umgeschaltet.`);
+        } else {
+            console.error(`Fehler beim Umschalten von Leitstelle ${buildingId}.`);
+        }
+    })
+    .catch((error) => console.error(error));
+}
 
     // Funktion zum Umschalten aller Leitstellen
     async function toggleAllCommandCenters() {
