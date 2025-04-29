@@ -16,22 +16,22 @@
     // true = Spoilerbutton aktiv / Infobereiche werden ausgeblendet
     // false = Spoilerbutton deaktiviert / Infobereiche bleiben sichtbar
 
-    const HIDE_EVENT_INFO = true; // Eventinfo in der Einsatzliste (Blaue Box) ein- oder ausblenden
-    const ENABLE_BREADCRUMB = true; // Navigationsleiste ein- oder ausblenden (Leiste bei geplanten Einsätzen ganz oben [Leitstelle > Name des Einsatzes]
-    const FIX_MISSION_HEADER_INFO = true; // Einsatzinfo (Name / Adresse) fixieren
-    const ENABLE_SUCCESS_ALERT = true; // Erfolgs-Meldungen (Grüne Box) ein- oder ausblenden
-    const ENABLE_MISSING_ALERT = true; // Fehlende Fahrzeuge (Rote Box) ein- oder ausblenden
+    const HIDE_EVENT_INFO = false; // Eventinfo in der Einsatzliste (Blaue Box) ein- oder ausblenden
+    const ENABLE_BREADCRUMB = false; // Navigationsleiste ein- oder ausblenden (Leiste bei geplanten Einsätzen ganz oben [Leitstelle > Name des Einsatzes]
+    const FIX_MISSION_HEADER_INFO = false; // Einsatzinfo (Name / Adresse) fixieren
+    const ENABLE_SUCCESS_ALERT = false; // Erfolgs-Meldungen (Grüne Box) ein- oder ausblenden
+    const ENABLE_MISSING_ALERT = false; // Fehlende Fahrzeuge (Rote Box) ein- oder ausblenden
     const ENABLE_SPEECH_REQUEST_INFOBOX = false; // Sprechwunsch (Blaue Box) ein- oder ausblenden
-    const ENABLE_SPEECH_REQUEST_ALERT = true; // Fahrzeug hat ein Sprechwunsch (Rote Box) ein- oder ausblenden
+    const ENABLE_SPEECH_REQUEST_ALERT = false; // Fahrzeug hat ein Sprechwunsch (Rote Box) ein- oder ausblenden
     const ENABLE_CARE_AND_SUPPLY = false; // Betreuung und Verpflegung (Rote Box) ein- oder ausblenden
-    const ENABLE_PATIENT_SPOILER = true; // Spoiler für Patientenbereich (ab X Patienten)
-    const ENABLE_AAO_SPOILER = true; // Spoiler für AAO-Einträge ohne Kategorie
+    const ENABLE_PATIENT_SPOILER = false; // Spoiler für Patientenbereich (ab X Patienten)
+    const ENABLE_AAO_SPOILER = false; // Spoiler für AAO-Einträge ohne Kategorie
     const ENABLE_TABS_SPOILER = false; // Spoiler für AAO-Tabs & Inhalte
     const ENABLE_AAO_COLUMN_SPOILERS = false; // Spoiler für die einzelnen AAO-Einträge
-    const ENABLE_MISSION_SHARED_INFOBOX = true; // Info-Box „Dieser Einsatz wurde von...“ ein - oder ausblenden
-    const ENABLE_VEHICLE_SPOILER = true; // Spoiler für Fahrzeug-Tabelle und anfahrende Fahrzeuge
-    const ENABLE_RELEASE_ALL_INFOBOX = true; // Info-Box „Wirklich alle entlassen?“ ein- oder ausblenden
-    const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = true; // Spoiler für "Freie Fahrzeugliste" rechte Seite
+    const ENABLE_MISSION_SHARED_INFOBOX = false; // Info-Box „Dieser Einsatz wurde von...“ ein - oder ausblenden
+    const ENABLE_VEHICLE_SPOILER = false; // Spoiler für Fahrzeug-Tabelle und anfahrende Fahrzeuge
+    const ENABLE_RELEASE_ALL_INFOBOX = false; // Info-Box „Wirklich alle entlassen?“ ein- oder ausblenden
+    const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = false; // Spoiler für "Freie Fahrzeugliste" rechte Seite
 
     const PATIENT_SPOILER_MIN_COUNT = 10; // Aab dieser Patientenanzahl Spoiler erstellen (Blendet ab 10 Patienten diese aus)
     // ======================
