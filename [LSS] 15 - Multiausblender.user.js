@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Multiausblender
+// @name         [LSS] 15 - Multiausblender
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Blendet im Einsatzfenster AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere Dinge individuell ein oder aus.
@@ -91,7 +91,7 @@
         const breadcrumb = document.querySelector('.breadcrumb'); // ✅ Punkt gehört hier in Anführungszeichen
         if (!breadcrumb) return;
 
-        if (ENABLE_BREADCRUMB) {
+        if (!ENABLE_BREADCRUMB) {
             breadcrumb.style.removeProperty('display');
         } else {
             breadcrumb.style.setProperty('display', 'none', 'important');
