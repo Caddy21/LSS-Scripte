@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Leitstellenspiel Einsatzzähler
+// @name         [LSS] - Einsatzzähler
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Zählt alle eigene angefahrenen Einsätze in einer Tabelle an.
