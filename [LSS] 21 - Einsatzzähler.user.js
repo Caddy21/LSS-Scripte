@@ -2,7 +2,7 @@
 // @name         [LSS] - Einsatzzähler
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Zählt alle eigene angefahrenen Einsätze in einer Tabelle an.
+// @description  Zählt alle eigenen angefahrenen Einsätze in einer Tabelle an. Nicht die vom Verband!
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
