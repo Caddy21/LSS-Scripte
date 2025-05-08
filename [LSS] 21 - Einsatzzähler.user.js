@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] - Einsatzzähler
+// @name         [LSS] 21 - Einsatzzähler
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Zählt alle eigenen angefahrenen Einsätze in einer Tabelle an. Nicht die vom Verband!
+// @description  Zählt alle eigene angefahrenen Einsätze in einer Tabelle an.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -55,191 +55,221 @@
 
     let counterUI;
 
+    // Funktion zur Erstellung des Userinterfaces
     function toggleCounterUI() {
-        if (counterUI) {
-            counterUI.remove();
-            counterUI = null;
-            console.log('[Einsatzzähler] UI geschlossen.');
-            return;
-        }
+    if (counterUI) {
+        counterUI.remove();
+        counterUI = null;
+        console.log('[Einsatzzähler] UI geschlossen.');
+        return;
+    }
 
-        console.log('[Einsatzzähler] UI wird geöffnet.');
+    console.log('[Einsatzzähler] UI wird geöffnet.');
 
-        const isDarkMode = document.body.classList.contains('dark') ||
-              getComputedStyle(document.body).backgroundColor === 'rgb(34, 34, 34)';
+    const isDarkMode = document.body.classList.contains('dark') ||
+        getComputedStyle(document.body).backgroundColor === 'rgb(34, 34, 34)';
 
-        const bgColor = isDarkMode ? '#2c2c2c' : '#fff';
-        const textColor = isDarkMode ? '#f0f0f0' : '#000';
-        const borderColor = isDarkMode ? '#555' : '#ccc';
+    const bgColor = isDarkMode ? '#2c2c2c' : '#fff';
+    const textColor = isDarkMode ? '#f0f0f0' : '#000';
+    const borderColor = isDarkMode ? '#555' : '#ccc';
 
-        counterUI = document.createElement('div');
-        counterUI.id = 'einsatzCounterUI';
-        counterUI.style.position = 'fixed';
-        counterUI.style.top = '60px';
-        counterUI.style.right = '20px';
-        counterUI.style.backgroundColor = bgColor;
-        counterUI.style.color = textColor;
-        counterUI.style.border = `1px solid ${borderColor}`;
-        counterUI.style.padding = '10px';
-        counterUI.style.zIndex = 9999;
-        counterUI.style.maxHeight = '600px';
-        counterUI.style.width = '400px';
-        counterUI.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-        counterUI.style.borderRadius = '6px';
+    counterUI = document.createElement('div');
+    counterUI.id = 'einsatzCounterUI';
+    Object.assign(counterUI.style, {
+        position: 'fixed',
+        top: '60px',
+        right: '20px',
+        backgroundColor: bgColor,
+        color: textColor,
+        border: `1px solid ${borderColor}`,
+        padding: '10px',
+        zIndex: 9999,
+        maxHeight: '600px',
+        width: '400px',
+        boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+        borderRadius: '6px',
+        display: 'flex',
+        flexDirection: 'column'
+    });
 
-        const style = document.createElement('style');
-        style.innerHTML = `
+    const style = document.createElement('style');
+    style.innerHTML = `
         #einsatzCounterUI .scrollbar {
             scrollbar-width: none;
         }
-
         #einsatzCounterUI .scrollbar::-webkit-scrollbar {
             width: 0px;
         }
     `;
-        document.head.appendChild(style);
+    document.head.appendChild(style);
 
-        const headerContainer = document.createElement('div');
-        headerContainer.style.position = 'sticky';
-        headerContainer.style.top = '0';
-        headerContainer.style.backgroundColor = bgColor;
-        headerContainer.style.zIndex = '10';
-        headerContainer.style.paddingBottom = '6px';
+    const headerContainer = document.createElement('div');
+    Object.assign(headerContainer.style, {
+        position: 'sticky',
+        top: '0',
+        backgroundColor: bgColor,
+        zIndex: '10',
+        paddingBottom: '6px'
+    });
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = '✕';
-        closeBtn.style.float = 'right';
-        closeBtn.style.background = 'transparent';
-        closeBtn.style.border = 'none';
-        closeBtn.style.color = textColor;
-        closeBtn.style.fontSize = '16px';
-        closeBtn.style.cursor = 'pointer';
-        closeBtn.addEventListener('click', () => {
-            counterUI.remove();
-            counterUI = null;
-            console.log('[Einsatzzähler] UI geschlossen.');
-        });
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    Object.assign(closeBtn.style, {
+        float: 'right',
+        background: 'transparent',
+        border: 'none',
+        color: textColor,
+        fontSize: '16px',
+        cursor: 'pointer'
+    });
+    closeBtn.addEventListener('click', () => {
+        counterUI.remove();
+        counterUI = null;
+        console.log('[Einsatzzähler] UI geschlossen.');
+    });
 
-        const resetBtn = document.createElement('button');
-        resetBtn.textContent = 'Zähler zurücksetzen';
-        resetBtn.style.marginBottom = '6px';
-        resetBtn.style.width = '100%';
-        resetBtn.style.background = '#c00';
-        resetBtn.style.color = '#fff';
-        resetBtn.style.border = 'none';
-        resetBtn.style.padding = '4px';
-        resetBtn.style.borderRadius = '4px';
-        resetBtn.style.cursor = 'pointer';
-        resetBtn.addEventListener('click', () => {
-            if (confirm('Alle Zähler zurücksetzen?')) {
-                for (let key in einsatzCounter) einsatzCounter[key] = 0;
-                localStorage.setItem(einsatzCounterKey, JSON.stringify(einsatzCounter));
-                updateCounterTable();
-            }
-        });
+    const title = document.createElement('h4');
+    title.textContent = 'Einsatzzähler';
+    title.style.marginTop = '0';
 
-        const title = document.createElement('h4');
-        title.textContent = 'Einsatzzähler';
-        title.style.marginTop = '0';
+    const searchInput = document.createElement('input');
+    Object.assign(searchInput, {
+        type: 'text',
+        placeholder: 'Suchen...'
+    });
+    Object.assign(searchInput.style, {
+        width: '100%',
+        margin: '6px 0',
+        padding: '4px',
+        border: `1px solid ${borderColor}`,
+        borderRadius: '4px',
+        backgroundColor: isDarkMode ? '#444' : '#f9f9f9',
+        color: textColor
+    });
+    searchInput.addEventListener('input', () => {
+        filterTable(searchInput.value.trim().toLowerCase());
+    });
 
-        const searchInput = document.createElement('input');
-        searchInput.type = 'text';
-        searchInput.placeholder = 'Suchen...';
-        searchInput.style.width = '100%';
-        searchInput.style.margin = '6px 0';
-        searchInput.style.padding = '4px';
-        searchInput.style.border = `1px solid ${borderColor}`;
-        searchInput.style.borderRadius = '4px';
-        searchInput.style.backgroundColor = isDarkMode ? '#444' : '#f9f9f9';
-        searchInput.style.color = textColor;
-        searchInput.addEventListener('input', () => {
-            filterTable(searchInput.value.trim().toLowerCase());
-        });
+    const sortByNameBtn = document.createElement('button');
+    sortByNameBtn.textContent = 'Sortiere nach Namen';
+    Object.assign(sortByNameBtn.style, {
+        width: '100%',
+        background: '#007bff',
+        color: '#fff',
+        border: 'none',
+        padding: '6px',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        flex: '1'
+    });
+    sortByNameBtn.addEventListener('click', () => {
+        sortCounterData('name');
+    });
 
-        // Sortierbuttons hinzufügen
-        const sortByNameBtn = document.createElement('button');
-        sortByNameBtn.textContent = 'Sortiere nach Namen';
-        sortByNameBtn.style.width = '100%';
-        sortByNameBtn.style.marginBottom = '6px';
-        sortByNameBtn.style.background = '#007bff';
-        sortByNameBtn.style.color = '#fff';
-        sortByNameBtn.style.border = 'none';
-        sortByNameBtn.style.padding = '6px';
-        sortByNameBtn.style.borderRadius = '4px';
-        sortByNameBtn.style.cursor = 'pointer';
-        sortByNameBtn.addEventListener('click', () => {
-            sortCounterData('name');
-        });
+    const sortByCountBtn = document.createElement('button');
+    sortByCountBtn.textContent = 'Sortiere nach Anzahl';
+    Object.assign(sortByCountBtn.style, {
+        width: '100%',
+        background: '#28a745',
+        color: '#fff',
+        border: 'none',
+        padding: '6px',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        flex: '1'
+    });
+    sortByCountBtn.addEventListener('click', () => {
+        sortCounterData('count');
+    });
 
-        const sortByCountBtn = document.createElement('button');
-        sortByCountBtn.textContent = 'Sortiere nach Anzahl';
-        sortByCountBtn.style.width = '100%';
-        sortByCountBtn.style.marginBottom = '6px';
-        sortByCountBtn.style.background = '#28a745';
-        sortByCountBtn.style.color = '#fff';
-        sortByCountBtn.style.border = 'none';
-        sortByCountBtn.style.padding = '6px';
-        sortByCountBtn.style.borderRadius = '4px';
-        sortByCountBtn.style.cursor = 'pointer';
-        sortByCountBtn.addEventListener('click', () => {
-            sortCounterData('count');
-        });
+    const sortButtonContainer = document.createElement('div');
+    Object.assign(sortButtonContainer.style, {
+        display: 'flex',
+        gap: '6px',
+        marginBottom: '6px'
+    });
+    sortButtonContainer.appendChild(sortByNameBtn);
+    sortButtonContainer.appendChild(sortByCountBtn);
 
-        const tableWrapper = document.createElement('div');
-        tableWrapper.classList.add('scrollbar');
-        tableWrapper.style.overflowY = 'auto';
-        tableWrapper.style.maxHeight = '400px';
-        tableWrapper.style.marginTop = '10px';
+    const tableWrapper = document.createElement('div');
+    tableWrapper.classList.add('scrollbar');
+    Object.assign(tableWrapper.style, {
+        overflowY: 'auto',
+        maxHeight: '400px',
+        marginTop: '10px'
+    });
 
-        const table = document.createElement('table');
-        table.id = 'einsatzCounterTable';
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
+    const table = document.createElement('table');
+    table.id = 'einsatzCounterTable';
+    Object.assign(table.style, {
+        width: '100%',
+        borderCollapse: 'collapse'
+    });
 
-        const thead = document.createElement('thead');
-        thead.innerHTML = `
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
         <tr>
             <th style="text-align:left; position:sticky; top:0; background-color:${bgColor}; z-index:5; border-bottom:1px solid ${borderColor}; white-space: nowrap;">Einsatz</th>
             <th style="text-align:right; position:sticky; top:0; background-color:${bgColor}; z-index:5; border-bottom:1px solid ${borderColor}; white-space: nowrap;">Anzahl</th>
         </tr>
     `;
-        table.appendChild(thead);
 
-        const tbody = document.createElement('tbody');
-        table.appendChild(tbody);
+    const tbody = document.createElement('tbody');
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    tableWrapper.appendChild(table);
 
-        tableWrapper.appendChild(table);
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Zähler zurücksetzen';
+    Object.assign(resetBtn.style, {
+        width: '100%',
+        background: '#c00',
+        color: '#fff',
+        border: 'none',
+        padding: '6px',
+        borderRadius: '4px',
+        cursor: 'pointer'
+    });
+    resetBtn.addEventListener('click', () => {
+        if (confirm('Alle Zähler zurücksetzen?')) {
+            for (let key in einsatzCounter) einsatzCounter[key] = 0;
+            localStorage.setItem(einsatzCounterKey, JSON.stringify(einsatzCounter));
+            updateCounterTable();
+        }
+    });
 
-        headerContainer.appendChild(closeBtn);
-        headerContainer.appendChild(title);
-        counterUI.appendChild(headerContainer);
-        counterUI.appendChild(resetBtn);
-        counterUI.appendChild(searchInput);
+    const resetBtnContainer = document.createElement('div');
+    Object.assign(resetBtnContainer.style, {
+        position: 'sticky',
+        bottom: '0',
+        backgroundColor: bgColor,
+        paddingTop: '10px',
+        marginTop: '10px',
+        zIndex: '10'
+    });
+    resetBtnContainer.appendChild(resetBtn);
 
-        const sortButtonContainer = document.createElement('div');
-        sortButtonContainer.style.display = 'flex';
-        sortButtonContainer.style.gap = '6px';
-        sortButtonContainer.style.marginBottom = '6px';
+    // UI Struktur aufbauen
+    headerContainer.appendChild(closeBtn);
+    headerContainer.appendChild(title);
+    counterUI.appendChild(headerContainer);
+    counterUI.appendChild(searchInput);
+    counterUI.appendChild(sortButtonContainer);
+    counterUI.appendChild(tableWrapper);
+    counterUI.appendChild(resetBtnContainer);
 
-        sortByNameBtn.style.flex = '1';
-        sortByCountBtn.style.flex = '1';
+    document.body.appendChild(counterUI);
+    updateCounterTable();
+    console.log('[Einsatzzähler] UI angezeigt.');
+}
 
-        sortButtonContainer.appendChild(sortByNameBtn);
-        sortButtonContainer.appendChild(sortByCountBtn);
-
-        counterUI.appendChild(sortButtonContainer);
-        counterUI.appendChild(tableWrapper);
-        document.body.appendChild(counterUI);
-
-        updateCounterTable();
-        console.log('[Einsatzzähler] UI angezeigt.');
-    }
-
+    // Funktion der Sortierungen
     function sortCounterData(method) {
         sortMethod = method;
         updateCounterTable();
     }
 
+    // Funktion für die Zählung
     function updateCounterTable() {
         const table = document.getElementById('einsatzCounterTable');
         const tbody = table.querySelector('tbody');
@@ -262,6 +292,7 @@
         });
     }
 
+    // Funktion für die Suche
     function filterTable(query) {
         const rows = document.querySelectorAll('#einsatzCounterTable tbody tr');
         rows.forEach(row => {
@@ -270,8 +301,17 @@
         });
     }
 
+    // Funktion zur Überwachung von Änderungen
     function countExistingMissions() {
-        const selectors = ['#mission_list', '#mission_list_krankentransporte', '#mission_list_sicherheitswache'];
+        const selectors = [
+            '#mission_list',
+            '#mission_list_krankentransporte',
+            '#mission_list_alliance',
+            '#mission_list_alliance_event',
+            '#mission_list_sicherheitswache',
+            '#mission_list_sicherheitswache_alliance'
+        ];
+
         selectors.forEach(sel => {
             const existingMissions = document.querySelectorAll(`${sel} .missionSideBarEntry`);
             existingMissions.forEach(node => {
@@ -281,39 +321,9 @@
                 const missionTypeId = node.getAttribute('mission_type_id');
                 if (!missionId || !missionTypeId || countedMissions.has(missionId)) return;
 
+                // Fahrzeug zugewiesen? (also auf Anfahrt oder vor Ort)
                 const isAssigned = node.querySelector('.glyphicon-user:not(.hidden)');
-                const isNotAssigned = node.querySelector('.glyphicon-asterisk:not(.hidden)');
-
-                if (isAssigned && !isNotAssigned) {
-                    const einsatzName = einsatzNameMap[missionTypeId];
-                    if (!einsatzName) {
-                        console.warn(`[Einsatzzähler] Kein Name gefunden für mission_type_id=${missionTypeId}`);
-                        return;
-                    }
-
-                    einsatzCounter[einsatzName] = (einsatzCounter[einsatzName] || 0) + 1;
-                    countedMissions.add(missionId);
-                    console.log(`[Einsatzzähler] Bestehender eigener Einsatz gezählt: ${einsatzName} (ID ${missionId}) => ${einsatzCounter[einsatzName]}`);
-                    localStorage.setItem(einsatzCounterKey, JSON.stringify(einsatzCounter));
-                    localStorage.setItem(countedMissionsKey, JSON.stringify(Array.from(countedMissions)));
-
-                    const td = document.getElementById(`counter-${CSS.escape(einsatzName)}`);
-                    if (td) td.textContent = einsatzCounter[einsatzName];
-                }
-            });
-        });
-    }
-
-    // Der Observer bleibt unverändert, aber stellt sicher, dass nur neue Einsätze gezählt werden
-    const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            mutation.addedNodes.forEach(node => {
-                if (!(node instanceof HTMLElement)) return;
-                if (!node.querySelector('.glyphicon-user')) return;
-
-                const missionId = node.getAttribute('mission_id');
-                const missionTypeId = node.getAttribute('mission_type_id');
-                if (!missionId || !missionTypeId || countedMissions.has(missionId)) return;
+                if (!isAssigned) return;
 
                 const einsatzName = einsatzNameMap[missionTypeId];
                 if (!einsatzName) {
@@ -323,25 +333,78 @@
 
                 einsatzCounter[einsatzName] = (einsatzCounter[einsatzName] || 0) + 1;
                 countedMissions.add(missionId);
-                console.log(`[Einsatzzähler] Eigener Einsatz erkannt: ${einsatzName} (ID ${missionId}) => ${einsatzCounter[einsatzName]}`);
+                console.log(`[Einsatzzähler] Bestehender eigener Einsatz gezählt: ${einsatzName} (ID ${missionId}) => ${einsatzCounter[einsatzName]}`);
                 localStorage.setItem(einsatzCounterKey, JSON.stringify(einsatzCounter));
-                localStorage.setItem(countedMissionsKey, JSON.stringify(Array.from(countedMissions))); // Speichern der gezählten Einsätze
+                localStorage.setItem(countedMissionsKey, JSON.stringify(Array.from(countedMissions)));
 
                 const td = document.getElementById(`counter-${CSS.escape(einsatzName)}`);
                 if (td) td.textContent = einsatzCounter[einsatzName];
             });
+        });
+    }
+
+    // Der Observer bleibt unverändert, aber stellt sicher, dass nur neue Einsätze gezählt werden
+    function checkAndCountMission(node) {
+        const isAssigned = node.querySelector('.glyphicon-user:not(.hidden)');
+        if (!isAssigned) return;
+
+        const missionId = node.getAttribute('mission_id');
+        const missionTypeId = node.getAttribute('mission_type_id');
+        if (!missionId || !missionTypeId || countedMissions.has(missionId)) return;
+
+        const einsatzName = einsatzNameMap[missionTypeId];
+        if (!einsatzName) {
+            console.warn(`[Einsatzzähler] Kein Name gefunden für mission_type_id=${missionTypeId}`);
+            return;
+        }
+
+        einsatzCounter[einsatzName] = (einsatzCounter[einsatzName] || 0) + 1;
+        countedMissions.add(missionId);
+        console.log(`[Einsatzzähler] Einsatz gezählt: ${einsatzName} (ID ${missionId}) => ${einsatzCounter[einsatzName]}`);
+        localStorage.setItem(einsatzCounterKey, JSON.stringify(einsatzCounter));
+        localStorage.setItem(countedMissionsKey, JSON.stringify(Array.from(countedMissions)));
+
+        const td = document.getElementById(`counter-${CSS.escape(einsatzName)}`);
+        if (td) td.textContent = einsatzCounter[einsatzName];
+    }
+
+    // Funktion zur Überwachung der Einsätze und Einsatzlisten
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    if (!(node instanceof HTMLElement)) return;
+                    checkAndCountMission(node);
+                });
+            }
+
+            if (mutation.type === 'attributes') {
+                const node = mutation.target;
+                if (!(node instanceof HTMLElement)) continue;
+
+                const missionEntry = node.closest('.missionSideBarEntry');
+                if (missionEntry) checkAndCountMission(missionEntry);
+            }
         }
     });
 
     const missionLists = [
         document.getElementById('mission_list'),
         document.getElementById('mission_list_krankentransporte'),
-        document.getElementById('mission_list_sicherheitswache')
+        document.getElementById('mission_list_alliance'),
+        document.getElementById('mission_list_alliance_event'),
+        document.getElementById('mission_list_sicherheitswache'),
+        document.getElementById('mission_list_sicherheitswache_alliance')
     ];
 
     missionLists.forEach(list => {
         if (list) {
-            observer.observe(list, { childList: true, subtree: true });
+            observer.observe(list, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class']
+            });
             console.log(`[Einsatzzähler] Beobachter für ${list.id} gestartet.`);
         }
     });
