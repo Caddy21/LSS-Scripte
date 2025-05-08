@@ -5,6 +5,7 @@
 // @description  Zählt alle eigene angefahrenen Einsätze in einer Tabelle an.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
