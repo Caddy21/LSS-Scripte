@@ -34,8 +34,7 @@
             }
         });
         localStorage.setItem(einsatzNameMapKey, JSON.stringify(einsatzNameMap));
-        console.log(`[Einsatzzähler] ${data.length} Einsatznamen geladen.`);
-
+        
         // Bestehende eigene Einsätze beim Seitenstart zählen
         countExistingMissions();
     });
@@ -50,7 +49,6 @@
         link.addEventListener('click', toggleCounterUI);
         newItem.appendChild(link);
         navUl.appendChild(newItem);
-        console.log('[Einsatzzähler] Menüpunkt hinzugefügt.');
     }
 
     let counterUI;
@@ -60,11 +58,8 @@
     if (counterUI) {
         counterUI.remove();
         counterUI = null;
-        console.log('[Einsatzzähler] UI geschlossen.');
         return;
     }
-
-    console.log('[Einsatzzähler] UI wird geöffnet.');
 
     const isDarkMode = document.body.classList.contains('dark') ||
         getComputedStyle(document.body).backgroundColor === 'rgb(34, 34, 34)';
@@ -125,7 +120,6 @@
     closeBtn.addEventListener('click', () => {
         counterUI.remove();
         counterUI = null;
-        console.log('[Einsatzzähler] UI geschlossen.');
     });
 
     const title = document.createElement('h4');
@@ -260,7 +254,6 @@
 
     document.body.appendChild(counterUI);
     updateCounterTable();
-    console.log('[Einsatzzähler] UI angezeigt.');
 }
 
     // Funktion der Sortierungen
@@ -333,7 +326,6 @@
 
                 einsatzCounter[einsatzName] = (einsatzCounter[einsatzName] || 0) + 1;
                 countedMissions.add(missionId);
-                console.log(`[Einsatzzähler] Bestehender eigener Einsatz gezählt: ${einsatzName} (ID ${missionId}) => ${einsatzCounter[einsatzName]}`);
                 localStorage.setItem(einsatzCounterKey, JSON.stringify(einsatzCounter));
                 localStorage.setItem(countedMissionsKey, JSON.stringify(Array.from(countedMissions)));
 
@@ -360,7 +352,6 @@
 
         einsatzCounter[einsatzName] = (einsatzCounter[einsatzName] || 0) + 1;
         countedMissions.add(missionId);
-        console.log(`[Einsatzzähler] Einsatz gezählt: ${einsatzName} (ID ${missionId}) => ${einsatzCounter[einsatzName]}`);
         localStorage.setItem(einsatzCounterKey, JSON.stringify(einsatzCounter));
         localStorage.setItem(countedMissionsKey, JSON.stringify(Array.from(countedMissions)));
 
@@ -405,7 +396,6 @@
                 attributes: true,
                 attributeFilter: ['class']
             });
-            console.log(`[Einsatzzähler] Beobachter für ${list.id} gestartet.`);
         }
     });
 
