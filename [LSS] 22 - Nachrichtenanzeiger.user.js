@@ -6,6 +6,7 @@
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
 // @grant        GM_xmlhttpRequest
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @connect      leitstellenspiel.de
 // ==/UserScript==
 
@@ -75,5 +76,5 @@
     setTimeout(updateMessages, 2000);
 
     // Regelmäßige Aktualisierung
-    setInterval(updateMessages, 1 * 60 * 1000); // alle 3 Minuten
+    setInterval(updateMessages, 5 * 60 * 1000); // alle 3 Minuten
 })();
