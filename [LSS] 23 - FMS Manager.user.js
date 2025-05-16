@@ -4,8 +4,7 @@
 // @version      1.0
 // @description  Fügt in der Lightbox einen Button zur Statusänderung bei Fahrzeugen dieser Leitstellen ein.
 // @author       Caddy21
-// @match        https://www.leitstellenspiel.de/buildings/*
-// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
+// @match        https://www.leitstellenspiel.de/*
 // @grant        GM.xmlHttpRequest
 // @connect      leitstellenspiel.de
 // @connect      api.lss-manager.de
@@ -15,34 +14,31 @@
     'use strict';
 
     // Verhindert die Ausführung im Hauptfenster, nur im iFrame aktiv
-    if (window.top !== window.self) {
-        console.log("🔒 Im iFrame - Starte das Script.");
+    initFmsButtonWatcher();
 
-        // Wartet bis die Seite vollständig geladen ist
-        window.addEventListener('load', function() {
+    function initFmsButtonWatcher() {
+        console.log("📡 Initialisiere FMS-Button-Überwachung …");
+
+        // Direkt prüfen nach dem Laden
+        window.addEventListener('load', function () {
             console.log("🌐 Seite vollständig geladen.");
-
-            // Prüft, ob es sich um eine Leitstelle (building_type=7) handelt und fügt Button hinzu
-            const titleEl = document.querySelector('.building-title h1[building_type="7"]');
-            if (titleEl) {
-                console.log("🎯 building-title mit building_type='7' gefunden.");
-                insertFmsButton(titleEl);
-            } else {
-                console.log("❌ building-title mit building_type='7' nicht gefunden.");
-            }
-
-            // Fallback für dynamisches Nachladen von Inhalten
-            const observer = new MutationObserver(() => {
-                const titleEl = document.querySelector('.building-title h1[building_type="7"]');
-                if (titleEl && !document.getElementById('fms-btn')) {
-                    console.log("🎯 building-title gefunden und Button wird eingefügt.");
-                    insertFmsButton(titleEl);
-                    observer.disconnect();
-                }
-            });
-
-            observer.observe(document.body, { childList: true, subtree: true });
+            tryInsertButton();
         });
+
+        // MutationObserver als Fallback
+        const observer = new MutationObserver(() => {
+            tryInsertButton();
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        function tryInsertButton() {
+            const titleEl = document.querySelector('.building-title h1[building_type="7"]');
+            if (titleEl && !document.getElementById('fms-btn')) {
+                console.log("🎯 building-title gefunden und Button wird eingefügt.");
+                insertFmsButton(titleEl);
+            }
+        }
     }
 
     // Fügt den "Fahrzeugstatus setzen"-Button hinzu
