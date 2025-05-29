@@ -46,7 +46,7 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
   
     - Fahne in der Einsatzliste entfernen (veröffentlicht)
     - Erweiterungs-Manager (veröffentlicht)
-    - Alle LST umschalten (veröffentlicht) - Aktuell außer Betrieb
+    - Alle LST umschalten (veröffentlicht)
     - Fahrzeuge im S6 auflisten (veröffentlicht)
     - SNR-Einsätze filtern (veröffentlicht) - EOL
     - Fahrzeuge löschen (veröffentlicht)
@@ -61,6 +61,12 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Multiausblender
     - Zielortfilter (veröffentlicht)
     - Einsätze anzeigen (veröffentlicht)
-    - Einsatzdaten-Kopierer
+    - Einsatzdaten-Kopierer (veröffentlicht)
+    - Wachen reaktivieren (veröffentlicht)
+    - Wachenstatus (veröffentlicht)
+    - Einsatzzähler
+    - Nachrichtenanzeiger (veröffentlicht)
+    - FMS Manager (veröffentlicht)
+    - KTW-Melder
     
 </details>
