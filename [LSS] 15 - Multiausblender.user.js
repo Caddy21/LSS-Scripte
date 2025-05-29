@@ -16,24 +16,35 @@
     // true = Spoilerbutton aktiv / Infobereiche werden ausgeblendet
     // false = Spoilerbutton deaktiviert / Infobereiche bleiben sichtbar
 
-    const HIDE_EVENT_INFO = false; // Eventinfo in der Einsatzliste (Blaue Box) ein- oder ausblenden
-    const ENABLE_BREADCRUMB = false; // Navigationsleiste ein- oder ausblenden (Leiste bei geplanten Einsätzen ganz oben [Leitstelle > Name des Einsatzes]
-    const FIX_MISSION_HEADER_INFO = false; // Einsatzinfo (Name / Adresse) fixieren
-    const ENABLE_SUCCESS_ALERT = false; // Erfolgs-Meldungen (Grüne Box) ein- oder ausblenden
-    const ENABLE_MISSING_ALERT = false; // Fehlende Fahrzeuge (Rote Box) ein- oder ausblenden
+    const PATIENT_SPOILER_MIN_COUNT = 10; // Ab dieser Patientenanzahl Spoiler erstellen
+
+    const HIDE_EVENT_INFO = true; // Eventinfo in der Einsatzliste (Blaue Box) ein- oder ausblenden
+    const ENABLE_BREADCRUMB = false; // Navigationsleiste ein- oder ausblenden (Leiste bei geplanten Einsätzen oder Wachen ganz oben [Leitstelle/Wache > Name des Einsatzes/Name des Fahrzeugs] als Beispiel
+    const FIX_MISSION_HEADER_INFO = true; // Einsatzinfo (Name / Adresse) fixieren
+    const ENABLE_SUCCESS_ALERT = true; // Erfolgs-Meldungen (Grüne Box) ein- oder ausblenden
+    const ENABLE_MISSING_ALERT = true; // Fehlende Fahrzeuge (Rote Box) ein- oder ausblenden
     const ENABLE_SPEECH_REQUEST_INFOBOX = false; // Sprechwunsch (Blaue Box) ein- oder ausblenden
-    const ENABLE_SPEECH_REQUEST_ALERT = false; // Fahrzeug hat ein Sprechwunsch (Rote Box) ein- oder ausblenden
+    const ENABLE_SPEECH_REQUEST_ALERT = true; // Fahrzeug hat ein Sprechwunsch (Rote Box) ein- oder ausblenden
     const ENABLE_CARE_AND_SUPPLY = false; // Betreuung und Verpflegung (Rote Box) ein- oder ausblenden
     const ENABLE_PATIENT_SPOILER = false; // Spoiler für Patientenbereich (ab X Patienten)
-    const ENABLE_AAO_SPOILER = false; // Spoiler für AAO-Einträge ohne Kategorie
+    const ENABLE_AAO_SPOILER = true; // Spoiler für AAO-Einträge ohne Kategorie
     const ENABLE_TABS_SPOILER = false; // Spoiler für AAO-Tabs & Inhalte
     const ENABLE_AAO_COLUMN_SPOILERS = false; // Spoiler für die einzelnen AAO-Einträge
-    const ENABLE_MISSION_SHARED_INFOBOX = false; // Info-Box „Dieser Einsatz wurde von...“ ein - oder ausblenden
-    const ENABLE_VEHICLE_SPOILER = false; // Spoiler für Fahrzeug-Tabelle und anfahrende Fahrzeuge
-    const ENABLE_RELEASE_ALL_INFOBOX = false; // Info-Box „Wirklich alle entlassen?“ ein- oder ausblenden
-    const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = false; // Spoiler für "Freie Fahrzeugliste" rechte Seite
+    const ENABLE_MISSION_SHARED_INFOBOX = true; // Info-Box „Dieser Einsatz wurde von...“ ein - oder ausblenden
+    const ENABLE_VEHICLE_SPOILER = true; // Spoiler für Fahrzeug-Tabelle und anfahrende Fahrzeuge
+    const ENABLE_MAX_DISTANCE_GROUP_SPOILER = true; // Spoiler für Max-Distanz-Gruppe (Button-Gruppe oben rechts)
+    const ENABLE_RELEASE_ALL_INFOBOX = true; // Info-Box „Wirklich alle entlassen?“ ein- oder ausblenden
+    const ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER = true; // Spoiler für "Freie Fahrzeugliste" rechte Seite
+    const HIDE_PRISONERS_INFOBOX = true; // Gewahrsamsbereich in der Wachenübersicht
+    const HIDE_PRISONERS_TABLE = true; // Die dazu gehörigen Tabelle
+    const ENABLE_VEHICLE_TABLE_SPOILER = false; // Fahrzeugtabelle in der Wachenübersicht
+    const HIDE_KTW_NO_TRANSPORTS = true; // Info-Box „Keine KTW-Transporte vorhanden“ in der Einsatzliste ein- oder ausblenden
 
-    const PATIENT_SPOILER_MIN_COUNT = 10; // Aab dieser Patientenanzahl Spoiler erstellen (Blendet ab 10 Patienten diese aus)
+    // Bereiche des LSSM V3 ausblenden
+    // Fahrzeugumbennung
+
+    const HIDE_RENAME_BUTTONS_SECTION = true; // Buttons im Umbennenn-Tool ein-/ausblenden
+    const HIDE_NAME_TOO_LONG_SECTION = true; // Hinweis bei zu langem Namen ein-/ausblenden
     // ======================
 
     // Funktion um die Eventbox in der Einsatzliste ein- oder auszublenden
@@ -132,32 +143,71 @@
             }
         }
 
-        // Betreuung & Verpflegung ein-/ausblenden (eindeutig über Text identifiziert)
+        // Betreuung & Verpflegung ein-/ausblenden
         document.querySelectorAll('.alert.alert-danger').forEach(el => {
             if (el.innerText.includes('Benötigte Betreuungs- und Verpflegungsausstattung')) {
                 el.style.display = ENABLE_CARE_AND_SUPPLY ? "none" : "block";
             }
 
-            // Sprechwunsch-Infobox (alert-danger) ein-/ausblenden
+            // Sprechwunsch-Infobox (alert-danger)
             if (el.innerText.includes('Ein Fahrzeug hat einen Sprechwunsch!')) {
                 el.style.display = ENABLE_SPEECH_REQUEST_ALERT ? "none" : "block";
             }
         });
 
-        // Sprechwunsch-Infobox (alert-info) separat ein-/ausblenden
+        // Sprechwunsch-Infoboxen (alert-info)
         document.querySelectorAll('.alert.alert-info').forEach(el => {
-    if (el.innerText.includes('Sprechwunsch')) {
-        el.style.display = ENABLE_SPEECH_REQUEST_INFOBOX ? "none" : "block";
-    }
+            if (el.innerText.includes('Sprechwunsch')) {
+                el.style.display = ENABLE_SPEECH_REQUEST_INFOBOX ? "none" : "block";
+            }
 
-    if (el.innerText.includes('Dieser Einsatz wurde von')) {
-        el.style.display = ENABLE_MISSION_SHARED_INFOBOX ? "none" : "block";
-    }
+            if (el.innerText.includes('Dieser Einsatz wurde von')) {
+                el.style.display = ENABLE_MISSION_SHARED_INFOBOX ? "none" : "block";
+            }
 
-    if (el.innerText.includes('Wirklich alle entlassen?')) {
-        el.style.display = ENABLE_RELEASE_ALL_INFOBOX ? "none" : "block";
-    }
-});
+            if (el.innerText.includes('Wirklich alle entlassen?')) {
+                el.style.display = ENABLE_RELEASE_ALL_INFOBOX ? "none" : "block";
+            }
+        });
+
+        // Zusätzliche DIV-Bereiche ein-/ausblenden
+        const renameButtons = document.getElementById('lssm_renameFzSettings_buttons');
+        if (renameButtons) {
+            renameButtons.style.display = HIDE_RENAME_BUTTONS_SECTION ? 'none' : 'block';
+        }
+
+        // Bereich: Name zu lang Hinweis
+        const nameTooLongDiv = document.getElementById('lssm_renameFzSettings_nameToLongDiv');
+        if (nameTooLongDiv && nameTooLongDiv.classList.contains('alert-danger')) {
+            if (HIDE_NAME_TOO_LONG_SECTION) {
+                nameTooLongDiv.style.setProperty('display', 'none', 'important');
+            } else {
+                nameTooLongDiv.style.removeProperty('display');
+            }
+        }
+
+        // Bereich: "prisoners" - Infobox (alert-info)
+        if (HIDE_PRISONERS_INFOBOX) {
+            const prisonersBox = document.querySelector('#prisoners .alert.alert-info');
+            if (prisonersBox) {
+                prisonersBox.style.display = "none";
+            }
+        }
+
+        // Bereich: "prisoners" - Tabelle (table-striped)
+        if (HIDE_PRISONERS_TABLE) {
+            const prisonersTable = document.querySelector('#prisoners .table.table-striped');
+            if (prisonersTable) {
+                prisonersTable.style.display = "none";
+            }
+        }
+
+        // Bereich: "ktw_no_transports" - Hinweisbox (alert-info)
+        const ktwNoTransportsBox = document.getElementById('ktw_no_transports');
+        if (ktwNoTransportsBox && ktwNoTransportsBox.classList.contains('alert-info')) {
+            ktwNoTransportsBox.style.display = HIDE_KTW_NO_TRANSPORTS ? 'none' : 'block';
+        }
+
     }
 
     // Spoiler für Patienten-Blöcke bei Überschreitung eines bestimmten Limits
@@ -189,7 +239,7 @@
         parent.insertBefore(wrapper, patientBlocks[0]);
     }
 
-   // Spoiler für Einzelfahrzeuge (AAO ohne Kategorie)
+    // Spoiler für Einzelfahrzeuge (AAO ohne Kategorie)
     function addSpoilerButtonToAAO(iframe) {
         let iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (!iframeDoc) return;
@@ -332,6 +382,38 @@
         return true;
     }
 
+    // Spoiler für MAximale Entfernung der Fahrzeuge
+    function addSpoilerButtonForMaxDistanceGroup() {
+        if (!ENABLE_MAX_DISTANCE_GROUP_SPOILER) return;
+
+        const group = document.getElementById('group_max_distance');
+        if (!group || group.dataset.spoilerAdded) return;
+        group.dataset.spoilerAdded = "true";
+
+        // Wrapper-Container erstellen
+        const wrapper = document.createElement("div");
+        group.parentNode.insertBefore(wrapper, group);
+        wrapper.appendChild(group); // Gruppe in Wrapper verschieben
+
+        const button = document.createElement("button");
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "5px";
+        button.innerText = "Max-Distanz-Buttons anzeigen";
+
+        // Button oben einfügen
+        wrapper.insertBefore(button, group);
+
+        group.style.display = "none";
+
+        button.addEventListener("click", () => {
+            const visible = group.style.display !== "none";
+            group.style.display = visible ? "none" : "inline-block";
+            button.innerText = visible ? "Max-Distanz-Buttons anzeigen" : "Max-Distanz-Buttons ausblenden";
+        });
+
+        return true;
+    }
+
     // Spoiler für „Freie Fahrzeugliste“ in Lightbox
     function addSpoilerButtonForVehicleListStep() {
         if (!ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER) return;
@@ -358,6 +440,32 @@
         dispatchButtons.insertBefore(button, dispatchButtons.firstChild);
     }
 
+    // Spoiler für allgemeine Fahrzeug-Tabelle
+    function addSpoilerButtonForVehicleTableGeneral() {
+        if (!ENABLE_VEHICLE_TABLE_SPOILER) return false;
+
+        const vehicleTable = document.getElementById('vehicle_table');
+        if (!vehicleTable || vehicleTable.dataset.spoilerAdded) return false;
+        vehicleTable.dataset.spoilerAdded = "true";
+
+        const button = document.createElement("button");
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "10px";
+        button.innerText = "Fahrzeugtabelle anzeigen";
+
+        vehicleTable.style.display = "none";
+
+        button.addEventListener("click", function () {
+            const visible = vehicleTable.style.display !== "none";
+            vehicleTable.style.display = visible ? "none" : "table";
+            button.innerText = visible ? "Fahrzeuge anzeigen" : "Fahrzeuge ausblenden";
+        });
+
+        vehicleTable.parentNode.insertBefore(button, vehicleTable);
+
+        return true;
+    }
+
     // Initiale Prüfung auf Seite/Lightbox und Hinzufügen der Spoiler
     function checkForLightboxAndAddButton() {
         let iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
@@ -375,9 +483,13 @@
         addSpoilerButtonForTabs();
         addSpoilerButtonsToAaoColumns();
         addSpoilerButtonForDrivingVehicles();
+        addSpoilerButtonForMaxDistanceGroup();
         addSpoilerButtonForVehicleListStep();
+        addSpoilerButtonForVehicleTableGeneral();
 
     }
+
+    // ----- Bereich um alles zu überwachen ----- \\
 
     // Beobachtet Klicks auf Lightbox-Buttons und aktiviert Spoiler nach kurzer Verzögerung
     function observeLightbox() {
