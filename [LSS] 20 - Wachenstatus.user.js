@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 20 - Wachenstatus
+// @name         [LSS] Wachenstatus
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.1
 // @description  Zeigt in der Gebäudeübersicht der LST den Status der Wachen an.
