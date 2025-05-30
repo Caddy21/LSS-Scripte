@@ -2,7 +2,7 @@
 // @name         [LSS] Einsatzzähler
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Zählt eigene angefahrene Einsätze, archiviert monatlich (nur gezählte), übersichtliches Archiv nach Jahr/Monat, modernes UI-Schema.
+// @description  Zählt eigene angefahrene Einsätze, archiviert monatlich (nur gezählte), übersichtliches Archiv nach Jahr/Monat.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
