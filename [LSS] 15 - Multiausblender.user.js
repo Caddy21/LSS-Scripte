@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 15 - Multiausblender
+// @name         [LSS] Multiausblender
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Blendet in der Einsatzübersicht sowie im Alarmfenster AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere Dinge individuell ein oder aus
