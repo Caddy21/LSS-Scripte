@@ -14,33 +14,37 @@
 
     // === OPTIONEN-DEFINITION === \\
     const OPTIONS = [
-        {key: 'HIDE_EVENT_INFO', label: 'Eventinfo in der Einsatzliste ausblenden', default: true, category: 'other'},
-        {key: 'ENABLE_BREADCRUMB', label: 'Navigationsleiste ausblenden', default: false, category: 'other'},
+
+        // === Alarmfenster === \\
         {key: 'FIX_MISSION_HEADER_INFO', label: 'Einsatzinfo fixieren', default: true, category: 'alarm'},
         {key: 'ENABLE_SUCCESS_ALERT', label: 'Erfolgreiche Alamierung ausblenden', default: true, category: 'alarm'},
         {key: 'ENABLE_MISSING_ALERT', label: 'Fehlende Fahrzeuge am Einsatzort ausblenden', default: true, category: 'alarm'},
-        {key: 'ENABLE_SPEECH_REQUEST_INFOBOX', label: 'Sprechwunsch-Infobox (blau) ausblenden', default: false, category: 'other'},
         {key: 'ENABLE_SPEECH_REQUEST_ALERT', label: 'Sprechwunsch-Infobox (rot) ausblenden', default: true, category: 'alarm'},
         {key: 'ENABLE_CARE_AND_SUPPLY', label: 'Betreuung und Verpflegung ausblenden', default: false, category: 'alarm'},
-        {key: 'ENABLE_PATIENT_SPOILER', label: 'Spoiler für Patientenbereich', default: false, category: 'alarm'},
-        {key: 'PATIENT_SPOILER_MIN_COUNT', label: 'Spoiler ab so vielen Patienten erzeugen', default: 10, type: 'number', category: 'alarm'},
+        {key: 'HIDE_PATIENT_BUTTON_FORM', label: 'Patienten-Button-Bereich ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_PATIENT_SPOILER', label: 'Spoiler für Patientenbereich (ab X Patienten) erzeugen', default: false, category: 'alarm'},
+        {key: 'PATIENT_SPOILER_MIN_COUNT', label: 'Spoiler ab so vielen Patienten (Zahl)', default: 10, type: 'number', category: 'alarm'},
         {key: 'ENABLE_AAO_SPOILER', label: 'Spoiler für AAO-Einträge ohne Kategorie erzeugen', default: true, category: 'alarm'},
         {key: 'ENABLE_TABS_SPOILER', label: 'Spoiler für AAO-Tabs erzeugen', default: false, category: 'alarm'},
         {key: 'ENABLE_AAO_COLUMN_SPOILERS', label: 'Spoiler für die AAO-Einträge erzeugen', default: false, category: 'alarm'},
         {key: 'ENABLE_MISSION_SHARED_INFOBOX', label: 'Info-Box „Einsatz geteilt von...“ ausblenden', default: true, category: 'alarm'},
+        {key: 'HIDE_PULLRIGHT_BUTTON', label: 'Anfahrten abbrechen Button ausblenden', default: false, category: 'alarm' },
         {key: 'ENABLE_VEHICLE_SPOILER', label: 'Spoiler für anfahrende Fahrzeuge und Fahrzeuge am Einsatzort erzeugen', default: true, category: 'alarm'},
-        {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons Alle Fahrzeuge Rückalamieren und Eigenen RD Rückalamieren ausblenden', default: true, category: 'alarm'},
-        {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für Maximale Entfernung erzeugen', default: true, category: 'alarm'},
+        {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons "Alle Fahrzeuge Rückalamieren" und "Eigenen RD Rückalamieren" ausblenden', default: true, category: 'alarm'},
+        {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für "Maximale Entfernung" erzeugen', default: true, category: 'alarm'},
         {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: true, category: 'alarm'},
         {key: 'ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER', label: 'Spoiler für „Freie Fahrzeugliste“ erzeugen', default: true, category: 'alarm'},
+
+        // === Sonstiges === \\
+        {key: 'HIDE_EVENT_INFO', label: 'Eventinfo in der Einsatzliste ausblenden', default: true, category: 'other'},
+        {key: 'ENABLE_BREADCRUMB', label: 'Navigationsleiste ausblenden', default: false, category: 'other'},
         {key: 'HIDE_PRISONERS_INFOBOX', label: 'Gewahrsamsbereich (Infobox) ausblenden', default: true, category: 'other'},
-        {key: 'HIDE_PRISONERS_TABLE', label: 'Gewahrsamsbereich (Tabelle) ausblenden', default: true, category: 'other'},
+        {key: 'HIDE_PRISONERS_TABLE', label: 'Gewahrsamsbereich (Tabelle Wachenansicht) ausblenden', default: true, category: 'other'},
         {key: 'ENABLE_VEHICLE_TABLE_SPOILER', label: 'Spoiler für Fahrzeugtabelle (Wachenübersicht) erzeugen', default: false, category: 'other'},
         {key: 'HIDE_KTW_NO_TRANSPORTS', label: 'Info-Box „Keine KTW-Transporte vorhanden“ ausblenden', default: true, category: 'other'},
         {key: 'HIDE_RENAME_BUTTONS_SECTION', label: 'Buttons im LSSM V3 Renamemanager ausblenden', default: true, category: 'other'},
         {key: 'HIDE_NAME_TOO_LONG_SECTION', label: 'Hinweis bei zu langem Namen (LSSM V3 Renamemanger) ausblenden', default: true, category: 'other'},
-        {key: 'HIDE_PATIENT_BUTTON_FORM', label: 'Patienten-Button-Bereich ausblenden', default: false, category: 'alarm'},
-        {key: 'HIDE_PULLRIGHT_BUTTON', label: 'Anfahrten abbrechen Button ausblenden', default: false, category: 'alarm' }
+        {key: 'ENABLE_SPEECH_REQUEST_INFOBOX', label: 'Sprechwunsch-Infobox (blau) ausblenden', default: false, category: 'other'},
     ];
 
     // === EINSTELLUNGEN LADEN/SPEICHERN === \\
