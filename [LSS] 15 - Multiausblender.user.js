@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] Multiausblender
+// @name         [LSS] 15 - Multiausblender
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
-// @description  Blendet in der Einsatzübersicht sowie im Alarmfenster AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere Dinge individuell ein oder aus
+// @description  Blendet verschiedene Sachen wie AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere Dinge individuell ein oder aus, permanent oder per Spoilerbutton
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -12,35 +12,38 @@
 (function () {
     'use strict';
 
-    // === OPTIONEN-DEFINITION ===
+    // === OPTIONEN-DEFINITION === \\
     const OPTIONS = [
-        {key: 'HIDE_EVENT_INFO', label: 'Eventinfo in der Einsatzliste ausblenden', default: true},
-        {key: 'ENABLE_BREADCRUMB', label: 'Navigationsleiste ausblenden', default: false},
-        {key: 'FIX_MISSION_HEADER_INFO', label: 'Einsatzinfo fixieren', default: true},
-        {key: 'ENABLE_SUCCESS_ALERT', label: 'Erfolgreiche Alamierung ausblenden', default: true},
-        {key: 'ENABLE_MISSING_ALERT', label: 'Fehlende Fahrzeuge am Einsatzort ausblenden', default: true},
-        {key: 'ENABLE_SPEECH_REQUEST_INFOBOX', label: 'Sprechwunsch-Infobox (blau) ausblenden', default: false},
-        {key: 'ENABLE_SPEECH_REQUEST_ALERT', label: 'Sprechwunsch-Infobox (rot) ausblenden', default: true},
-        {key: 'ENABLE_CARE_AND_SUPPLY', label: 'Betreuung und Verpflegung ausblenden', default: false},
-        {key: 'ENABLE_PATIENT_SPOILER', label: 'Spoiler für Patientenbereich (ab X Patienten) erzeugen', default: false},
-        {key: 'PATIENT_SPOILER_MIN_COUNT', label: 'Spoiler ab so vielen Patienten (Zahl)', default: 10, type: 'number'},
-        {key: 'ENABLE_AAO_SPOILER', label: 'Spoiler für AAO-Einträge ohne Kategorie erzeugen', default: true},
-        {key: 'ENABLE_TABS_SPOILER', label: 'Spoiler für AAO-Tabs erzeugen', default: false},
-        {key: 'ENABLE_AAO_COLUMN_SPOILERS', label: 'Spoiler für die AAO-Einträge erzeugen', default: false},
-        {key: 'ENABLE_MISSION_SHARED_INFOBOX', label: 'Info-Box „Einsatz geteilt von...“ ausblenden', default: true},
-        {key: 'ENABLE_VEHICLE_SPOILER', label: 'Spoiler für anfahrende Fahrzeuge und Fahrzeuge am Einsatzort erzeugen', default: true},
-        {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für Maximale Entfernung erzeugen', default: true},
-        {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: true},
-        {key: 'ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER', label: 'Spoiler für „Freie Fahrzeugliste“ erzeugen', default: true},
-        {key: 'HIDE_PRISONERS_INFOBOX', label: 'Gewahrsamsbereich (Infobox) ausblenden', default: true},
-        {key: 'HIDE_PRISONERS_TABLE', label: 'Gewahrsamsbereich (Tabelle) ausblenden', default: true},
-        {key: 'ENABLE_VEHICLE_TABLE_SPOILER', label: 'Spoiler für Fahrzeugtabelle (Wachenübersicht) erzeugen', default: false},
-        {key: 'HIDE_KTW_NO_TRANSPORTS', label: 'Info-Box „Keine KTW-Transporte vorhanden“ ausblenden', default: true},
-        {key: 'HIDE_RENAME_BUTTONS_SECTION', label: 'Buttons im LSSM V3 Renamemanager ausblenden', default: true},
-        {key: 'HIDE_NAME_TOO_LONG_SECTION', label: 'Hinweis bei zu langem Namen (LSSM V3 Renamemanger) ausblenden', default: true}
+        {key: 'HIDE_EVENT_INFO', label: 'Eventinfo in der Einsatzliste ausblenden', default: true, category: 'other'},
+        {key: 'ENABLE_BREADCRUMB', label: 'Navigationsleiste ausblenden', default: false, category: 'other'},
+        {key: 'FIX_MISSION_HEADER_INFO', label: 'Einsatzinfo fixieren', default: true, category: 'alarm'},
+        {key: 'ENABLE_SUCCESS_ALERT', label: 'Erfolgreiche Alamierung ausblenden', default: true, category: 'alarm'},
+        {key: 'ENABLE_MISSING_ALERT', label: 'Fehlende Fahrzeuge am Einsatzort ausblenden', default: true, category: 'alarm'},
+        {key: 'ENABLE_SPEECH_REQUEST_INFOBOX', label: 'Sprechwunsch-Infobox (blau) ausblenden', default: false, category: 'other'},
+        {key: 'ENABLE_SPEECH_REQUEST_ALERT', label: 'Sprechwunsch-Infobox (rot) ausblenden', default: true, category: 'alarm'},
+        {key: 'ENABLE_CARE_AND_SUPPLY', label: 'Betreuung und Verpflegung ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_PATIENT_SPOILER', label: 'Spoiler für Patientenbereich (ab X Patienten) erzeugen', default: false, category: 'alarm'},
+        {key: 'PATIENT_SPOILER_MIN_COUNT', label: 'Spoiler ab so vielen Patienten (Zahl)', default: 10, type: 'number', category: 'alarm'},
+        {key: 'ENABLE_AAO_SPOILER', label: 'Spoiler für AAO-Einträge ohne Kategorie erzeugen', default: true, category: 'alarm'},
+        {key: 'ENABLE_TABS_SPOILER', label: 'Spoiler für AAO-Tabs erzeugen', default: false, category: 'alarm'},
+        {key: 'ENABLE_AAO_COLUMN_SPOILERS', label: 'Spoiler für die AAO-Einträge erzeugen', default: false, category: 'alarm'},
+        {key: 'ENABLE_MISSION_SHARED_INFOBOX', label: 'Info-Box „Einsatz geteilt von...“ ausblenden', default: true, category: 'alarm'},
+        {key: 'ENABLE_VEHICLE_SPOILER', label: 'Spoiler für anfahrende Fahrzeuge und Fahrzeuge am Einsatzort erzeugen', default: true, category: 'alarm'},
+        {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons Alle Fahrzeuge Rückalamieren und Eigenen RD Rückalamieren ausblenden', default: true, category: 'alarm'},
+        {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für Maximale Entfernung erzeugen', default: true, category: 'alarm'},
+        {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: true, category: 'alarm'},
+        {key: 'ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER', label: 'Spoiler für „Freie Fahrzeugliste“ erzeugen', default: true, category: 'alarm'},
+        {key: 'HIDE_PRISONERS_INFOBOX', label: 'Gewahrsamsbereich (Infobox) ausblenden', default: true, category: 'other'},
+        {key: 'HIDE_PRISONERS_TABLE', label: 'Gewahrsamsbereich (Tabelle) ausblenden', default: true, category: 'other'},
+        {key: 'ENABLE_VEHICLE_TABLE_SPOILER', label: 'Spoiler für Fahrzeugtabelle (Wachenübersicht) erzeugen', default: false, category: 'other'},
+        {key: 'HIDE_KTW_NO_TRANSPORTS', label: 'Info-Box „Keine KTW-Transporte vorhanden“ ausblenden', default: true, category: 'other'},
+        {key: 'HIDE_RENAME_BUTTONS_SECTION', label: 'Buttons im LSSM V3 Renamemanager ausblenden', default: true, category: 'other'},
+        {key: 'HIDE_NAME_TOO_LONG_SECTION', label: 'Hinweis bei zu langem Namen (LSSM V3 Renamemanger) ausblenden', default: true, category: 'other'},
+        {key: 'HIDE_PATIENT_BUTTON_FORM', label: 'Patienten-Button-Bereich ausblenden', default: false, category: 'alarm'},
+        {key: 'HIDE_PULLRIGHT_BUTTON', label: 'Anfahrten abbrechen Button ausblenden', default: false, category: 'alarm' }
     ];
 
-    // === EINSTELLUNGEN LADEN/SPEICHERN ===
+    // === EINSTELLUNGEN LADEN/SPEICHERN === \\
     function loadSettings() {
         const saved = JSON.parse(localStorage.getItem('multiausblender_settings') || '{}');
         OPTIONS.forEach(opt => {
@@ -58,7 +61,7 @@
         localStorage.setItem('multiausblender_settings', JSON.stringify(settings));
     }
 
-    // === Farbschema erkennen & setzen ===
+    // === Farbschema erkennen & setzen === \\
     function getColorMode() {
         // 1. User-Einstellung prüfen
         let mode = localStorage.getItem('multiausblender_ui_mode');
@@ -91,16 +94,12 @@
         }
     }
 
-    // === GUI: EINSTELLUNGSFENSTER (mit Darkmode!) ===
+    // === GUI: EINSTELLUNGSFENSTER === \\
     function createSettingsGUI() {
-        // Suche den Ziel-Container in der Navbar
         let navbarRight = document.querySelector('.flex-row.flex-nowrap.hidden-xs.navbar-right');
-        if (!navbarRight) return; // Falls nicht gefunden, beende
-
-        // Prüfe, ob der Button schon existiert
+        if (!navbarRight) return;
         if (document.getElementById('multiausblender-settings-btn')) return;
 
-        // Einstellungs-Button erzeugen
         const btn = document.createElement('button');
         btn.id = 'multiausblender-settings-btn';
         btn.type = 'button';
@@ -108,7 +107,6 @@
         btn.style.marginRight = '8px';
         btn.innerHTML = '<span class="glyphicon glyphicon-cog"></span> Multiausblender';
 
-        // VOR dem "Hilfe zu diesem Einsatz"-Button einfügen
         const helpBtn = navbarRight.querySelector('#mission_help');
         if (helpBtn) {
             navbarRight.insertBefore(btn, helpBtn);
@@ -116,21 +114,32 @@
             navbarRight.appendChild(btn);
         }
 
-        // Modal-Dialog bei Klick
         btn.onclick = () => {
             let modal = document.getElementById('multiausblender-modal');
-            if (modal) { modal.style.display = 'flex'; return; }
+            if (modal) {
+                modal.style.display = 'flex';
+                return;
+            }
 
-            // Dark/Lightmode
-            let colorMode = getColorMode();
-            let style = getModalStyles(colorMode);
+            const colorMode = getColorMode();
+            const style = getModalStyles(colorMode);
 
             modal = document.createElement('div');
             modal.id = 'multiausblender-modal';
-            modal.style = `position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10000;display:flex;align-items:center;justify-content:center;background:${style.overlay};`;
+            modal.style = `
+            position:fixed;
+            top:0;left:0;
+            width:100vw;
+            height:100vh;
+            z-index:10000;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:${style.overlay};
+        `;
 
             let html = `
-          <div id="multiausblender-modal-content" style="
+            <div id="multiausblender-modal-content" style="
                 background:${style.background};
                 color:${style.foreground};
                 padding:24px;
@@ -144,40 +153,66 @@
             ">
             <h3 style="margin-top:0;">Multiausblender Einstellungen</h3>
             <form id="multiausblender-form">
-        `;
+                <fieldset style="margin-bottom:15px;">
+                    <legend style="font-size:16px;font-weight:bold;margin-bottom:10px;color:${style.foreground};">
+                         🚨 Alarmmaske
+                    </legend>`;
 
-            OPTIONS.forEach(opt => {
+            OPTIONS.filter(opt => opt.category === 'alarm').forEach(opt => {
                 const id = 'multiausblender_' + opt.key;
-                if (opt.type === 'number') {
-                    html += `
-                    <div style="margin-bottom:10px;">
-                        <label for="${id}">${opt.label}:</label>
-                        <input type="number" id="${id}" value="${window[opt.key]}" min="1" style="width:60px;background:${style.inputBg};color:${style.foreground};border:1px solid ${style.border};" />
-                    </div>
-                `;
-                } else {
-                    html += `
-                    <div style="margin-bottom:5px;">
-                        <input type="checkbox" id="${id}" ${window[opt.key] ? 'checked' : ''} />
-                        <label for="${id}">${opt.label}</label>
-                    </div>
-                `;
-                }
+                html += opt.type === 'number'
+                    ? `
+                <div style="margin-bottom:10px;">
+                    <label for="${id}">${opt.label}:</label>
+                    <input type="number" id="${id}" value="${window[opt.key]}" min="1"
+                        style="width:60px;background:${style.inputBg};color:${style.foreground};border:1px solid ${style.border};" />
+                </div>`
+                : `
+                <div style="margin-bottom:5px;">
+                    <input type="checkbox" id="${id}" ${window[opt.key] ? 'checked' : ''} />
+                    <label for="${id}">${opt.label}</label>
+                </div>`;
             });
 
-            // Dark/Lightmode Umschalter
             html += `
+                </fieldset>
+                <fieldset>
+                    <legend style="font-size:16px;font-weight:bold;margin-bottom:10px;color:${style.foreground};">
+                           📝 Sonstiges
+                    </legend>`;
+
+            OPTIONS.filter(opt => opt.category === 'other').forEach(opt => {
+                const id = 'multiausblender_' + opt.key;
+                html += opt.type === 'number'
+                    ? `
+                <div style="margin-bottom:10px;">
+                    <label for="${id}">${opt.label}:</label>
+                    <input type="number" id="${id}" value="${window[opt.key]}" min="1"
+                        style="width:60px;background:${style.inputBg};color:${style.foreground};border:1px solid ${style.border};" />
+                </div>`
+                : `
+                <div style="margin-bottom:5px;">
+                    <input type="checkbox" id="${id}" ${window[opt.key] ? 'checked' : ''} />
+                    <label for="${id}">${opt.label}</label>
+                </div>`;
+            });
+
+            html += `
+                </fieldset>
             </form>
             <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;">
                 <div>
                     <label style="font-size:13px;cursor:pointer;">
-                        <input type="radio" name="ui_mode" value="auto" ${!localStorage.getItem('multiausblender_ui_mode') ? 'checked' : ''} style="vertical-align:middle;"> System
+                        <input type="radio" name="ui_mode" value="auto" ${!localStorage.getItem('multiausblender_ui_mode') ? 'checked' : ''} style="vertical-align:middle;">
+                        System
                     </label>
                     <label style="font-size:13px;cursor:pointer;margin-left:7px;">
-                        <input type="radio" name="ui_mode" value="light" ${localStorage.getItem('multiausblender_ui_mode')==='light' ? 'checked' : ''} style="vertical-align:middle;"> Hell
+                        <input type="radio" name="ui_mode" value="light" ${localStorage.getItem('multiausblender_ui_mode') === 'light' ? 'checked' : ''} style="vertical-align:middle;">
+                        Hell
                     </label>
                     <label style="font-size:13px;cursor:pointer;margin-left:7px;">
-                        <input type="radio" name="ui_mode" value="dark" ${localStorage.getItem('multiausblender_ui_mode')==='dark' ? 'checked' : ''} style="vertical-align:middle;"> Dunkel
+                        <input type="radio" name="ui_mode" value="dark" ${localStorage.getItem('multiausblender_ui_mode') === 'dark' ? 'checked' : ''} style="vertical-align:middle;">
+                        Dunkel
                     </label>
                 </div>
                 <div>
@@ -185,22 +220,22 @@
                     <button id="multiausblender-cancel" class="btn btn-danger" type="button">Abbrechen</button>
                 </div>
             </div>
-          </div>
-        `;
+        </div>`;
+
             modal.innerHTML = html;
             document.body.appendChild(modal);
 
-            // Umschalten des Farbschemas
-            Array.from(modal.querySelectorAll('input[name="ui_mode"]')).forEach(radio => {
+            // Farbschema-Umschalter
+            modal.querySelectorAll('input[name="ui_mode"]').forEach(radio => {
                 radio.onchange = e => {
-                    let val = e.target.value;
-                    if (val === "auto") {
+                    const val = e.target.value;
+                    if (val === 'auto') {
                         localStorage.removeItem('multiausblender_ui_mode');
                     } else {
                         setColorMode(val);
                     }
                     modal.remove();
-                    btn.onclick();
+                    btn.onclick(); // Neu öffnen mit neuem Style
                 };
             });
 
@@ -220,6 +255,7 @@
                 modal.style.display = 'none';
                 window.top.location.reload();
             };
+
             // Abbrechen
             modal.querySelector('#multiausblender-cancel').onclick = () => {
                 modal.style.display = 'none';
@@ -227,7 +263,7 @@
         };
     }
 
-    // === HILFSFUNKTIONEN FÜR ALLE OPTIONEN (greifen auf window[OPTION] zu) ===
+    // === HILFSFUNKTIONEN FÜR ALLE OPTIONEN === \\
     function observeAndToggleEventInfo() {
         const existingStyle = document.getElementById('style-hide-eventInfo');
         if (existingStyle) existingStyle.remove();
@@ -284,12 +320,12 @@
         }
 
         // Fehlende Fahrzeuge ausblenden
-        if (window.ENABLE_MISSING_ALERT) {
-            // Alle Boxen mit der Klasse ausblenden
-            document.querySelectorAll('.alert.alert-danger.alert-missing-vehicles').forEach(el => {
-                el.style.display = "none";
-            });
-        }
+        document.querySelectorAll('.alert.alert-danger').forEach(el => {
+            if (el.innerText.includes('Fehlende Fahrzeuge')) {
+                el.style.display = window.ENABLE_MISSING_ALERT ? "none" : "block";
+            }
+
+        });
 
         // Betreuung & Verpflegung ein-/ausblenden
         document.querySelectorAll('.alert.alert-danger').forEach(el => {
@@ -316,11 +352,13 @@
             }
         });
 
+
         // Zusätzliche DIV-Bereiche ein-/ausblenden
         const renameButtons = document.getElementById('lssm_renameFzSettings_buttons');
         if (renameButtons) {
             renameButtons.style.display = window.HIDE_RENAME_BUTTONS_SECTION ? 'none' : 'block';
         }
+
         // Bereich: Name zu lang Hinweis
         const nameTooLongDiv = document.getElementById('lssm_renameFzSettings_nameToLongDiv');
         if (nameTooLongDiv && nameTooLongDiv.classList.contains('alert-danger')) {
@@ -330,21 +368,50 @@
                 nameTooLongDiv.style.removeProperty('display');
             }
         }
+
         // Bereich: "prisoners" - Infobox (alert-info)
         if (window.HIDE_PRISONERS_INFOBOX) {
             const prisonersBox = document.querySelector('#prisoners .alert.alert-info');
             if (prisonersBox) prisonersBox.style.display = "none";
         }
+
         // Bereich: "prisoners" - Tabelle (table-striped)
         if (window.HIDE_PRISONERS_TABLE) {
             const prisonersTable = document.querySelector('#prisoners .table.table-striped');
             if (prisonersTable) prisonersTable.style.display = "none";
         }
-        // Bereich: "ktw_no_transports" - Hinweisbox (alert-info)
+
+        // Bereich: "ktw_no_transports" - Hinweisbox
         const ktwNoTransportsBox = document.getElementById('ktw_no_transports');
         if (ktwNoTransportsBox && ktwNoTransportsBox.classList.contains('alert-info')) {
             ktwNoTransportsBox.style.display = window.HIDE_KTW_NO_TRANSPORTS ? 'none' : 'block';
         }
+
+        // Patienten-Spoiler-Button-Bereich ausblenden
+        const patientButtonForm = document.getElementById('patient_button_form');
+        if (patientButtonForm) {
+            patientButtonForm.style.display = window.HIDE_PATIENT_BUTTON_FORM ? 'none' : 'block';
+        }
+
+        // Patienten-Anforderungen (rote Box) zusätzlich unabhängig ausblenden
+        const patientRequirementsBox = document.getElementById('patient_missing_requirements');
+        if (patientRequirementsBox) {
+            patientRequirementsBox.style.setProperty('display', window.HIDE_PATIENT_BUTTON_FORM ? 'none' : 'block', 'important');
+        }
+
+        // Einzelnen Button (z. B. "btn-default btn-xs pull-right") ein-/ausblenden
+        const rightButton = document.querySelector('.btn.btn-default.btn-xs.pull-right');
+        if (rightButton) {
+            rightButton.style.display = window.HIDE_PULLRIGHT_BUTTON ? 'none' : 'inline-block';
+        }
+
+        document.querySelectorAll('.btn-group.pull-right').forEach(el => {
+            const textContent = el.innerText.toLowerCase();
+            if (textContent.includes('rückalarmieren')) {
+                el.style.display = window.HIDE_BUTTON_GROUP_PULL_RIGHT ? 'none' : 'block';
+            }
+        });
+
     }
 
     function addSpoilerButtonForPatientBlocks() {
@@ -594,7 +661,7 @@
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // === INITIALISIERUNG ===
+    // === INITIALISIERUNG === \\
     loadSettings();
     createSettingsGUI();
 
