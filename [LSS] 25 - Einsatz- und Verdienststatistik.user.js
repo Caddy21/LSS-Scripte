@@ -274,8 +274,8 @@
         // Starte Intervall-Timer nur EINMAL!
         if (!window.__statsStarted) {
             window.__statsStarted = true;
-            setInterval(updateMissionCounts, 30000);
-            setInterval(updateAverageEarnings, 30000);
+            setInterval(updateMissionCounts, 1000);
+            setInterval(updateAverageEarnings, 1000);
         }
         // Egal wie oft das Event kommt: Statistikbox ggf. neu bauen!
         ensureStatsContainerExists();
