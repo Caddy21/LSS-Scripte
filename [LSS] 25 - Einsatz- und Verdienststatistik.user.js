@@ -260,7 +260,7 @@
         }
     }
 
-    // NEU: Stellt sicher, dass der Statistikbereich immer existiert
+    // Stellt sicher, dass der Statistikbereich immer existiert
     function ensureStatsContainerExists() {
         if (!document.getElementById('average_earnings_display')) {
             createEarningsAndMissionsContainer(false);
