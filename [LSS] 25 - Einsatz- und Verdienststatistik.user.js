@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Einsatz- und Verdienststatistik
+// @name         [LSS] Einsatz- und Verdienststatistik
 // @namespace    https://github.com/Caddy21/Testgebiet
 // @version      1.0
 // @description  Zeigt Einsatz- und Verdienststatistiken für Tag / Woche / Monat / Jahr
