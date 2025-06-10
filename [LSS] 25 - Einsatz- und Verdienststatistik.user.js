@@ -5,6 +5,7 @@
 // @description  Zeigt Einsatz- und Verdienststatistiken für Tag / Woche / Monat / Jahr
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        GM.getValue
 // @grant        GM.setValue
 // ==/UserScript==
