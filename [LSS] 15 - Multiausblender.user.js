@@ -33,6 +33,7 @@
         {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons "Alle Fahrzeuge Rückalamieren" und "Eigenen RD Rückalamieren" ausblenden', default: true, category: 'alarm'},
         {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für "Maximale Entfernung" erzeugen', default: true, category: 'alarm'},
         {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: true, category: 'alarm'},
+        {key: 'HIDE_AMOUNT_OF_PEOPLE', label: 'Personenzähler (amount_of_people) ausblenden', default: false, category: 'alarm'},
         {key: 'ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER', label: 'Spoiler für „Freie Fahrzeugliste“ erzeugen', default: true, category: 'alarm'},
 
         // === Sonstiges === \\
@@ -407,6 +408,12 @@
         const rightButton = document.querySelector('.btn.btn-default.btn-xs.pull-right');
         if (rightButton) {
             rightButton.style.display = window.HIDE_PULLRIGHT_BUTTON ? 'none' : 'inline-block';
+        }
+
+        // Bereich: Personenzähler (amount_of_people) ein-/ausblenden
+        const amountOfPeople = document.getElementById('amount_of_people');
+        if (amountOfPeople) {
+            amountOfPeople.style.display = window.HIDE_AMOUNT_OF_PEOPLE ? 'none' : 'block';
         }
 
         document.querySelectorAll('.btn-group.pull-right').forEach(el => {
