@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AAO schneller anlegen
+// @name         [LSS] AAO schneller anlegen
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Fügt im Einsatzfenster ein Button zum AAO-Anlegen ein.
