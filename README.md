@@ -68,5 +68,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Nachrichtenanzeiger (veröffentlicht)
     - FMS Manager (veröffentlicht)
     - KTW-Melder
+    - Einsatz- und Verdienststatistik
     
 </details>
