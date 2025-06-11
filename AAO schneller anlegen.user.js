@@ -1,10 +1,11 @@
 // ==UserScript==
-// @name         AAO-Button bei Einsatz (zwei Buttons, Lightbox/iframe Support, Standard-Position)
+// @name         AAO schneller anlegen
 // @namespace    http://tampermonkey.net/
-// @version      2.3
-// @description  Fügt in Lightbox-Iframes zwei Buttons "AAO anlegen/bearbeiten" und "AAO-Bearbeiten" im normalen Flow von .mission_header_info.row ein
-// @author       DeinName
+// @version      1.0
+// @description  Fügt im Einsatzfenster ein Button zum AAO-Anlegen ein.
+// @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
@@ -33,31 +34,11 @@
         button1.className = 'btn btn-success btn-xs aao-custom-button';
         button1.style.marginLeft = '10px';
         button1.addEventListener('click', () => {
-            alert('AAO anlegen');
-        });
-
-        // === Button 2: AAO bearbeiten === \\
-        const button2 = doc.createElement('button');
-        button2.textContent = 'AAO bearbeiten';
-        button2.className = 'btn btn-warning btn-xs aao-custom-button';
-        button2.style.marginLeft = '10px';
-        button2.addEventListener('click', () => {
-            alert('AAO-Bearbeiten');
-        });
-
-        // === Button 3: AAO löschen === \\
-        const button3 = doc.createElement('button');
-        button3.textContent = 'AAO löschen';
-        button3.className = 'btn btn-danger btn-xs aao-custom-button';
-        button3.style.marginLeft = '10px';
-        button3.addEventListener('click', () => {
-            alert('AAO-Löschen');
+            window.open('https://www.leitstellenspiel.de/aaos/new', '_blank');
         });
 
         // === Buttons direkt ans Ende des Containers einfügen (ohne Flexbox, Standard-Flow) === \\
         headerInfo.appendChild(button1);
-        headerInfo.appendChild(button2);
-        headerInfo.appendChild(button3);
 
         console.log("[AAO-Button] Beide Buttons erfolgreich in .mission_header_info.row im Standard-Flow eingefügt.");
     }
