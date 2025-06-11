@@ -33,9 +33,9 @@ Chris
 
 
 ## Im Spiel
-- Ich teste meine Scripte über den aktuellsten Firefox mit der Erweiterung [Tampermonkey](https://www.tampermonkey.net/).
+- Ich teste meine Scripte über den aktuellsten Firefox sowie Edge mit der Erweiterung [Tampermonkey](https://www.tampermonkey.net/).
 - Verwendete Desings im Leitestellenspiel.de > Standart und Fensterdesign Dunkel.
-- Jedes Script wird für sich allein getestet.
+- Jedes Script wird für sich allein getestet!
 
 Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nicht** aus und werden nicht berücksichtigt da jedes Script für sich allein getestet wird.
   
