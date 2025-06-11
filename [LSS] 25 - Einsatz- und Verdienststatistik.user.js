@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         [LSS] Einsatz- und Verdienststatistik
-// @namespace    https://github.com/Caddy21/Testgebiet
+// @name         [LSS] 25 - Einsatz- und Verdienststatistik
+// @namespace    https://github.com/Caddy21/LSS-Scripte
 // @version      1.0
 // @description  Zeigt Einsatz- und Verdienststatistiken für Tag / Woche / Monat / Jahr
 // @author       Caddy21
@@ -17,7 +17,6 @@
     let missionData = {};
     const MISSION_DATA_KEY = 'missionData_v1';
 
-    // Funktion zum laden der Einsatzdaten
     function loadMissionDataFromStorage() {
         const dataStr = localStorage.getItem(MISSION_DATA_KEY);
         if (dataStr) {
@@ -35,7 +34,7 @@
         return 1 + Math.floor(diff / 7);
     }
 
-    // Funktion um den Container für Daten zu erstellen
+    // Statistik-Box erzeugen (wie gehabt)
     function createEarningsAndMissionsContainer(fallbackMode = false) {
         if (document.getElementById('average_earnings_display')) return;
 
@@ -56,7 +55,7 @@
             }
         }
 
-        if (!containerParent) return; // Keine sinnvolle Position gefunden
+        if (!containerParent) return;
 
         const earningsContainer = document.createElement('div');
         earningsContainer.id = 'average_earnings_display';
@@ -96,7 +95,6 @@
         }
     }
 
-    // Funktion zum updaten der Zähler
     async function updateMissionCounts() {
         const accessedElements = document.querySelectorAll('.missionSideBarEntry .glyphicon-user:not(.hidden)');
         let todayMissions = await GM.getValue('today_missions', 0);
@@ -174,7 +172,6 @@
         }
     }
 
-    // Funktion zum updaten des Verdienstes
     async function updateAverageEarnings() {
         const finishedElements = document.querySelectorAll('.missionSideBarEntry.mission_deleted');
 
@@ -260,7 +257,7 @@
         }
     }
 
-    // Stellt sicher, dass der Statistikbereich immer existiert
+    // NEU: Stellt sicher, dass der Statistikbereich immer existiert!
     function ensureStatsContainerExists() {
         if (!document.getElementById('average_earnings_display')) {
             createEarningsAndMissionsContainer(false);
@@ -269,7 +266,6 @@
         }
     }
 
-    // Funktion um das Script zu starten
     function startStats(fallbackMode = false) {
         // Starte Intervall-Timer nur EINMAL!
         if (!window.__statsStarted) {
@@ -298,16 +294,7 @@
         ensureStatsContainerExists();
     });
 
-    // Schnittstelle zum "Einsatzkategorienfilter-Script"
-    if (window.categoryButtonReady) {
-        startStats(false); // Normale Integration
-    } else {
-        document.addEventListener('categoryButtonReady', () => startStats(false));
-
-        // Fallback: Statistik generell einfügen.
-        setTimeout(() => {
-            if (!window.__statsStarted) startStats(true);
-        }, 2000);
-    }
+    // Optional: missionData laden
+    loadMissionDataFromStorage();
 
 })();
