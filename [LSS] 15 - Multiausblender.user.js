@@ -33,7 +33,7 @@
         {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons "Alle Fahrzeuge Rückalamieren" und "Eigenen RD Rückalamieren" ausblenden', default: true, category: 'alarm'},
         {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für "Maximale Entfernung" erzeugen', default: true, category: 'alarm'},
         {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: true, category: 'alarm'},
-        {key: 'HIDE_AMOUNT_OF_PEOPLE', label: 'Personenzähler (amount_of_people) ausblenden', default: false, category: 'alarm'},
+        {key: 'HIDE_AMOUNT_OF_PEOPLE', label: 'Personenzähler (amount_of_people) ausblenden', default: false, category: 'other'},
         {key: 'ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER', label: 'Spoiler für „Freie Fahrzeugliste“ erzeugen', default: true, category: 'alarm'},
 
         // === Sonstiges === \\
@@ -320,48 +320,46 @@
         // Erfolgsmeldungen ausblenden
         if (window.ENABLE_SUCCESS_ALERT) {
             document.querySelectorAll('.alert-success').forEach(el => {
-                el.style.display = "none";
+                el.style.setProperty('display', 'none', 'important');
             });
         }
 
         // Fehlende Fahrzeuge ausblenden
         document.querySelectorAll('.alert.alert-danger').forEach(el => {
             if (el.innerText.includes('Fehlende Fahrzeuge')) {
-                el.style.display = window.ENABLE_MISSING_ALERT ? "none" : "block";
+                el.style.setProperty('display', window.ENABLE_MISSING_ALERT ? 'none' : 'block', 'important');
             }
-
         });
 
         // Betreuung & Verpflegung ein-/ausblenden
         document.querySelectorAll('.alert.alert-danger').forEach(el => {
             if (el.innerText.includes('Benötigte Betreuungs- und Verpflegungsausstattung')) {
-                el.style.display = window.ENABLE_CARE_AND_SUPPLY ? "none" : "block";
+                el.style.setProperty('display', window.ENABLE_CARE_AND_SUPPLY ? 'none' : 'block', 'important');
             }
 
             // Sprechwunsch-Infobox (alert-danger)
             if (el.innerText.includes('Ein Fahrzeug hat einen Sprechwunsch!')) {
-                el.style.display = window.ENABLE_SPEECH_REQUEST_ALERT ? "none" : "block";
+                el.style.setProperty('display', window.ENABLE_SPEECH_REQUEST_ALERT ? 'none' : 'block', 'important');
             }
         });
 
         // Sprechwunsch-Infoboxen (alert-info)
         document.querySelectorAll('.alert.alert-info').forEach(el => {
             if (el.innerText.includes('Sprechwunsch')) {
-                el.style.display = window.ENABLE_SPEECH_REQUEST_INFOBOX ? "none" : "block";
+                el.style.setProperty('display', window.ENABLE_SPEECH_REQUEST_INFOBOX ? 'none' : 'block', 'important');
             }
             if (el.innerText.includes('Dieser Einsatz wurde von')) {
-                el.style.display = window.ENABLE_MISSION_SHARED_INFOBOX ? "none" : "block";
+                el.style.setProperty('display', window.ENABLE_MISSION_SHARED_INFOBOX ? 'none' : 'block', 'important');
             }
             if (el.innerText.includes('Wirklich alle entlassen?')) {
-                el.style.display = window.ENABLE_RELEASE_ALL_INFOBOX ? "none" : "block";
+                el.style.setProperty('display', window.ENABLE_RELEASE_ALL_INFOBOX ? 'none' : 'block', 'important');
             }
         });
-
 
         // Zusätzliche DIV-Bereiche ein-/ausblenden
         const renameButtons = document.getElementById('lssm_renameFzSettings_buttons');
         if (renameButtons) {
-            renameButtons.style.display = window.HIDE_RENAME_BUTTONS_SECTION ? 'none' : 'block';
+            renameButtons.style.setProperty('display', window.HIDE_RENAME_BUTTONS_SECTION ? 'none' : 'block', 'important');
         }
 
         // Bereich: Name zu lang Hinweis
@@ -377,25 +375,25 @@
         // Bereich: "prisoners" - Infobox (alert-info)
         if (window.HIDE_PRISONERS_INFOBOX) {
             const prisonersBox = document.querySelector('#prisoners .alert.alert-info');
-            if (prisonersBox) prisonersBox.style.display = "none";
+            if (prisonersBox) prisonersBox.style.setProperty('display', 'none', 'important');
         }
 
         // Bereich: "prisoners" - Tabelle (table-striped)
         if (window.HIDE_PRISONERS_TABLE) {
             const prisonersTable = document.querySelector('#prisoners .table.table-striped');
-            if (prisonersTable) prisonersTable.style.display = "none";
+            if (prisonersTable) prisonersTable.style.setProperty('display', 'none', 'important');
         }
 
         // Bereich: "ktw_no_transports" - Hinweisbox
         const ktwNoTransportsBox = document.getElementById('ktw_no_transports');
         if (ktwNoTransportsBox && ktwNoTransportsBox.classList.contains('alert-info')) {
-            ktwNoTransportsBox.style.display = window.HIDE_KTW_NO_TRANSPORTS ? 'none' : 'block';
+            ktwNoTransportsBox.style.setProperty('display', window.HIDE_KTW_NO_TRANSPORTS ? 'none' : 'block', 'important');
         }
 
         // Patienten-Spoiler-Button-Bereich ausblenden
         const patientButtonForm = document.getElementById('patient_button_form');
         if (patientButtonForm) {
-            patientButtonForm.style.display = window.HIDE_PATIENT_BUTTON_FORM ? 'none' : 'block';
+            patientButtonForm.style.setProperty('display', window.HIDE_PATIENT_BUTTON_FORM ? 'none' : 'block', 'important');
         }
 
         // Patienten-Anforderungen (rote Box) zusätzlich unabhängig ausblenden
@@ -407,22 +405,21 @@
         // Einzelnen Button (z. B. "btn-default btn-xs pull-right") ein-/ausblenden
         const rightButton = document.querySelector('.btn.btn-default.btn-xs.pull-right');
         if (rightButton) {
-            rightButton.style.display = window.HIDE_PULLRIGHT_BUTTON ? 'none' : 'inline-block';
+            rightButton.style.setProperty('display', window.HIDE_PULLRIGHT_BUTTON ? 'none' : 'inline-block', 'important');
         }
 
         // Bereich: Personenzähler (amount_of_people) ein-/ausblenden
         const amountOfPeople = document.getElementById('amount_of_people');
         if (amountOfPeople) {
-            amountOfPeople.style.display = window.HIDE_AMOUNT_OF_PEOPLE ? 'none' : 'block';
+            amountOfPeople.style.setProperty('display', window.HIDE_AMOUNT_OF_PEOPLE ? 'none' : 'block', 'important');
         }
 
         document.querySelectorAll('.btn-group.pull-right').forEach(el => {
             const textContent = el.innerText.toLowerCase();
             if (textContent.includes('rückalarmieren')) {
-                el.style.display = window.HIDE_BUTTON_GROUP_PULL_RIGHT ? 'none' : 'block';
+                el.style.setProperty('display', window.HIDE_BUTTON_GROUP_PULL_RIGHT ? 'none' : 'block', 'important');
             }
         });
-
     }
 
     function addSpoilerButtonForPatientBlocks() {
