@@ -5,6 +5,7 @@
 // @description  Fügt einen Teilen-Button bei lukrativen Einsätzen ein
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        GM_getValue
 // @grant        GM_setValue
 // ==/UserScript==
