@@ -12,14 +12,10 @@
 (function () {
     "use strict";
 
-    const MIN_CREDITS = 100; // Mindestdurchschnittsverdiens
+    const MIN_CREDITS = 3000; // Mindestdurchschnittsverdiens
 
     const MISSION_LIST_IDS = [
         "mission_list",
-        "mission_list_krankentransporte",
-        "mission_list_alliance",
-        "mission_list_sicherheitswache_alliance",
-        "mission_list_alliance_event",
         "mission_list_sicherheitswache",
     ];
 
@@ -47,7 +43,7 @@
             setTimeout(() => {
                 iframe.remove();
             }, 2000);
-
+            
         });
 
         alarmButton.insertAdjacentElement("afterend", button);
@@ -61,7 +57,8 @@
         if (cached) {
             try {
                 const parsed = JSON.parse(cached);
-                if (Date.now() - parsed.timestamp < CACHE_TIME) {  
+                if (Date.now() - parsed.timestamp < CACHE_TIME) {
+                    
                     return parsed.data;
                 }
             } catch (e) {
@@ -81,6 +78,7 @@
             timestamp: Date.now(),
             data: creditMap
         }));
+        
         return creditMap;
     }
 
