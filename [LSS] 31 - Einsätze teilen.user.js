@@ -48,7 +48,6 @@
                 iframe.remove();
             }, 2000);
 
-            console.log(`[Teilen-Button] Einsatz ${missionId} über Iframe geteilt.`);
         });
 
         alarmButton.insertAdjacentElement("afterend", button);
@@ -62,8 +61,7 @@
         if (cached) {
             try {
                 const parsed = JSON.parse(cached);
-                if (Date.now() - parsed.timestamp < CACHE_TIME) {
-                    console.log("[Teilen-Button] Verwende gecachte Einsatzdaten (GM-Speicher).");
+                if (Date.now() - parsed.timestamp < CACHE_TIME) {  
                     return parsed.data;
                 }
             } catch (e) {
@@ -83,8 +81,6 @@
             timestamp: Date.now(),
             data: creditMap
         }));
-
-        console.log("[Teilen-Button] Neue Einsatzdaten geladen und gespeichert.");
         return creditMap;
     }
 
