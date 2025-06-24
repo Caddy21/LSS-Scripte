@@ -16,35 +16,35 @@
     const OPTIONS = [
 
         // === Alarmfenster === \\
-        {key: 'FIX_MISSION_HEADER_INFO', label: 'Einsatzinfo fixieren', default: true, category: 'alarm'},
-        {key: 'ENABLE_SUCCESS_ALERT', label: 'Erfolgreiche Alamierung ausblenden', default: true, category: 'alarm'},
-        {key: 'ENABLE_MISSING_ALERT', label: 'Fehlende Fahrzeuge am Einsatzort ausblenden', default: true, category: 'alarm'},
-        {key: 'ENABLE_SPEECH_REQUEST_ALERT', label: 'Sprechwunsch-Infobox (rot) ausblenden', default: true, category: 'alarm'},
+        {key: 'FIX_MISSION_HEADER_INFO', label: 'Einsatzinfo fixieren', default: false, category: 'alarm'},
+        {key: 'ENABLE_MISSING_ALERT', label: 'Fehlende Fahrzeuge ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_SUCCESS_ALERT', label: 'Erfolgreiche Alamierung ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_SPEECH_REQUEST_ALERT', label: 'Sprechwunsch-Infobox (rot) ausblenden', default: false, category: 'alarm'},
         {key: 'ENABLE_CARE_AND_SUPPLY', label: 'Betreuung und Verpflegung ausblenden', default: false, category: 'alarm'},
         {key: 'HIDE_PATIENT_BUTTON_FORM', label: 'Patienten-Button-Bereich ausblenden', default: false, category: 'alarm'},
         {key: 'ENABLE_PATIENT_SPOILER', label: 'Spoiler für Patientenbereich (ab X Patienten) erzeugen', default: false, category: 'alarm'},
         {key: 'PATIENT_SPOILER_MIN_COUNT', label: 'Spoiler ab so vielen Patienten (Zahl)', default: 10, type: 'number', category: 'alarm'},
-        {key: 'ENABLE_AAO_SPOILER', label: 'Spoiler für AAO-Einträge ohne Kategorie erzeugen', default: true, category: 'alarm'},
+        {key: 'ENABLE_AAO_SPOILER', label: 'Spoiler für AAO-Einträge ohne Kategorie erzeugen', default: false, category: 'alarm'},
         {key: 'ENABLE_TABS_SPOILER', label: 'Spoiler für AAO-Tabs erzeugen', default: false, category: 'alarm'},
         {key: 'ENABLE_AAO_COLUMN_SPOILERS', label: 'Spoiler für die AAO-Einträge erzeugen', default: false, category: 'alarm'},
-        {key: 'ENABLE_MISSION_SHARED_INFOBOX', label: 'Info-Box „Einsatz geteilt von...“ ausblenden', default: true, category: 'alarm'},
+        {key: 'ENABLE_MISSION_SHARED_INFOBOX', label: 'Info-Box „Einsatz geteilt von...“ ausblenden', default: false, category: 'alarm'},
         {key: 'HIDE_PULLRIGHT_BUTTON', label: 'Anfahrten abbrechen Button ausblenden', default: false, category: 'alarm' },
-        {key: 'ENABLE_VEHICLE_SPOILER', label: 'Spoiler für anfahrende Fahrzeuge und Fahrzeuge am Einsatzort erzeugen', default: true, category: 'alarm'},
-        {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons "Alle Fahrzeuge Rückalamieren" und "Eigenen RD Rückalamieren" ausblenden', default: true, category: 'alarm'},
-        {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für "Maximale Entfernung" erzeugen', default: true, category: 'alarm'},
-        {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: true, category: 'alarm'},
-        {key: 'HIDE_AMOUNT_OF_PEOPLE', label: 'Personenzähler (amount_of_people) ausblenden', default: false, category: 'other'},
-        {key: 'ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER', label: 'Spoiler für „Freie Fahrzeugliste“ erzeugen', default: true, category: 'alarm'},
+        {key: 'ENABLE_VEHICLE_SPOILER', label: 'Spoiler für anfahrende Fahrzeuge und Fahrzeuge am Einsatzort erzeugen', default: false, category: 'alarm'},
+        {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons "Alle Fahrzeuge Rückalamieren" und "Eigenen RD Rückalamieren" ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für "Maximale Entfernung" erzeugen', default: false, category: 'alarm'},
+        {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: false, category: 'alarm'},
+        {key: 'HIDE_AMOUNT_OF_PEOPLE', label: 'Personenzähler ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER', label: 'Spoiler für „Freie Fahrzeugliste“ erzeugen', default: false, category: 'alarm'},
 
         // === Sonstiges === \\
-        {key: 'HIDE_EVENT_INFO', label: 'Eventinfo in der Einsatzliste ausblenden', default: true, category: 'other'},
+        {key: 'HIDE_EVENT_INFO', label: 'Eventinfo in der Einsatzliste ausblenden', default: false, category: 'other'},
         {key: 'ENABLE_BREADCRUMB', label: 'Navigationsleiste ausblenden', default: false, category: 'other'},
-        {key: 'HIDE_PRISONERS_INFOBOX', label: 'Gewahrsamsbereich (Infobox) ausblenden', default: true, category: 'other'},
-        {key: 'HIDE_PRISONERS_TABLE', label: 'Gewahrsamsbereich (Tabelle Wachenansicht) ausblenden', default: true, category: 'other'},
+        {key: 'HIDE_PRISONERS_INFOBOX', label: 'Gewahrsamsbereich (Infobox) ausblenden', default: false, category: 'other'},
+        {key: 'HIDE_PRISONERS_TABLE', label: 'Gewahrsamsbereich (Tabelle Wachenansicht) ausblenden', default: false, category: 'other'},
         {key: 'ENABLE_VEHICLE_TABLE_SPOILER', label: 'Spoiler für Fahrzeugtabelle (Wachenübersicht) erzeugen', default: false, category: 'other'},
-        {key: 'HIDE_KTW_NO_TRANSPORTS', label: 'Info-Box „Keine KTW-Transporte vorhanden“ ausblenden', default: true, category: 'other'},
-        {key: 'HIDE_RENAME_BUTTONS_SECTION', label: 'Buttons im LSSM V3 Renamemanager ausblenden', default: true, category: 'other'},
-        {key: 'HIDE_NAME_TOO_LONG_SECTION', label: 'Hinweis bei zu langem Namen (LSSM V3 Renamemanger) ausblenden', default: true, category: 'other'},
+        {key: 'HIDE_KTW_NO_TRANSPORTS', label: 'Info-Box „Keine KTW-Transporte vorhanden“ ausblenden', default: false, category: 'other'},
+        {key: 'HIDE_RENAME_BUTTONS_SECTION', label: 'Buttons im LSSM V3 Renamemanager ausblenden', default: false, category: 'other'},
+        {key: 'HIDE_NAME_TOO_LONG_SECTION', label: 'Hinweis bei zu langem Namen (LSSM V3 Renamemanger) ausblenden', default: false, category: 'other'},
         {key: 'ENABLE_SPEECH_REQUEST_INFOBOX', label: 'Sprechwunsch-Infobox (blau) ausblenden', default: false, category: 'other'},
     ];
 
@@ -296,6 +296,13 @@
         observer.observe(observerTarget, {childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class']});
     }
 
+    // === Hilfsfunktion ===
+    function safeToggleDisplay(el, shouldShow) {
+        if (!el) return;
+        if (el.hasAttribute('hidden')) return;
+        el.style.setProperty('display', shouldShow ? 'block' : 'none', 'important');
+    }
+
     function toggleBreadcrumb() {
         const breadcrumb = document.querySelector('.breadcrumb');
         if (!breadcrumb) return;
@@ -316,6 +323,7 @@
         header.dataset.fixed = "true";
     }
 
+    // === Überarbeitete hideOptionalElements ===
     function hideOptionalElements() {
         // Erfolgsmeldungen ausblenden
         if (window.ENABLE_SUCCESS_ALERT) {
@@ -324,52 +332,54 @@
             });
         }
 
-        // Fehlende Fahrzeuge ausblenden
+        // Fehlende Fahrzeuge, Betreuung, Sprechwunsch-Infoboxen (alert-danger) behandeln
         document.querySelectorAll('.alert.alert-danger').forEach(el => {
+            // Leere oder vom Spiel ausgeblendete Boxen entfernen
+            if (el.hasAttribute('hidden') || el.textContent.trim() === '') {
+                el.remove();
+                return;
+            }
             if (el.innerText.includes('Fehlende Fahrzeuge')) {
-                el.style.setProperty('display', window.ENABLE_MISSING_ALERT ? 'none' : 'block', 'important');
+                safeToggleDisplay(el, !window.ENABLE_MISSING_ALERT);
             }
-        });
-
-        // Betreuung & Verpflegung ein-/ausblenden
-        document.querySelectorAll('.alert.alert-danger').forEach(el => {
             if (el.innerText.includes('Benötigte Betreuungs- und Verpflegungsausstattung')) {
-                el.style.setProperty('display', window.ENABLE_CARE_AND_SUPPLY ? 'none' : 'block', 'important');
+                safeToggleDisplay(el, !window.ENABLE_CARE_AND_SUPPLY);
             }
-
-            // Sprechwunsch-Infobox (alert-danger)
             if (el.innerText.includes('Ein Fahrzeug hat einen Sprechwunsch!')) {
-                el.style.setProperty('display', window.ENABLE_SPEECH_REQUEST_ALERT ? 'none' : 'block', 'important');
+                safeToggleDisplay(el, !window.ENABLE_SPEECH_REQUEST_ALERT);
+            }
+            if (el.innerText.includes('Du hast keine freien Stellplätze. Du musst erst die Stufe der Wache erweitern.')) {
+                el.style.setProperty('display', 'none', 'important');
             }
         });
 
-        // Sprechwunsch-Infoboxen (alert-info)
+        // alert-info Boxen (z.B. Sprechwunsch, geteilte Einsätze, alle entlassen)
         document.querySelectorAll('.alert.alert-info').forEach(el => {
+            if (el.hasAttribute('hidden') || el.textContent.trim() === '') {
+                el.remove();
+                return;
+            }
             if (el.innerText.includes('Sprechwunsch')) {
-                el.style.setProperty('display', window.ENABLE_SPEECH_REQUEST_INFOBOX ? 'none' : 'block', 'important');
+                safeToggleDisplay(el, !window.ENABLE_SPEECH_REQUEST_INFOBOX);
             }
             if (el.innerText.includes('Dieser Einsatz wurde von')) {
-                el.style.setProperty('display', window.ENABLE_MISSION_SHARED_INFOBOX ? 'none' : 'block', 'important');
+                safeToggleDisplay(el, !window.ENABLE_MISSION_SHARED_INFOBOX);
             }
             if (el.innerText.includes('Wirklich alle entlassen?')) {
-                el.style.setProperty('display', window.ENABLE_RELEASE_ALL_INFOBOX ? 'none' : 'block', 'important');
+                safeToggleDisplay(el, !window.ENABLE_RELEASE_ALL_INFOBOX);
             }
         });
 
-        // Zusätzliche DIV-Bereiche ein-/ausblenden
-        const renameButtons = document.getElementById('lssm_renameFzSettings_buttons');
-        if (renameButtons) {
-            renameButtons.style.setProperty('display', window.HIDE_RENAME_BUTTONS_SECTION ? 'none' : 'block', 'important');
-        }
-
-        // Bereich: Name zu lang Hinweis
+        // Bereich: Name zu lang Hinweis (LSSM V3 Renamemanager)
         const nameTooLongDiv = document.getElementById('lssm_renameFzSettings_nameToLongDiv');
         if (nameTooLongDiv && nameTooLongDiv.classList.contains('alert-danger')) {
-            if (window.HIDE_NAME_TOO_LONG_SECTION) {
+            // Wenn leer, löschen
+            if (nameTooLongDiv.textContent.trim() === '') {
+                nameTooLongDiv.remove();
+            } else if (window.HIDE_NAME_TOO_LONG_SECTION) {
                 nameTooLongDiv.style.setProperty('display', 'none', 'important');
-            } else {
-                nameTooLongDiv.style.removeProperty('display');
             }
+            // KEIN else-Zweig! Nicht sichtbar machen, wenn Option nicht aktiv!
         }
 
         // Bereich: "prisoners" - Infobox (alert-info)
@@ -390,16 +400,20 @@
             ktwNoTransportsBox.style.setProperty('display', window.HIDE_KTW_NO_TRANSPORTS ? 'none' : 'block', 'important');
         }
 
-        // Patienten-Spoiler-Button-Bereich ausblenden
+        // Patienten-Button-Bereich
         const patientButtonForm = document.getElementById('patient_button_form');
         if (patientButtonForm) {
-            patientButtonForm.style.setProperty('display', window.HIDE_PATIENT_BUTTON_FORM ? 'none' : 'block', 'important');
+            if (patientButtonForm.hasAttribute('hidden') || patientButtonForm.textContent.trim() === '') {
+                patientButtonForm.remove();
+            } else {
+                safeToggleDisplay(patientButtonForm, !window.HIDE_PATIENT_BUTTON_FORM);
+            }
         }
 
-        // Patienten-Anforderungen (rote Box) zusätzlich unabhängig ausblenden
+        // Patienten-Anforderungen (rote Box) unabhängig ausblenden
         const patientRequirementsBox = document.getElementById('patient_missing_requirements');
         if (patientRequirementsBox) {
-            patientRequirementsBox.style.setProperty('display', window.HIDE_PATIENT_BUTTON_FORM ? 'none' : 'block', 'important');
+            safeToggleDisplay(patientRequirementsBox, !window.HIDE_PATIENT_BUTTON_FORM);
         }
 
         // Einzelnen Button (z. B. "btn-default btn-xs pull-right") ein-/ausblenden
@@ -414,12 +428,19 @@
             amountOfPeople.style.setProperty('display', window.HIDE_AMOUNT_OF_PEOPLE ? 'none' : 'block', 'important');
         }
 
+        // Button-Gruppe für Rückalarmieren ein-/ausblenden
         document.querySelectorAll('.btn-group.pull-right').forEach(el => {
             const textContent = el.innerText.toLowerCase();
             if (textContent.includes('rückalarmieren')) {
                 el.style.setProperty('display', window.HIDE_BUTTON_GROUP_PULL_RIGHT ? 'none' : 'block', 'important');
             }
         });
+
+        // Bereich: Rename-Buttons (LSSM V3 Renamemanager) ein-/ausblenden
+        const renameButtons = document.getElementById('lssm_renameFzSettings_buttons');
+        if (renameButtons) {
+            renameButtons.style.setProperty('display', window.HIDE_RENAME_BUTTONS_SECTION ? 'none' : 'block', 'important');
+        }
     }
 
     function addSpoilerButtonForPatientBlocks() {
