@@ -30,6 +30,7 @@
         {key: 'ENABLE_MISSION_SHARED_INFOBOX', label: 'Info-Box „Einsatz geteilt von...“ ausblenden', default: false, category: 'alarm'},
         {key: 'HIDE_PULLRIGHT_BUTTON', label: 'Anfahrten abbrechen Button ausblenden', default: false, category: 'alarm' },
         {key: 'ENABLE_VEHICLE_SPOILER', label: 'Spoiler für anfahrende Fahrzeuge und Fahrzeuge am Einsatzort erzeugen', default: false, category: 'alarm'},
+        {key: 'SHOW_PRISON_ERROR', label: 'Freie Zellen Button ausblenden', default: false, category: 'alarm'},
         {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons "Alle Fahrzeuge Rückalamieren" und "Eigenen RD Rückalamieren" ausblenden', default: false, category: 'alarm'},
         {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für "Maximale Entfernung" erzeugen', default: false, category: 'alarm'},
         {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: false, category: 'alarm'},
@@ -663,6 +664,19 @@
         });
     }
 
+    function togglePrisonErrorAndControl() {
+    const errorDiv = document.getElementById('prisons-load-error');
+    const controlDiv = document.getElementById('prisons-load-control');
+    // Fehlerbereich anzeigen, wenn Option aktiv
+    if (window.SHOW_PRISON_ERROR) {
+        if (errorDiv) errorDiv.removeAttribute('hidden');
+        if (controlDiv) controlDiv.setAttribute('hidden', '');
+    } else {
+        if (errorDiv) errorDiv.setAttribute('hidden', '');
+        if (controlDiv) controlDiv.removeAttribute('hidden');
+    }
+}
+
     function checkForLightboxAndAddButton() {
         let iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
         if (window.ENABLE_AAO_SPOILER && iframes.length > 0) {
@@ -711,15 +725,6 @@
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // === INITIALISIERUNG === \\
-    loadSettings();
-    createSettingsGUI();
-    checkForLightboxAndAddButton();
-    hideOptionalElements();
-    toggleBuildingFiltersGroupInLightbox();
-    observeAndToggleEventInfo();
-    observeLightbox();
-
     let vehicleTableCheckInterval = setInterval(() => {
         if (addSpoilerButtonForVehicleTable()) {
             clearInterval(vehicleTableCheckInterval);
@@ -729,7 +734,19 @@
     let observer = new MutationObserver(() => {
         checkForLightboxAndAddButton();
         hideOptionalElements();
+        togglePrisonErrorAndControl();
         toggleBuildingFiltersGroupInLightbox();
     });
     observer.observe(document.body, { childList: true, subtree: true });
+
+     // === INITIALISIERUNG === \\
+    loadSettings();
+    createSettingsGUI();
+    checkForLightboxAndAddButton();
+    hideOptionalElements();
+    togglePrisonErrorAndControl();
+    toggleBuildingFiltersGroupInLightbox();
+    observeAndToggleEventInfo();
+    observeLightbox();
+
 })();
