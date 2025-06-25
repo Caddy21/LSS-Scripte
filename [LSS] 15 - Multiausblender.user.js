@@ -1,445 +1,714 @@
 // ==UserScript==
-// @name         [LSS] Einsatz- und Verdienststatistik
-// @namespace    https://github.com/Caddy21/LSS-Scripte
+// @name         [LSS] 15 - Multiausblender
+// @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
-// @description  Zeigt Einsatz- und Verdienststatistiken für Tag / Woche / Monat / Jahr in der Einsatzliste an
+// @description  Blendet verschiedene Sachen wie AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere Dinge individuell ein oder aus, permanent oder per Spoilerbutton
 // @author       Caddy21
-// @match        https://www.leitstellenspiel.de
+// @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
-// @grant        GM.getValue
-// @grant        GM.setValue
+// @grant        none
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    // Optional: missionData laden, falls benötigt
-    let missionData = {};
-    const MISSION_DATA_KEY = 'missionData_v1';
+    // === OPTIONEN-DEFINITION === \\
+    const OPTIONS = [
 
-    function loadMissionDataFromStorage() {
-        const dataStr = localStorage.getItem(MISSION_DATA_KEY);
-        if (dataStr) {
-            try { missionData = JSON.parse(dataStr); } catch { missionData = {}; }
-        }
-    }
+        // === Alarmfenster === \\
+        {key: 'FIX_MISSION_HEADER_INFO', label: 'Einsatzinfo fixieren', default: false, category: 'alarm'},
+        {key: 'ENABLE_MISSING_ALERT', label: 'Fehlende Fahrzeuge ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_SUCCESS_ALERT', label: 'Erfolgreiche Alamierung ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_SPEECH_REQUEST_ALERT', label: 'Sprechwunsch-Infobox (rot) ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_CARE_AND_SUPPLY', label: 'Betreuung und Verpflegung ausblenden', default: false, category: 'alarm'},
+        {key: 'HIDE_PATIENT_BUTTON_FORM', label: 'Patienten-Button-Bereich ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_PATIENT_SPOILER', label: 'Spoiler für Patientenbereich (ab X Patienten) erzeugen', default: false, category: 'alarm'},
+        {key: 'PATIENT_SPOILER_MIN_COUNT', label: 'Spoiler ab so vielen Patienten (Zahl)', default: 10, type: 'number', category: 'alarm'},
+        {key: 'ENABLE_AAO_SPOILER', label: 'Spoiler für AAO-Einträge ohne Kategorie erzeugen', default: false, category: 'alarm'},
+        {key: 'ENABLE_TABS_SPOILER', label: 'Spoiler für AAO-Tabs erzeugen', default: false, category: 'alarm'},
+        {key: 'ENABLE_AAO_COLUMN_SPOILERS', label: 'Spoiler für die AAO-Einträge erzeugen', default: false, category: 'alarm'},
+        {key: 'ENABLE_MISSION_SHARED_INFOBOX', label: 'Info-Box „Einsatz geteilt von...“ ausblenden', default: false, category: 'alarm'},
+        {key: 'HIDE_PULLRIGHT_BUTTON', label: 'Anfahrten abbrechen Button ausblenden', default: false, category: 'alarm' },
+        {key: 'ENABLE_VEHICLE_SPOILER', label: 'Spoiler für anfahrende Fahrzeuge und Fahrzeuge am Einsatzort erzeugen', default: false, category: 'alarm'},
+        {key: 'HIDE_BUTTON_GROUP_PULL_RIGHT', label: 'Buttons "Alle Fahrzeuge Rückalamieren" und "Eigenen RD Rückalamieren" ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_MAX_DISTANCE_GROUP_SPOILER', label: 'Spoiler für "Maximale Entfernung" erzeugen', default: false, category: 'alarm'},
+        {key: 'ENABLE_RELEASE_ALL_INFOBOX', label: 'Info-Box „Wirklich alle entlassen?“ ausblenden', default: false, category: 'alarm'},
+        {key: 'HIDE_AMOUNT_OF_PEOPLE', label: 'Personenzähler ausblenden', default: false, category: 'alarm'},
+        {key: 'ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER', label: 'Spoiler für „Freie Fahrzeugliste“ erzeugen', default: false, category: 'alarm'},
 
-    // ISO-Woche berechnen
-    function getISOWeek(date) {
-        const target = new Date(date.valueOf());
-        const dayNr = (date.getDay() + 6) % 7;
-        target.setDate(target.getDate() - dayNr + 3);
-        const firstThursday = new Date(target.getFullYear(), 0, 4);
-        const diff = (target - firstThursday) / 86400000;
-        return 1 + Math.floor(diff / 7);
-    }
+        // === Sonstiges === \\
+        {key: 'HIDE_EVENT_INFO', label: 'Eventinfo in der Einsatzliste ausblenden', default: false, category: 'other'},
+        {key: 'ENABLE_BREADCRUMB', label: 'Navigationsleiste ausblenden', default: false, category: 'other'},
+        {key: 'HIDE_PRISONERS_INFOBOX', label: 'Gewahrsamsbereich (Infobox) ausblenden', default: false, category: 'other'},
+        {key: 'HIDE_PRISONERS_TABLE', label: 'Gewahrsamsbereich (Tabelle Wachenansicht) ausblenden', default: false, category: 'other'},
+        {key: 'ENABLE_VEHICLE_TABLE_SPOILER', label: 'Spoiler für Fahrzeugtabelle (Wachenübersicht) erzeugen', default: false, category: 'other'},
+        {key: 'HIDE_KTW_NO_TRANSPORTS', label: 'Info-Box „Keine KTW-Transporte vorhanden“ ausblenden', default: false, category: 'other'},
+        {key: 'HIDE_RENAME_BUTTONS_SECTION', label: 'Buttons im LSSM V3 Renamemanager ausblenden', default: false, category: 'other'},
+        {key: 'HIDE_NAME_TOO_LONG_SECTION', label: 'Hinweis bei zu langem Namen (LSSM V3 Renamemanger) ausblenden', default: false, category: 'other'},
+        {key: 'ENABLE_SPEECH_REQUEST_INFOBOX', label: 'Sprechwunsch-Infobox (blau) ausblenden', default: false, category: 'other'},
 
-    (function injectStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-/* Gesamtcontainer */
-.stats-container {
-    margin-top: 15px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
-    gap: 15px;
-    font-family: Arial, sans-serif;
-    color: white;
-}
+    ];
 
-/* Einzelne Box */
-.stat-block {
-    display: flex;
-    align-items: center;
-    background: #222;
-    padding: 12px 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    user-select: none;
-}
-
-/* Inhalt der Box */
-.stat-content {
-    flex-grow: 1;
-}
-
-/* Überschrift (z.B. "Einsätze") */
-.stat-label {
-    font-weight: 700;
-    font-size: 1.5rem; /* Größe der Block-Überschrift */
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-}
-
-/* Icons links/rechts neben der Überschrift */
-.stat-icon-left,
-.stat-icon-right {
-    font-size: 16px;
-}
-
-/* Bereich für Werte und Worte */
-.stat-values {
-    font-size: 1.4rem; /* EINHEITLICHE Schriftgröße für Worte & Zahlen */
-    line-height: 1.5;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    row-gap: 5px;
-}
-
-/* Worte wie "Heute", "Diese Woche" etc. */
-.stat-values .label {
-    justify-self: start;
-    font-size: inherit; /* Stellt sicher, dass die Worte exakt die gleiche Größe wie die Zahlen haben */
-    font-weight: 400;   /* Optional: Kannst du auf 700 setzen, wenn du die Worte fett möchtest */
-}
-
-/* Zahlenwerte */
-.stat-values .value {
-    justify-self: end;
-    font-size: inherit; /* Zahlen ebenfalls gleich groß */
-    font-weight: 400;   /* Optional: Kannst du auf 700 setzen, wenn du die Zahlen fett möchtest */
-}
-    `;
-        document.head.appendChild(style);
-    })();
-
-    function createEarningsAndMissionsContainer(fallbackMode = false) {
-        if (document.getElementById('average_earnings_display')) return;
-
-        let containerParent = null;
-        let insertBeforeNode = null;
-
-        const catButtonContainer = document.getElementById('categoryButtonContainer');
-        if (catButtonContainer && catButtonContainer.parentNode) {
-            containerParent = catButtonContainer.parentNode;
-            insertBeforeNode = catButtonContainer.nextSibling;
-        } else if (fallbackMode) {
-            const searchInput = document.getElementById('search_input_field_missions');
-            if (searchInput && searchInput.parentNode) {
-                containerParent = searchInput.parentNode;
-                insertBeforeNode = searchInput;
+    // === EINSTELLUNGEN LADEN/SPEICHERN === \\
+    function loadSettings() {
+        const saved = JSON.parse(localStorage.getItem('multiausblender_settings') || '{}');
+        OPTIONS.forEach(opt => {
+            if (typeof saved[opt.key] !== 'undefined') {
+                window[opt.key] = saved[opt.key];
+            } else {
+                window[opt.key] = opt.default;
             }
-        }
-        if (!containerParent) return;
+        });
+    }
 
-        // Hilfsfunktion für einzelne Statistikblöcke
-        function createStatBlock(id, colorClass, icon, label) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'stat-block ' + colorClass;
-            wrapper.id = id;
+    function saveSettings() {
+        const settings = {};
+        OPTIONS.forEach(opt => settings[opt.key] = window[opt.key]);
+        localStorage.setItem('multiausblender_settings', JSON.stringify(settings));
+    }
 
-            wrapper.innerHTML = `
-            <div class="stat-content">
-            <div class="stat-label">
-                <span class="stat-icon-left">${icon}</span>
-                ${label}
-                <span class="stat-icon-right">${icon}</span>
-            </div>
-            <div class="stat-values"></div>
-            </div>
-        `;
-            return wrapper;
-        }
+    // === Farbschema erkennen & setzen === \\
+    function getColorMode() {
+        // 1. User-Einstellung prüfen
+        let mode = localStorage.getItem('multiausblender_ui_mode');
+        if (mode === 'dark' || mode === 'light') return mode;
+        // 2. Systemeinstellung prüfen
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
 
-        const earningsContainer = document.createElement('section');
-        earningsContainer.id = 'average_earnings_display';
-        earningsContainer.className = 'stats-container';
+    function setColorMode(mode) {
+        localStorage.setItem('multiausblender_ui_mode', mode);
+    }
 
-        earningsContainer.appendChild(createStatBlock('today_missions_wrapper', 'red', '🚨', 'Einsätze'));
-        earningsContainer.appendChild(createStatBlock('today_earnings_wrapper', 'green', '💰', 'Verdienst'));
-        earningsContainer.appendChild(createStatBlock('patients_count_wrapper', 'yellow', '🩺', 'Patienten'));
-        earningsContainer.appendChild(createStatBlock('prisoners_count_wrapper', 'orange', '🔒', 'Gefangene'));
-
-        if (insertBeforeNode) {
-            containerParent.insertBefore(earningsContainer, insertBeforeNode);
+    function getModalStyles(mode) {
+        if (mode === 'dark') {
+            return {
+                background: '#18181c',
+                foreground: '#fff',
+                border: '#333',
+                overlay: 'rgba(0,0,0,.8)',
+                inputBg: '#23232a'
+            };
         } else {
-            containerParent.appendChild(earningsContainer);
+            return {
+                background: '#fff',
+                foreground: '#18181c',
+                border: '#ccc',
+                overlay: 'rgba(0,0,0,.5)',
+                inputBg: '#f8f8fa'
+            };
         }
     }
 
-    async function updateAverageEarnings() {
-        const finishedElements = document.querySelectorAll('.missionSideBarEntry.mission_deleted');
+    // === GUI: EINSTELLUNGSFENSTER === \\
+    function createSettingsGUI() {
+        let navbarRight = document.querySelector('.flex-row.flex-nowrap.hidden-xs.navbar-right');
+        if (!navbarRight) return;
+        if (document.getElementById('multiausblender-settings-btn')) return;
 
-        let todayEarnings = await GM.getValue('today_earnings', 0);
-        let weekEarnings = await GM.getValue('week_earnings', 0);
-        let monthEarnings = await GM.getValue('month_earnings', 0);
-        let yearEarnings = await GM.getValue('year_earnings', 0);
-        let countedMissions = await GM.getValue('counted_missions', []);
-        let lastSavedDate = await GM.getValue('last_saved_date', '');
-        let lastSavedWeek = await GM.getValue('last_saved_week', '');
-        let lastSavedMonth = await GM.getValue('last_saved_month', '');
-        let lastSavedYear = await GM.getValue('last_saved_year', '');
-        if (!Array.isArray(countedMissions)) countedMissions = [];
+        const btn = document.createElement('button');
+        btn.id = 'multiausblender-settings-btn';
+        btn.type = 'button';
+        btn.className = 'btn btn-default btn-xs navbar-btn hidden-xs';
+        btn.style.marginRight = '8px';
+        btn.innerHTML = '<span class="glyphicon glyphicon-cog"></span> Multiausblender';
 
-        const today = new Date();
-        const todayDateString = today.toISOString().slice(0, 10);
-        const currentMonth = today.toISOString().slice(0, 7);
-        const currentYear = today.getFullYear().toString();
-        const currentWeek = getISOWeek(today);
-
-        if (lastSavedDate !== todayDateString) {
-            todayEarnings = 0;
-            countedMissions = [];
-            await GM.setValue('today_earnings', 0);
-            await GM.setValue('counted_missions', []);
-            await GM.setValue('last_saved_date', todayDateString);
-
-            if (lastSavedWeek !== currentWeek.toString()) {
-                weekEarnings = 0;
-                await GM.setValue('week_earnings', 0);
-                await GM.setValue('last_saved_week', currentWeek.toString());
-            }
-            if (lastSavedMonth !== currentMonth) {
-                monthEarnings = 0;
-                await GM.setValue('month_earnings', 0);
-                await GM.setValue('last_saved_month', currentMonth);
-            }
-            if (lastSavedYear !== currentYear) {
-                yearEarnings = 0;
-                await GM.setValue('year_earnings', 0);
-                await GM.setValue('last_saved_year', currentYear);
-            }
+        const helpBtn = navbarRight.querySelector('#mission_help');
+        if (helpBtn) {
+            navbarRight.insertBefore(btn, helpBtn);
+        } else {
+            navbarRight.appendChild(btn);
         }
 
-        for (const element of finishedElements) {
-            const elementId = element.id;
-            if (!countedMissions.includes(elementId)) {
-                // Falls missionData genutzt wird:
-                const missionId = element.getAttribute('mission_type_id');
-                const additiveOverlay = element.getAttribute('data-additive-overlays');
-                let credits = 250;
-                if (missionId && missionData[missionId]) {
-                    credits = missionData[missionId].base_credits ?? 250;
-                    if (additiveOverlay && missionData[missionId].overlays && missionData[missionId].overlays[additiveOverlay]) {
-                        credits = missionData[missionId].overlays[additiveOverlay];
+        btn.onclick = () => {
+            let modal = document.getElementById('multiausblender-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                return;
+            }
+
+            const colorMode = getColorMode();
+            const style = getModalStyles(colorMode);
+
+            modal = document.createElement('div');
+            modal.id = 'multiausblender-modal';
+            modal.style = `
+            position:fixed;
+            top:0;left:0;
+            width:100vw;
+            height:100vh;
+            z-index:10000;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:${style.overlay};
+        `;
+
+            let html = `
+            <div id="multiausblender-modal-content" style="
+                background:${style.background};
+                color:${style.foreground};
+                padding:24px;
+                border-radius:8px;
+                min-width:320px;
+                max-width:96vw;
+                max-height:90vh;
+                overflow-y:auto;
+                border:1px solid ${style.border};
+                box-shadow: 0 2px 16px 0 ${style.overlay};
+            ">
+            <h3 style="margin-top:0;">Multiausblender Einstellungen</h3>
+            <form id="multiausblender-form">
+                <fieldset style="margin-bottom:15px;">
+                    <legend style="font-size:16px;font-weight:bold;margin-bottom:10px;color:${style.foreground};">
+                         🚨 Alarmmaske
+                    </legend>`;
+
+            OPTIONS.filter(opt => opt.category === 'alarm').forEach(opt => {
+                const id = 'multiausblender_' + opt.key;
+                html += opt.type === 'number'
+                    ? `
+                <div style="margin-bottom:10px;">
+                    <label for="${id}">${opt.label}:</label>
+                    <input type="number" id="${id}" value="${window[opt.key]}" min="1"
+                        style="width:60px;background:${style.inputBg};color:${style.foreground};border:1px solid ${style.border};" />
+                </div>`
+                : `
+                <div style="margin-bottom:5px;">
+                    <input type="checkbox" id="${id}" ${window[opt.key] ? 'checked' : ''} />
+                    <label for="${id}">${opt.label}</label>
+                </div>`;
+            });
+
+            html += `
+                </fieldset>
+                <fieldset>
+                    <legend style="font-size:16px;font-weight:bold;margin-bottom:10px;color:${style.foreground};">
+                           📝 Sonstiges
+                    </legend>`;
+
+            OPTIONS.filter(opt => opt.category === 'other').forEach(opt => {
+                const id = 'multiausblender_' + opt.key;
+                html += opt.type === 'number'
+                    ? `
+                <div style="margin-bottom:10px;">
+                    <label for="${id}">${opt.label}:</label>
+                    <input type="number" id="${id}" value="${window[opt.key]}" min="1"
+                        style="width:60px;background:${style.inputBg};color:${style.foreground};border:1px solid ${style.border};" />
+                </div>`
+                : `
+                <div style="margin-bottom:5px;">
+                    <input type="checkbox" id="${id}" ${window[opt.key] ? 'checked' : ''} />
+                    <label for="${id}">${opt.label}</label>
+                </div>`;
+            });
+
+            html += `
+                </fieldset>
+            </form>
+            <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <label style="font-size:13px;cursor:pointer;">
+                        <input type="radio" name="ui_mode" value="auto" ${!localStorage.getItem('multiausblender_ui_mode') ? 'checked' : ''} style="vertical-align:middle;">
+                        System
+                    </label>
+                    <label style="font-size:13px;cursor:pointer;margin-left:7px;">
+                        <input type="radio" name="ui_mode" value="light" ${localStorage.getItem('multiausblender_ui_mode') === 'light' ? 'checked' : ''} style="vertical-align:middle;">
+                        Hell
+                    </label>
+                    <label style="font-size:13px;cursor:pointer;margin-left:7px;">
+                        <input type="radio" name="ui_mode" value="dark" ${localStorage.getItem('multiausblender_ui_mode') === 'dark' ? 'checked' : ''} style="vertical-align:middle;">
+                        Dunkel
+                    </label>
+                </div>
+                <div>
+                    <button id="multiausblender-save" class="btn btn-success">Speichern</button>
+                    <button id="multiausblender-cancel" class="btn btn-danger" type="button">Abbrechen</button>
+                </div>
+            </div>
+        </div>`;
+
+            modal.innerHTML = html;
+            document.body.appendChild(modal);
+
+            // Farbschema-Umschalter
+            modal.querySelectorAll('input[name="ui_mode"]').forEach(radio => {
+                radio.onchange = e => {
+                    const val = e.target.value;
+                    if (val === 'auto') {
+                        localStorage.removeItem('multiausblender_ui_mode');
+                    } else {
+                        setColorMode(val);
                     }
-                }
-                todayEarnings += credits;
-                weekEarnings += credits;
-                monthEarnings += credits;
-                yearEarnings += credits;
-                countedMissions.push(elementId);
-            }
+                    modal.remove();
+                    btn.onclick(); // Neu öffnen mit neuem Style
+                };
+            });
+
+            // Speichern
+            modal.querySelector('#multiausblender-save').onclick = e => {
+                e.preventDefault();
+                OPTIONS.forEach(opt => {
+                    const id = 'multiausblender_' + opt.key;
+                    if (opt.type === 'number') {
+                        const val = parseInt(modal.querySelector('#' + id).value, 10);
+                        window[opt.key] = isNaN(val) ? opt.default : val;
+                    } else {
+                        window[opt.key] = !!modal.querySelector('#' + id).checked;
+                    }
+                });
+                saveSettings();
+                modal.style.display = 'none';
+                window.top.location.reload();
+            };
+
+            // Abbrechen
+            modal.querySelector('#multiausblender-cancel').onclick = () => {
+                modal.style.display = 'none';
+            };
+        };
+    }
+
+    // === HILFSFUNKTIONEN FÜR ALLE OPTIONEN === \\
+    function observeAndToggleEventInfo() {
+        const existingStyle = document.getElementById('style-hide-eventInfo');
+        if (existingStyle) existingStyle.remove();
+
+        const style = document.createElement('style');
+        style.id = 'style-hide-eventInfo';
+
+        if (window.HIDE_EVENT_INFO) {
+            style.textContent = `#eventInfo { display: none !important; }`;
+        } else {
+            style.textContent = `#eventInfo { display: block !important; }`;
         }
+        document.head.appendChild(style);
 
-        await GM.setValue('today_earnings', todayEarnings);
-        await GM.setValue('week_earnings', weekEarnings);
-        await GM.setValue('month_earnings', monthEarnings);
-        await GM.setValue('year_earnings', yearEarnings);
-        await GM.setValue('counted_missions', countedMissions);
+        const enforceDisplay = () => {
+            const box = document.querySelector('#eventInfo');
+            if (box) {
+                box.style.setProperty('display', window.HIDE_EVENT_INFO ? 'none' : 'block', 'important');
+            }
+        };
 
-        const todayEarningsWrapper = document.querySelector('#today_earnings_wrapper .stat-values');
-        if (todayEarningsWrapper) {
-            const currentMonthName = new Date().toLocaleString('de-DE', { month: 'long' });
-            const currentYear = new Date().getFullYear();
-            todayEarningsWrapper.innerHTML = `
-    <div class="label">Heute:</div><div class="value">${todayEarnings.toLocaleString()} Credits</div>
-    <div class="label">Diese Woche:</div><div class="value">${weekEarnings.toLocaleString()} Credits</div>
-    <div class="label">Im Monat ${currentMonthName}:</div><div class="value">${monthEarnings.toLocaleString()} Credits</div>
-    <div class="label">Im Jahr ${currentYear}:</div><div class="value">${yearEarnings.toLocaleString()} Credits</div>
-`;
+        enforceDisplay();
+        const observerTarget = document.getElementById('missions_outer') || document.body;
+        const observer = new MutationObserver(() => { enforceDisplay(); });
+        observer.observe(observerTarget, {childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class']});
+    }
 
+    // === Hilfsfunktion ===
+    function safeToggleDisplay(el, shouldShow) {
+        if (!el) return;
+        if (el.hasAttribute('hidden')) return;
+        el.style.setProperty('display', shouldShow ? 'block' : 'none', 'important');
+    }
+
+    function toggleBreadcrumb() {
+        const breadcrumb = document.querySelector('.breadcrumb');
+        if (!breadcrumb) return;
+        if (!window.ENABLE_BREADCRUMB) {
+            breadcrumb.style.removeProperty('display');
+        } else {
+            breadcrumb.style.setProperty('display', 'none', 'important');
         }
     }
 
-    async function updateMissionCounts() {
-        const accessedElements = document.querySelectorAll('.missionSideBarEntry .glyphicon-user:not(.hidden)');
-        let todayMissions = await GM.getValue('today_missions', 0);
-        let weekMissions = await GM.getValue('week_missions', 0);
-        let monthMissions = await GM.getValue('month_missions', 0);
-        let yearMissions = await GM.getValue('year_missions', 0);
-        let countedFinishedMissions = await GM.getValue('counted_finished_missions', []);
-        let lastSavedDate = await GM.getValue('last_saved_date_missions', '');
-        let lastSavedWeek = await GM.getValue('last_saved_week_missions', '');
-        let lastSavedMonth = await GM.getValue('last_saved_month_missions', '');
-        let lastSavedYear = await GM.getValue('last_saved_year_missions', '');
-        if (!Array.isArray(countedFinishedMissions)) countedFinishedMissions = [];
-
-        const today = new Date();
-        const todayDateString = today.toISOString().slice(0, 10);
-        const currentMonth = today.toISOString().slice(0, 7);
-        const currentYear = today.getFullYear().toString();
-        const currentWeek = getISOWeek(today);
-        const currentWeekYearKey = `${currentYear}-KW${currentWeek.toString().padStart(2, '0')}`;
-
-        if (lastSavedDate !== todayDateString) {
-            todayMissions = 0;
-            countedFinishedMissions = [];
-            await GM.setValue('today_missions', 0);
-            await GM.setValue('counted_finished_missions', []);
-            await GM.setValue('last_saved_date_missions', todayDateString);
-
-            if (lastSavedWeek !== currentWeekYearKey) {
-                weekMissions = 0;
-                await GM.setValue('week_missions', 0);
-                await GM.setValue('last_saved_week_missions', currentWeekYearKey);
-            }
-            if (lastSavedMonth !== currentMonth) {
-                monthMissions = 0;
-                await GM.setValue('month_missions', 0);
-                await GM.setValue('last_saved_month_missions', currentMonth);
-            }
-            if (lastSavedYear !== currentYear) {
-                yearMissions = 0;
-                await GM.setValue('year_missions', 0);
-                await GM.setValue('last_saved_year_missions', currentYear);
-            }
-        }
-
-        for (const element of accessedElements) {
-            const missionEntry = element.closest('.missionSideBarEntry');
-            if (!missionEntry) continue;
-            const elementId = missionEntry.id;
-            if (!countedFinishedMissions.includes(elementId)) {
-                todayMissions++;
-                weekMissions++;
-                monthMissions++;
-                yearMissions++;
-                countedFinishedMissions.push(elementId);
-            }
-        }
-
-        await GM.setValue('today_missions', todayMissions);
-        await GM.setValue('week_missions', weekMissions);
-        await GM.setValue('month_missions', monthMissions);
-        await GM.setValue('year_missions', yearMissions);
-        await GM.setValue('counted_finished_missions', countedFinishedMissions);
-
-        const missionCountsWrapper = document.querySelector('#today_missions_wrapper .stat-values');
-        if (missionCountsWrapper) {
-            const currentMonthName = new Date().toLocaleString('de-DE', { month: 'long' });
-            const currentYear = new Date().getFullYear();
-            missionCountsWrapper.innerHTML = `
-    <div class="label">Heute:</div><div class="value">${todayMissions} Stück</div>
-    <div class="label">Diese Woche:</div><div class="value">${weekMissions} Stück</div>
-    <div class="label">Im Monat ${currentMonthName}:</div><div class="value">${monthMissions} Stück</div>
-    <div class="label">Im Jahr ${currentYear}:</div><div class="value">${yearMissions} Stück</div>
-`;
-
-        }
+    function fixMissionHeaderInfo() {
+        if (!window.FIX_MISSION_HEADER_INFO) return;
+        const header = document.querySelector('.mission_header_info.row');
+        if (!header || header.dataset.fixed === "true") return;
+        header.style.position = "sticky";
+        header.style.top = "0";
+        header.style.zIndex = "10";
+        header.dataset.fixed = "true";
     }
 
-    async function updatePatientsAndPrisonersCount() {
-        // Werte laden
-        let todayPatients = await GM.getValue('today_patients', 0);
-        let weekPatients = await GM.getValue('week_patients', 0);
-        let monthPatients = await GM.getValue('month_patients', 0);
-        let yearPatients = await GM.getValue('year_patients', 0);
-        let countedPatients = await GM.getValue('counted_patients', []);
+    // === Überarbeitete hideOptionalElements ===
+    function hideOptionalElements() {
+        // Erfolgsmeldungen ausblenden
+        if (window.ENABLE_SUCCESS_ALERT) {
+            document.querySelectorAll('.alert-success').forEach(el => {
+                el.style.setProperty('display', 'none', 'important');
+            });
+        }
 
-        let todayPrisoners = await GM.getValue('today_prisoners', 0);
-        let weekPrisoners = await GM.getValue('week_prisoners', 0);
-        let monthPrisoners = await GM.getValue('month_prisoners', 0);
-        let yearPrisoners = await GM.getValue('year_prisoners', 0);
-        let countedPrisoners = await GM.getValue('counted_prisoners', []);
+        // Fehlende Fahrzeuge, Betreuung, Sprechwunsch-Infoboxen (alert-danger) behandeln
+        document.querySelectorAll('.alert.alert-danger').forEach(el => {
+            // Leere oder vom Spiel ausgeblendete Boxen entfernen
+            if (el.hasAttribute('hidden') || el.textContent.trim() === '') {
+                el.remove();
+                return;
+            }
+            if (el.innerText.includes('Fehlende Fahrzeuge')) {
+                safeToggleDisplay(el, !window.ENABLE_MISSING_ALERT);
+            }
+            if (el.innerText.includes('Benötigte Betreuungs- und Verpflegungsausstattung')) {
+                safeToggleDisplay(el, !window.ENABLE_CARE_AND_SUPPLY);
+            }
+            if (el.innerText.includes('Ein Fahrzeug hat einen Sprechwunsch!')) {
+                safeToggleDisplay(el, !window.ENABLE_SPEECH_REQUEST_ALERT);
+            }
+            if (el.innerText.includes('Du hast keine freien Stellplätze. Du musst erst die Stufe der Wache erweitern.')) {
+                el.style.setProperty('display', 'none', 'important');
+            }
+        });
 
-        // Patienten-Elemente finden: nur die mit class="col-md-6 small" und id beginnend mit "patient_"
-        const patientElements = document.querySelectorAll('.col-md-6.small[id^="patient_"]');
-        for (const patientEl of patientElements) {
-            const patientId = patientEl.id;
-            if (!countedPatients.includes(patientId)) {
-                todayPatients++;
-                weekPatients++;
-                monthPatients++;
-                yearPatients++;
-                countedPatients.push(patientId);
+        // alert-info Boxen (z.B. Sprechwunsch, geteilte Einsätze, alle entlassen)
+        document.querySelectorAll('.alert.alert-info').forEach(el => {
+            if (el.hasAttribute('hidden') || el.textContent.trim() === '') {
+                el.remove();
+                return;
+            }
+            if (el.innerText.includes('Sprechwunsch')) {
+                safeToggleDisplay(el, !window.ENABLE_SPEECH_REQUEST_INFOBOX);
+            }
+            if (el.innerText.includes('Dieser Einsatz wurde von')) {
+                safeToggleDisplay(el, !window.ENABLE_MISSION_SHARED_INFOBOX);
+            }
+            if (el.innerText.includes('Wirklich alle entlassen?')) {
+                safeToggleDisplay(el, !window.ENABLE_RELEASE_ALL_INFOBOX);
+            }
+        });
+
+        // Bereich: Name zu lang Hinweis (LSSM V3 Renamemanager)
+        const nameTooLongDiv = document.getElementById('lssm_renameFzSettings_nameToLongDiv');
+        if (nameTooLongDiv && nameTooLongDiv.classList.contains('alert-danger')) {
+            // Wenn leer, löschen
+            if (nameTooLongDiv.textContent.trim() === '') {
+                nameTooLongDiv.remove();
+            } else if (window.HIDE_NAME_TOO_LONG_SECTION) {
+                nameTooLongDiv.style.setProperty('display', 'none', 'important');
+            }
+            // KEIN else-Zweig! Nicht sichtbar machen, wenn Option nicht aktiv!
+        }
+
+        // Bereich: "prisoners" - Infobox (alert-info)
+        if (window.HIDE_PRISONERS_INFOBOX) {
+            const prisonersBox = document.querySelector('#prisoners .alert.alert-info');
+            if (prisonersBox) prisonersBox.style.setProperty('display', 'none', 'important');
+        }
+
+        // Bereich: "prisoners" - Tabelle (table-striped)
+        if (window.HIDE_PRISONERS_TABLE) {
+            const prisonersTable = document.querySelector('#prisoners .table.table-striped');
+            if (prisonersTable) prisonersTable.style.setProperty('display', 'none', 'important');
+        }
+
+        // Bereich: "ktw_no_transports" - Hinweisbox
+        const ktwNoTransportsBox = document.getElementById('ktw_no_transports');
+        if (ktwNoTransportsBox && ktwNoTransportsBox.classList.contains('alert-info')) {
+            ktwNoTransportsBox.style.setProperty('display', window.HIDE_KTW_NO_TRANSPORTS ? 'none' : 'block', 'important');
+        }
+
+        // Patienten-Button-Bereich
+        const patientButtonForm = document.getElementById('patient_button_form');
+        if (patientButtonForm) {
+            if (patientButtonForm.hasAttribute('hidden') || patientButtonForm.textContent.trim() === '') {
+                patientButtonForm.remove();
+            } else {
+                safeToggleDisplay(patientButtonForm, !window.HIDE_PATIENT_BUTTON_FORM);
             }
         }
 
-        // Gefangene-Elemente finden: alle mit id beginnend mit "prisoner_"
-        const prisonerElements = document.querySelectorAll('[id^="prisoner_"]');
-        for (const prisonerEl of prisonerElements) {
-            const prisonerId = prisonerEl.id;
-            if (!countedPrisoners.includes(prisonerId)) {
-                todayPrisoners++;
-                weekPrisoners++;
-                monthPrisoners++;
-                yearPrisoners++;
-                countedPrisoners.push(prisonerId);
+        // Patienten-Anforderungen (rote Box) unabhängig ausblenden
+        const patientRequirementsBox = document.getElementById('patient_missing_requirements');
+        if (patientRequirementsBox) {
+            safeToggleDisplay(patientRequirementsBox, !window.HIDE_PATIENT_BUTTON_FORM);
+        }
+
+        // Einzelnen Button (z. B. "btn-default btn-xs pull-right") ein-/ausblenden
+        const rightButton = document.querySelector('.btn.btn-default.btn-xs.pull-right');
+        if (rightButton) {
+            rightButton.style.setProperty('display', window.HIDE_PULLRIGHT_BUTTON ? 'none' : 'inline-block', 'important');
+        }
+
+        // Bereich: Personenzähler (amount_of_people) ein-/ausblenden
+        const amountOfPeople = document.getElementById('amount_of_people');
+        if (amountOfPeople) {
+            amountOfPeople.style.setProperty('display', window.HIDE_AMOUNT_OF_PEOPLE ? 'none' : 'block', 'important');
+        }
+
+        // Button-Gruppe für Rückalarmieren ein-/ausblenden
+        document.querySelectorAll('.btn-group.pull-right').forEach(el => {
+            const textContent = el.innerText.toLowerCase();
+            if (textContent.includes('rückalarmieren')) {
+                el.style.setProperty('display', window.HIDE_BUTTON_GROUP_PULL_RIGHT ? 'none' : 'block', 'important');
             }
+        });
+
+        // Bereich: Rename-Buttons (LSSM V3 Renamemanager) ein-/ausblenden
+        const renameButtons = document.getElementById('lssm_renameFzSettings_buttons');
+        if (renameButtons) {
+            renameButtons.style.setProperty('display', window.HIDE_RENAME_BUTTONS_SECTION ? 'none' : 'block', 'important');
         }
 
-        // Werte speichern
-        await GM.setValue('today_patients', todayPatients);
-        await GM.setValue('week_patients', weekPatients);
-        await GM.setValue('month_patients', monthPatients);
-        await GM.setValue('year_patients', yearPatients);
-        await GM.setValue('counted_patients', countedPatients);
-
-        await GM.setValue('today_prisoners', todayPrisoners);
-        await GM.setValue('week_prisoners', weekPrisoners);
-        await GM.setValue('month_prisoners', monthPrisoners);
-        await GM.setValue('year_prisoners', yearPrisoners);
-        await GM.setValue('counted_prisoners', countedPrisoners);
-
-        // Anzeige aktualisieren
-        const patientsCountWrapper = document.querySelector('#patients_count_wrapper .stat-values');
-        if (patientsCountWrapper) {
-            const currentMonthName = new Date().toLocaleString('de-DE', { month: 'long' });
-            const currentYear = new Date().getFullYear();
-            patientsCountWrapper.innerHTML = `
-    <div class="label">Heute:</div><div class="value">${todayPatients} Stück</div>
-    <div class="label">Diese Woche:</div><div class="value">${weekPatients} Stück</div>
-    <div class="label">Im Monat ${currentMonthName}:</div><div class="value">${monthPatients} Stück</div>
-    <div class="label">Im Jahr ${currentYear}:</div><div class="value">${yearPatients} Stück</div>
-`;
-        }
-
-        const prisonersCountWrapper = document.querySelector('#prisoners_count_wrapper .stat-values');
-        if (prisonersCountWrapper) {
-            const currentMonthName = new Date().toLocaleString('de-DE', { month: 'long' });
-            const currentYear = new Date().getFullYear();
-            prisonersCountWrapper.innerHTML = `
-    <div class="label">Heute:</div><div class="value">${todayPrisoners} Stück</div>
-    <div class="label">Diese Woche:</div><div class="value">${weekPrisoners} Stück</div>
-    <div class="label">Im Monat ${currentMonthName}:</div><div class="value">${monthPrisoners} Stück</div>
-    <div class="label">Im Jahr ${currentYear}:</div><div class="value">${yearPrisoners} Stück</div>
-`;
-        }
     }
 
-    function ensureStatsContainerExists() {
-        if (!document.getElementById('average_earnings_display')) {
-            createEarningsAndMissionsContainer(false);
+    function addSpoilerButtonForPatientBlocks() {
+        if (!window.ENABLE_PATIENT_SPOILER) return;
+        let patientBlocks = document.querySelectorAll('.mission_patient');
+        if (patientBlocks.length < window.PATIENT_SPOILER_MIN_COUNT) return;
+        if (document.getElementById('togglePatientBlockButton')) return;
+
+        let parent = patientBlocks[0].parentNode;
+        let wrapper = document.createElement("div");
+        wrapper.style.marginBottom = "10px";
+
+        let button = document.createElement("button");
+        button.id = "togglePatientBlockButton";
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.innerText = "Patienten anzeigen";
+
+        patientBlocks.forEach(block => block.style.display = "none");
+
+        button.addEventListener("click", function () {
+            const visible = patientBlocks[0].style.display !== "none";
+            patientBlocks.forEach(block => block.style.display = visible ? "none" : "block");
+            button.innerText = visible ? "Patienten anzeigen" : "Patienten ausblenden";
+        });
+
+        wrapper.appendChild(button);
+        parent.insertBefore(wrapper, patientBlocks[0]);
+    }
+
+    function addSpoilerButtonToAAO(iframe) {
+        let iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!iframeDoc) return;
+        let target = iframeDoc.getElementById("mission_aao_no_category");
+        if (!target || target.dataset.spoilerAdded) return;
+        target.dataset.spoilerAdded = "true";
+
+        if (!window.ENABLE_AAO_SPOILER) return;
+
+        let button = document.createElement("button");
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "10px";
+        button.innerText = "Einzelfahrzeuge anzeigen";
+
+        target.style.display = "none";
+
+        button.addEventListener("click", function () {
+            const visible = target.style.display !== "none";
+            target.style.display = visible ? "none" : "block";
+            button.innerText = visible ? "Einzelfahrzeuge anzeigen" : "Einzelfahrzeuge ausblenden";
+        });
+
+        target.parentNode.insertBefore(button, target);
+    }
+
+    function addSpoilerButtonForTabs() {
+        if (!window.ENABLE_TABS_SPOILER) return;
+        let tabs = document.getElementById("aao-tabs");
+        let content = document.querySelector(".tab-content");
+        if (!tabs || !content || document.getElementById("toggleTabsButton")) return;
+
+        let button = document.createElement("button");
+        button.id = "toggleTabsButton";
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "10px";
+        button.innerText = "AAO-Tabs anzeigen";
+
+        tabs.style.display = "none";
+        content.style.display = "none";
+
+        button.addEventListener("click", function () {
+            const visible = tabs.style.display !== "none";
+            tabs.style.display = content.style.display = visible ? "none" : "block";
+            button.innerText = visible ? "AAO-Tabs anzeigen" : "AAO-Tabs ausblenden";
+        });
+
+        tabs.parentNode.insertBefore(button, tabs);
+    }
+
+    function addSpoilerButtonsToAaoColumns() {
+        if (!window.ENABLE_AAO_COLUMN_SPOILERS) return;
+        const columns = document.querySelectorAll('[id^="aao_category_"] .col-sm-2.col-xs-4');
+        columns.forEach((col, index) => {
+            if (col.dataset.spoilerAdded) return;
+            col.dataset.spoilerAdded = 'true';
+            const children = Array.from(col.children);
+            if (children.length === 0) return;
+            const button = document.createElement('button');
+            button.classList.add('btn', 'btn-xs', 'btn-primary');
+            button.style.marginBottom = '5px';
+            button.innerText = 'Einträge anzeigen';
+            const contentWrapper = document.createElement('div');
+            contentWrapper.style.display = 'none';
+            children.forEach(child => contentWrapper.appendChild(child));
+            button.addEventListener('click', () => {
+                const isVisible = contentWrapper.style.display !== 'none';
+                contentWrapper.style.display = isVisible ? 'none' : 'block';
+                button.innerText = isVisible ? 'Einträge anzeigen' : 'Einträge ausblenden';
+            });
+            col.appendChild(button);
+            col.appendChild(contentWrapper);
+        });
+    }
+
+    function addSpoilerButtonForVehicleTable() {
+        if (!window.ENABLE_VEHICLE_SPOILER) return false;
+        let vehicleTable = document.getElementById('mission_vehicle_at_mission');
+        if (!vehicleTable || vehicleTable.dataset.spoilerAdded) return false;
+        vehicleTable.dataset.spoilerAdded = "true";
+        let button = document.createElement("button");
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "10px";
+        button.innerText = "Fahrzeuge anzeigen";
+        vehicleTable.style.display = "none";
+        button.addEventListener("click", function () {
+            const visible = vehicleTable.style.display !== "none";
+            vehicleTable.style.display = visible ? "none" : "table";
+            button.innerText = visible ? "Fahrzeuge anzeigen" : "Fahrzeuge ausblenden";
+        });
+        vehicleTable.parentNode.insertBefore(button, vehicleTable);
+        return true;
+    }
+
+    function addSpoilerButtonForDrivingVehicles() {
+        if (!window.ENABLE_VEHICLE_SPOILER) return false;
+        let drivingBlock = document.getElementById('mission_vehicle_driving');
+        if (!drivingBlock || drivingBlock.dataset.spoilerAdded) return false;
+        drivingBlock.dataset.spoilerAdded = "true";
+        let button = document.createElement("button");
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "10px";
+        button.innerText = "Fahrzeuge anzeigen";
+        drivingBlock.style.display = "none";
+        button.addEventListener("click", function () {
+            const visible = drivingBlock.style.display !== "none";
+            drivingBlock.style.display = visible ? "none" : "block";
+            button.innerText = visible ? "Fahrzeuge anzeigen" : "Fahrzeuge ausblenden";
+        });
+        drivingBlock.parentNode.insertBefore(button, drivingBlock);
+        return true;
+    }
+
+    function addSpoilerButtonForMaxDistanceGroup() {
+        if (!window.ENABLE_MAX_DISTANCE_GROUP_SPOILER) return;
+        const group = document.getElementById('group_max_distance');
+        if (!group || group.dataset.spoilerAdded) return;
+        group.dataset.spoilerAdded = "true";
+        const wrapper = document.createElement("div");
+        group.parentNode.insertBefore(wrapper, group);
+        wrapper.appendChild(group);
+        const button = document.createElement("button");
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "5px";
+        button.innerText = "Max-Distanz-Buttons anzeigen";
+        wrapper.insertBefore(button, group);
+        group.style.display = "none";
+        button.addEventListener("click", () => {
+            const visible = group.style.display !== "none";
+            group.style.display = visible ? "none" : "inline-block";
+            button.innerText = visible ? "Max-Distanz-Buttons anzeigen" : "Max-Distanz-Buttons ausblenden";
+        });
+        return true;
+    }
+
+    function addSpoilerButtonForVehicleListStep() {
+        if (!window.ENABLE_AVAILABLE_VEHICLE_LIST_SPOILER) return;
+        const vehicleListStep = document.getElementById('vehicle_list_step');
+        const dispatchButtons = document.getElementById('dispatch_buttons');
+        if (!vehicleListStep || !dispatchButtons || document.getElementById('toggleVehicleListStepButton')) return;
+        const button = document.createElement('button');
+        button.id = 'toggleVehicleListStepButton';
+        button.classList.add('btn', 'btn-success');
+        button.innerText = 'Fahrzeugliste anzeigen';
+        vehicleListStep.style.display = 'none';
+        button.addEventListener('click', function (e) {
+            e.preventDefault();
+            const visible = vehicleListStep.style.display !== 'none';
+            vehicleListStep.style.display = visible ? 'none' : 'block';
+            button.innerText = visible ? 'Fahrzeuge anzeigen' : 'Fahrzeuge ausblenden';
+        });
+        dispatchButtons.insertBefore(button, dispatchButtons.firstChild);
+    }
+
+    function addSpoilerButtonForVehicleTableGeneral() {
+        if (!window.ENABLE_VEHICLE_TABLE_SPOILER) return false;
+        const vehicleTable = document.getElementById('vehicle_table');
+        if (!vehicleTable || vehicleTable.dataset.spoilerAdded) return false;
+        vehicleTable.dataset.spoilerAdded = "true";
+        const button = document.createElement("button");
+        button.classList.add("btn", "btn-xl", "btn-primary");
+        button.style.marginBottom = "10px";
+        button.innerText = "Fahrzeugtabelle anzeigen";
+        vehicleTable.style.display = "none";
+        button.addEventListener("click", function () {
+            const visible = vehicleTable.style.display !== "none";
+            vehicleTable.style.display = visible ? "none" : "table";
+            button.innerText = visible ? "Fahrzeuge anzeigen" : "Fahrzeuge ausblenden";
+        });
+        vehicleTable.parentNode.insertBefore(button, vehicleTable);
+        return true;
+    }
+
+    function checkForLightboxAndAddButton() {
+        let iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
+        if (window.ENABLE_AAO_SPOILER && iframes.length > 0) {
+            iframes.forEach(iframe => addSpoilerButtonToAAO(iframe));
         }
-        updateMissionCounts();
-        updateAverageEarnings();
-        updatePatientsAndPrisonersCount();
-    }
-
-    function startStats(fallbackMode = false) {
-        // Starte Intervall-Timer nur EINMAL!
-        if (!window.__statsStarted) {
-            window.__statsStarted = true;
-            setInterval(updateMissionCounts, 1000);
-            setInterval(updateAverageEarnings, 1000);
-            setInterval(updatePatientsAndPrisonersCount, 1000);
+        if (addSpoilerButtonForVehicleTable()) {
+            clearInterval(vehicleTableCheckInterval);
         }
-        // Egal wie oft das Event kommt: Statistikbox ggf. neu bauen!
-        ensureStatsContainerExists();
+        toggleBreadcrumb();
+        fixMissionHeaderInfo();
+        addSpoilerButtonForPatientBlocks();
+        addSpoilerButtonForTabs();
+        addSpoilerButtonsToAaoColumns();
+        addSpoilerButtonForDrivingVehicles();
+        addSpoilerButtonForMaxDistanceGroup();
+        addSpoilerButtonForVehicleListStep();
+        addSpoilerButtonForVehicleTableGeneral();
     }
 
-    // Starte Statistik-Script, sobald Buttons da sind:
-    if (window.categoryButtonReady) {
-        startStats(false);
-    } else {
-        // Auf Event warten
-        document.addEventListener('categoryButtonReady', () => startStats(false));
-        // Fallback nach 2 Sekunden (wenn Script 1 nicht da)
-        setTimeout(() => {
-            if (!window.__statsStarted) startStats(true);
-        }, 2000);
+    function observeLightbox() {
+        const observer = new MutationObserver(() => {
+            const iframe = document.querySelector('iframe[id^="lightbox_iframe_"]');
+            if (iframe && !iframe.dataset.styleInjected) {
+                iframe.dataset.styleInjected = "true";
+                iframe.addEventListener('load', () => {
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (!iframeDoc) return;
+                        const style = iframeDoc.createElement('style');
+                        style.textContent = `
+                        .alert-success { display: ${window.ENABLE_SUCCESS_ALERT ? 'none' : 'block'} !important; }
+                        #missing_text.alert-danger.alert-missing-vehicles { display: ${window.ENABLE_MISSING_ALERT ? 'none' : 'block'} !important; }
+                        .alert-danger { display: block !important; }
+                        .alert-danger:has(p:contains('Ein Fahrzeug hat einen Sprechwunsch!')) { display: ${window.ENABLE_SPEECH_REQUEST_ALERT ? 'none' : 'block'} !important; }
+                        .alert-danger:has(p:contains('Benötigte Betreuungs- und Verpflegungsausstattung')) { display: ${window.ENABLE_CARE_AND_SUPPLY ? 'none' : 'block'} !important; }
+                        .alert-info:has(p:contains('Sprechwunsch')) { display: ${window.ENABLE_SPEECH_REQUEST_INFOBOX ? 'none' : 'block'} !important; }
+                        `;
+                        iframeDoc.head.appendChild(style);
+                        checkForLightboxAndAddButton();
+                    } catch (err) {
+                        console.warn("Fehler beim Injektion in Lightbox-iFrame:", err);
+                    }
+                });
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // WICHTIG: Bei JEDEM categoryButtonReady-Event prüfen, ob Statistikbox fehlt und ggf. neu einfügen!
-    document.addEventListener('categoryButtonReady', () => {
-        ensureStatsContainerExists();
+    // === INITIALISIERUNG === \\
+    loadSettings();
+    createSettingsGUI();
+
+    let vehicleTableCheckInterval = setInterval(() => {
+        if (addSpoilerButtonForVehicleTable()) {
+            clearInterval(vehicleTableCheckInterval);
+        }
+    }, 1000);
+
+    let observer = new MutationObserver(() => {
+        checkForLightboxAndAddButton();
+        hideOptionalElements();
     });
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    // Optional: missionData laden
-    loadMissionDataFromStorage();
-
+    checkForLightboxAndAddButton();
+    observeAndToggleEventInfo();
+    observeLightbox();
 })();
