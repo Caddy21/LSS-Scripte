@@ -46,6 +46,7 @@
         {key: 'HIDE_RENAME_BUTTONS_SECTION', label: 'Buttons im LSSM V3 Renamemanager ausblenden', default: false, category: 'other'},
         {key: 'HIDE_NAME_TOO_LONG_SECTION', label: 'Hinweis bei zu langem Namen (LSSM V3 Renamemanger) ausblenden', default: false, category: 'other'},
         {key: 'ENABLE_SPEECH_REQUEST_INFOBOX', label: 'Sprechwunsch-Infobox (blau) ausblenden', default: false, category: 'other'},
+        {key: 'HIDE_BUILDING_FILTERS_GROUP', label: 'Schulen-Buttongruppe (Gebäudefilter) ausblenden', default: false, category: 'other'},
 
     ];
 
@@ -644,6 +645,24 @@
         return true;
     }
 
+    function toggleBuildingFiltersGroupInLightbox() {
+        // Suche alle Lightbox-iFrames
+        document.querySelectorAll('iframe[id^="lightbox_iframe_"]').forEach(iframe => {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (!doc) return;
+                ['building-filters', 'btn-group-building-select'].forEach(id => {
+                    const el = doc.getElementById(id);
+                    if (el) {
+                        el.style.setProperty('display', window.HIDE_BUILDING_FILTERS_GROUP ? 'none' : '', 'important');
+                    }
+                });
+            } catch(e) {
+                // Cross-origin Fehler ignorieren
+            }
+        });
+    }
+
     function checkForLightboxAndAddButton() {
         let iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
         if (window.ENABLE_AAO_SPOILER && iframes.length > 0) {
@@ -695,6 +714,11 @@
     // === INITIALISIERUNG === \\
     loadSettings();
     createSettingsGUI();
+    checkForLightboxAndAddButton();
+    hideOptionalElements();
+    toggleBuildingFiltersGroupInLightbox();
+    observeAndToggleEventInfo();
+    observeLightbox();
 
     let vehicleTableCheckInterval = setInterval(() => {
         if (addSpoilerButtonForVehicleTable()) {
@@ -705,10 +729,7 @@
     let observer = new MutationObserver(() => {
         checkForLightboxAndAddButton();
         hideOptionalElements();
+        toggleBuildingFiltersGroupInLightbox();
     });
     observer.observe(document.body, { childList: true, subtree: true });
-
-    checkForLightboxAndAddButton();
-    observeAndToggleEventInfo();
-    observeLightbox();
 })();
