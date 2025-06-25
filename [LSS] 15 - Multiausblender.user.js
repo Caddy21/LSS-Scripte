@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 15 - Multiausblender
+// @name         [LSS] Multiausblender
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Blendet verschiedene Sachen wie AAO-Einträge, Fahrzeug-Tabellen, Patientenbereich und weitere Dinge individuell ein oder aus, permanent oder per Spoilerbutton
