@@ -58,7 +58,7 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Stellplatzfinder (veröffentlicht)
     - Alarmstichworte (veröffentlicht)
     - Aufgeräumtes Profil-Menü (veröffentlicht)
-    - Multiausblender
+    - Multiausblender (veröffentlicht)
     - Zielortfilter (veröffentlicht)
     - Einsätze anzeigen (veröffentlicht)
     - Einsatzdaten-Kopierer (veröffentlicht)
@@ -69,5 +69,11 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - FMS Manager (veröffentlicht)
     - KTW-Melder
     - Einsatz- und Verdienststatistik
+    - AAO schneller anlegen
+    - Personal-Soll-Checker
+    - Fahrzeuge nachladen
+    - AAO Auswahl löschen
+    - Einsätze ein- und ausklappen
+    - Einsätze teilen
     
 </details>
