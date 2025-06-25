@@ -1,300 +1,223 @@
 // ==UserScript==
-// @name         [LSS] Einsatz- und Verdienststatistik
+// @name         [LSS] Einsatz- und Verdienststatistik (Kompakt)
 // @namespace    https://github.com/Caddy21/LSS-Scripte
-// @version      1.0
+// @version      1.1
 // @description  Zeigt Einsatz- und Verdienststatistiken für Tag / Woche / Monat / Jahr in der Einsatzliste an
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de
-// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        GM.getValue
 // @grant        GM.setValue
 // ==/UserScript==
 
-(function () {
+(function() {
     'use strict';
 
-    // Optional: missionData laden, falls benötigt
-    let missionData = {};
+    // --- Hilfsfunktionen ---
     const MISSION_DATA_KEY = 'missionData_v1';
+    let missionData = {};
+
+    (function injectStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+.stats-container {
+    margin-top: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+    gap: 15px;
+    font-family: Arial, sans-serif;
+    color: white;
+}
+.stat-block {
+    display: flex;
+    align-items: center;
+    background: #222;
+    padding: 12px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    user-select: none;
+}
+.stat-content {
+    flex-grow: 1;
+}
+.stat-label {
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+.stat-icon-left,
+.stat-icon-right {
+    font-size: 16px;
+}
+.stat-values {
+    font-size: 1.4rem;
+    line-height: 1.5;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    row-gap: 5px;
+}
+.stat-values .label {
+    justify-self: start;
+    font-size: inherit;
+    font-weight: 400;
+}
+.stat-values .value {
+    justify-self: end;
+    font-size: inherit;
+    font-weight: 400;
+}
+        `;
+        document.head.appendChild(style);
+    })();
+
+    function getISOWeek(d) {
+        d = new Date(d); const dayNr = (d.getDay() + 6) % 7;
+        d.setDate(d.getDate() - dayNr + 3);
+        const firstThu = new Date(d.getFullYear(), 0, 4);
+        return 1 + Math.floor((d - firstThu) / 86400000 / 7);
+    }
 
     function loadMissionDataFromStorage() {
-        const dataStr = localStorage.getItem(MISSION_DATA_KEY);
-        if (dataStr) {
-            try { missionData = JSON.parse(dataStr); } catch { missionData = {}; }
-        }
+        const s = localStorage.getItem(MISSION_DATA_KEY);
+        if(s) try { missionData = JSON.parse(s); } catch { missionData = {}; }
     }
 
-    // ISO-Woche berechnen
-    function getISOWeek(date) {
-        const target = new Date(date.valueOf());
-        const dayNr = (date.getDay() + 6) % 7;
-        target.setDate(target.getDate() - dayNr + 3);
-        const firstThursday = new Date(target.getFullYear(), 0, 4);
-        const diff = (target - firstThursday) / 86400000;
-        return 1 + Math.floor(diff / 7);
+    function statBlock(id, color, icon, label) {
+        const w = document.createElement('div');
+        w.className = `stat-block ${color}`; w.id = id;
+        w.innerHTML = `<div class="stat-content">
+    <div class="stat-label"><span>${icon}</span>${label}<span>${icon}</span></div>
+    <div class="stat-values"></div></div>`;
+        return w;
     }
 
-    // Statistik-Box erzeugen (wie gehabt)
-    function createEarningsAndMissionsContainer(fallbackMode = false) {
-        if (document.getElementById('average_earnings_display')) return;
-
-        let containerParent = null;
-        let insertBeforeNode = null;
-
-        // Immer versuchen, Statistik nach dem Button-Container zu platzieren, falls vorhanden
-        const catButtonContainer = document.getElementById('categoryButtonContainer');
-        if (catButtonContainer && catButtonContainer.parentNode) {
-            containerParent = catButtonContainer.parentNode;
-            insertBeforeNode = catButtonContainer.nextSibling;
-        } else if (fallbackMode) {
-            // Nur wenn wirklich kein Button-Container da ist: vor das Suchfeld
-            const searchInput = document.getElementById('search_input_field_missions');
-            if (searchInput && searchInput.parentNode) {
-                containerParent = searchInput.parentNode;
-                insertBeforeNode = searchInput;
-            }
-        }
-
-        if (!containerParent) return;
-
-        const earningsContainer = document.createElement('div');
-        earningsContainer.id = 'average_earnings_display';
-        earningsContainer.style.marginTop = '10px';
-
-        // Heute-Verdienst-Anzeige
-        const todayEarningsWrapper = document.createElement('div');
-        todayEarningsWrapper.id = 'today_earnings_wrapper';
-        todayEarningsWrapper.style.marginTop = '10px';
-        todayEarningsWrapper.style.display = 'flex';
-        todayEarningsWrapper.style.alignItems = 'center';
-        todayEarningsWrapper.style.gap = '10px';
-
-        const todayDisplay = document.createElement('div');
-        todayDisplay.id = 'today_earnings_display';
-        todayEarningsWrapper.appendChild(todayDisplay);
-
-        // Bereich für Einsatzzahlen
-        const todayMissionsWrapper = document.createElement('div');
-        todayMissionsWrapper.id = 'today_missions_wrapper';
-        todayMissionsWrapper.style.marginTop = '10px';
-        todayMissionsWrapper.style.display = 'flex';
-        todayMissionsWrapper.style.alignItems = 'center';
-        todayMissionsWrapper.style.gap = '10px';
-
-        const todayMissionsDisplay = document.createElement('div');
-        todayMissionsDisplay.id = 'today_missions_display';
-        todayMissionsWrapper.appendChild(todayMissionsDisplay);
-
-        earningsContainer.appendChild(todayEarningsWrapper);
-        earningsContainer.appendChild(todayMissionsWrapper);
-
-        if (insertBeforeNode) {
-            containerParent.insertBefore(earningsContainer, insertBeforeNode);
-        } else {
-            containerParent.appendChild(earningsContainer);
-        }
+    function fillBlock(wrapper, labels, values, unit='') {
+        wrapper.innerHTML = labels.map((l,i) =>
+                                       `<div class="label">${l}</div><div class="value">${values[i]}${unit}</div>`
+                                      ).join('');
     }
 
-    async function updateMissionCounts() {
-        const accessedElements = document.querySelectorAll('.missionSideBarEntry .glyphicon-user:not(.hidden)');
-        let todayMissions = await GM.getValue('today_missions', 0);
-        let weekMissions = await GM.getValue('week_missions', 0);
-        let monthMissions = await GM.getValue('month_missions', 0);
-        let yearMissions = await GM.getValue('year_missions', 0);
-        let countedFinishedMissions = await GM.getValue('counted_finished_missions', []);
-        let lastSavedDate = await GM.getValue('last_saved_date_missions', '');
-        let lastSavedWeek = await GM.getValue('last_saved_week_missions', '');
-        let lastSavedMonth = await GM.getValue('last_saved_month_missions', '');
-        let lastSavedYear = await GM.getValue('last_saved_year_missions', '');
-        if (!Array.isArray(countedFinishedMissions)) countedFinishedMissions = [];
-
-        const today = new Date();
-        const todayDateString = today.toISOString().slice(0, 10);
-        const currentMonth = today.toISOString().slice(0, 7);
-        const currentYear = today.getFullYear().toString();
-        const currentWeek = getISOWeek(today);
-        const currentWeekYearKey = `${currentYear}-KW${currentWeek.toString().padStart(2, '0')}`;
-
-        if (lastSavedDate !== todayDateString) {
-            todayMissions = 0;
-            countedFinishedMissions = [];
-            await GM.setValue('today_missions', 0);
-            await GM.setValue('counted_finished_missions', []);
-            await GM.setValue('last_saved_date_missions', todayDateString);
-
-            if (lastSavedWeek !== currentWeekYearKey) {
-                weekMissions = 0;
-                await GM.setValue('week_missions', 0);
-                await GM.setValue('last_saved_week_missions', currentWeekYearKey);
-            }
-            if (lastSavedMonth !== currentMonth) {
-                monthMissions = 0;
-                await GM.setValue('month_missions', 0);
-                await GM.setValue('last_saved_month_missions', currentMonth);
-            }
-            if (lastSavedYear !== currentYear) {
-                yearMissions = 0;
-                await GM.setValue('year_missions', 0);
-                await GM.setValue('last_saved_year_missions', currentYear);
-            }
+    // --- Statistik-Container ---
+    function createStatsContainer(fallback) {
+        if(document.getElementById('average_earnings_display')) return;
+        let parent=null, before=null;
+        const btn=document.getElementById('categoryButtonContainer');
+        if(btn&&btn.parentNode){parent=btn.parentNode;before=btn.nextSibling;}
+        else if(fallback){
+            const inp=document.getElementById('search_input_field_missions');
+            if(inp&&inp.parentNode){parent=inp.parentNode;before=inp;}
         }
-
-        for (const element of accessedElements) {
-            const missionEntry = element.closest('.missionSideBarEntry');
-            if (!missionEntry) continue;
-            const elementId = missionEntry.id;
-            if (!countedFinishedMissions.includes(elementId)) {
-                todayMissions++;
-                weekMissions++;
-                monthMissions++;
-                yearMissions++;
-                countedFinishedMissions.push(elementId);
-            }
-        }
-
-        await GM.setValue('today_missions', todayMissions);
-        await GM.setValue('week_missions', weekMissions);
-        await GM.setValue('month_missions', monthMissions);
-        await GM.setValue('year_missions', yearMissions);
-        await GM.setValue('counted_finished_missions', countedFinishedMissions);
-
-        const missionCountsContainer = document.getElementById('today_missions_display');
-        if (missionCountsContainer) {
-            const currentMonthName = today.toLocaleString('de-DE', { month: 'long' });
-            missionCountsContainer.innerHTML =
-                `<div style="display: flex; gap: 10px; align-items: center;">
-                    <span style="color: red; font-weight: bold;">Einsätze:</span>
-                    <span title="Heute abgeschlossen">🗓️ <b>Heutige:</b> ${todayMissions} Stück</span>
-                    <span title="Diese Woche abgeschlossen">📆 <b>Diese Woche:</b> ${weekMissions} Stück</span>
-                    <span title="Diesen Monat abgeschlossen">📅 <b>Alle Einsätze im ${currentMonthName}:</b> ${monthMissions} Stück</span>
-                    <span title="Dieses Jahr abgeschlossen">📆 <b>Alle Einsätze im Jahr ${currentYear}:</b> ${yearMissions} Stück</span>
-                </div>`;
-        }
+        if(!parent) return;
+        const s=document.createElement('section'); s.id='average_earnings_display'; s.className='stats-container';
+        s.append(
+            statBlock('today_missions_wrapper','red','🚨','Einsätze'),
+            statBlock('today_earnings_wrapper','green','💰','Verdienst'),
+            statBlock('patients_count_wrapper','yellow','🩺','Patienten'),
+            statBlock('prisoners_count_wrapper','orange','🔒','Gefangene')
+        );
+        before?parent.insertBefore(s,before):parent.appendChild(s);
     }
 
-    async function updateAverageEarnings() {
-        const finishedElements = document.querySelectorAll('.missionSideBarEntry.mission_deleted');
-
-        let todayEarnings = await GM.getValue('today_earnings', 0);
-        let weekEarnings = await GM.getValue('week_earnings', 0);
-        let monthEarnings = await GM.getValue('month_earnings', 0);
-        let yearEarnings = await GM.getValue('year_earnings', 0);
-        let countedMissions = await GM.getValue('counted_missions', []);
-        let lastSavedDate = await GM.getValue('last_saved_date', '');
-        let lastSavedWeek = await GM.getValue('last_saved_week', '');
-        let lastSavedMonth = await GM.getValue('last_saved_month', '');
-        let lastSavedYear = await GM.getValue('last_saved_year', '');
-        if (!Array.isArray(countedMissions)) countedMissions = [];
-
-        const today = new Date();
-        const todayDateString = today.toISOString().slice(0, 10);
-        const currentMonth = today.toISOString().slice(0, 7);
-        const currentYear = today.getFullYear().toString();
-        const currentWeek = getISOWeek(today);
-
-        if (lastSavedDate !== todayDateString) {
-            todayEarnings = 0;
-            countedMissions = [];
-            await GM.setValue('today_earnings', 0);
-            await GM.setValue('counted_missions', []);
-            await GM.setValue('last_saved_date', todayDateString);
-
-            if (lastSavedWeek !== currentWeek.toString()) {
-                weekEarnings = 0;
-                await GM.setValue('week_earnings', 0);
-                await GM.setValue('last_saved_week', currentWeek.toString());
-            }
-            if (lastSavedMonth !== currentMonth) {
-                monthEarnings = 0;
-                await GM.setValue('month_earnings', 0);
-                await GM.setValue('last_saved_month', currentMonth);
-            }
-            if (lastSavedYear !== currentYear) {
-                yearEarnings = 0;
-                await GM.setValue('year_earnings', 0);
-                await GM.setValue('last_saved_year', currentYear);
-            }
-        }
-
-        for (const element of finishedElements) {
-            const elementId = element.id;
-            if (!countedMissions.includes(elementId)) {
-                // Falls missionData genutzt wird:
-                const missionId = element.getAttribute('mission_type_id');
-                const additiveOverlay = element.getAttribute('data-additive-overlays');
-                let credits = 250;
-                if (missionId && missionData[missionId]) {
-                    credits = missionData[missionId].base_credits ?? 250;
-                    if (additiveOverlay && missionData[missionId].overlays && missionData[missionId].overlays[additiveOverlay]) {
-                        credits = missionData[missionId].overlays[additiveOverlay];
+    // --- Statistik-Updates ---
+    async function updateStats() {
+        // Einsätze
+        const acc=document.querySelectorAll('.missionSideBarEntry .glyphicon-user:not(.hidden)');
+        let [t,w,m,y,cf] = await Promise.all([
+            GM.getValue('today_missions',0), GM.getValue('week_missions',0), GM.getValue('month_missions',0), GM.getValue('year_missions',0),
+            GM.getValue('counted_finished_missions',[])
+        ]);
+        const d=new Date(), ds=d.toISOString().slice(0,10), ms=d.toISOString().slice(0,7), ys=d.getFullYear().toString(), kw=getISOWeek(d), kwy=`${ys}-KW${kw.toString().padStart(2,'0')}`;
+        let [lsd,lsw,lsm,lsy]=await Promise.all([
+            GM.getValue('last_saved_date_missions',''), GM.getValue('last_saved_week_missions',''), GM.getValue('last_saved_month_missions',''), GM.getValue('last_saved_year_missions','')
+        ]);
+        if(lsd!==ds){t=0;cf=[];await GM.setValue('today_missions',0);await GM.setValue('counted_finished_missions',[]);await GM.setValue('last_saved_date_missions',ds);
+                     if(lsw!==kwy){w=0;await GM.setValue('week_missions',0);await GM.setValue('last_saved_week_missions',kwy);}
+                     if(lsm!==ms){m=0;await GM.setValue('month_missions',0);await GM.setValue('last_saved_month_missions',ms);}
+                     if(lsy!==ys){y=0;await GM.setValue('year_missions',0);await GM.setValue('last_saved_year_missions',ys);}
                     }
-                }
-                todayEarnings += credits;
-                weekEarnings += credits;
-                monthEarnings += credits;
-                yearEarnings += credits;
-                countedMissions.push(elementId);
+        for(const el of acc){const me=el.closest('.missionSideBarEntry');if(me&&!cf.includes(me.id)){t++;w++;m++;y++;cf.push(me.id);}}
+        await Promise.all([
+            GM.setValue('today_missions',t),GM.setValue('week_missions',w),GM.setValue('month_missions',m),GM.setValue('year_missions',y),GM.setValue('counted_finished_missions',cf)
+        ]);
+        const mW=document.querySelector('#today_missions_wrapper .stat-values');
+        if(mW) fillBlock(mW,["Heute:","Diese Woche:","Im Monat "+d.toLocaleString('de-DE',{month:'long'})+":","Im Jahr "+ys+":"],[t,w,m,y],' Stück');
+
+        // Verdienst
+        const finished=document.querySelectorAll('.missionSideBarEntry.mission_deleted');
+        let [te,we,me,ye,cm] = await Promise.all([
+            GM.getValue('today_earnings',0), GM.getValue('week_earnings',0), GM.getValue('month_earnings',0), GM.getValue('year_earnings',0),
+            GM.getValue('counted_missions',[])
+        ]);
+        let [lsdE,lswE,lsmE,lsyE]=await Promise.all([
+            GM.getValue('last_saved_date',''), GM.getValue('last_saved_week',''), GM.getValue('last_saved_month',''), GM.getValue('last_saved_year','')
+        ]);
+        if(lsdE!==ds){te=0;cm=[];await GM.setValue('today_earnings',0);await GM.setValue('counted_missions',[]);await GM.setValue('last_saved_date',ds);
+                      if(lswE!==kw.toString()){we=0;await GM.setValue('week_earnings',0);await GM.setValue('last_saved_week',kw.toString());}
+                      if(lsmE!==ms){me=0;await GM.setValue('month_earnings',0);await GM.setValue('last_saved_month',ms);}
+                      if(lsyE!==ys){ye=0;await GM.setValue('year_earnings',0);await GM.setValue('last_saved_year',ys);}
+                     }
+        for(const el of finished){
+            const id=el.id;
+            if(!cm.includes(id)){
+                const mid=el.getAttribute('mission_type_id'), add=el.getAttribute('data-additive-overlays');
+                let cr=250;
+                if(mid&&missionData[mid]){cr=missionData[mid].base_credits??250;if(add&&missionData[mid].overlays&&missionData[mid].overlays[add])cr=missionData[mid].overlays[add];}
+                te+=cr; we+=cr; me+=cr; ye+=cr; cm.push(id);
             }
         }
+        await Promise.all([
+            GM.setValue('today_earnings',te),GM.setValue('week_earnings',we),GM.setValue('month_earnings',me),GM.setValue('year_earnings',ye),GM.setValue('counted_missions',cm)
+        ]);
+        const eW=document.querySelector('#today_earnings_wrapper .stat-values');
+        if(eW) fillBlock(eW,["Heute:","Diese Woche:","Im Monat "+d.toLocaleString('de-DE',{month:'long'})+":","Im Jahr "+ys+":"],[te,we,me,ye],' Credits');
 
-        await GM.setValue('today_earnings', todayEarnings);
-        await GM.setValue('week_earnings', weekEarnings);
-        await GM.setValue('month_earnings', monthEarnings);
-        await GM.setValue('year_earnings', yearEarnings);
-        await GM.setValue('counted_missions', countedMissions);
+        // Patienten
+        let [tp,wp,mp,yp,cp] = await Promise.all([
+            GM.getValue('today_patients',0),GM.getValue('week_patients',0),GM.getValue('month_patients',0),GM.getValue('year_patients',0),
+            GM.getValue('counted_patients',[])
+        ]);
+        const pat=document.querySelectorAll('.col-md-6.small[id^="patient_"]');
+        for(const p of pat){if(!cp.includes(p.id)){tp++;wp++;mp++;yp++;cp.push(p.id);}}
+        await Promise.all([
+            GM.setValue('today_patients',tp),GM.setValue('week_patients',wp),GM.setValue('month_patients',mp),GM.setValue('year_patients',yp),GM.setValue('counted_patients',cp)
+        ]);
+        const pW=document.querySelector('#patients_count_wrapper .stat-values');
+        if(pW) fillBlock(pW,["Heute:","Diese Woche:","Im Monat "+d.toLocaleString('de-DE',{month:'long'})+":","Im Jahr "+ys+":"],[tp,wp,mp,yp],' Stück');
 
-        const todayEarningsContainer = document.getElementById('today_earnings_display');
-        if (todayEarningsContainer) {
-            const currentMonthName = today.toLocaleString('de-DE', { month: 'long' });
-            todayEarningsContainer.innerHTML =
-                `<div style="display: flex; gap: 10px;">
-                    <span style="color: green; font-weight: bold;">Verdienst:</span>
-                    <span title="Heutiger Verdienst">🗓️ <b>Heute:</b> ${todayEarnings.toLocaleString()} Credits</span>
-                    <span title="Wochenverdienst">📆 <b>Diese Woche:</b> ${weekEarnings.toLocaleString()} Credits</span>
-                    <span title="Monatsverdienst">📅 <b> Im Monat ${currentMonthName}:</b> ${monthEarnings.toLocaleString()} Credits</span>
-                    <span title="Jahresverdienst">📆 <b> Im Jahr ${currentYear}:</b> ${yearEarnings.toLocaleString()} Credits</span>
-                </div>`;
+        // Gefangene
+        let [tpr,wpr,mpr,ypr,cpr] = await Promise.all([
+            GM.getValue('today_prisoners',0),GM.getValue('week_prisoners',0),GM.getValue('month_prisoners',0),GM.getValue('year_prisoners',0),
+            GM.getValue('counted_prisoners',[])
+        ]);
+        const prs=document.querySelectorAll('[id^="prisoner_"]');
+        for(const p of prs){if(!cpr.includes(p.id)){tpr++;wpr++;mpr++;ypr++;cpr.push(p.id);}}
+        await Promise.all([
+            GM.setValue('today_prisoners',tpr),GM.setValue('week_prisoners',wpr),GM.setValue('month_prisoners',mpr),GM.setValue('year_prisoners',ypr),GM.setValue('counted_prisoners',cpr)
+        ]);
+        const prW=document.querySelector('#prisoners_count_wrapper .stat-values');
+        if(prW) fillBlock(prW,["Heute:","Diese Woche:","Im Monat "+d.toLocaleString('de-DE',{month:'long'})+":","Im Jahr "+ys+":"],[tpr,wpr,mpr,ypr],' Stück');
+    }
+
+    // --- Startlogik ---
+    function ensureStatsContainerExists(fallback=false){createStatsContainer(fallback);updateStats();}
+
+    function startStats(fallback=false){
+        if(!window.__statsStarted){
+            window.__statsStarted=true;
+            setInterval(updateStats,1000);
         }
+        ensureStatsContainerExists(fallback);
     }
 
-    // NEU: Stellt sicher, dass der Statistikbereich immer existiert!
-    function ensureStatsContainerExists() {
-        if (!document.getElementById('average_earnings_display')) {
-            createEarningsAndMissionsContainer(false);
-            updateMissionCounts();
-            updateAverageEarnings();
-        }
-    }
-
-    function startStats(fallbackMode = false) {
-        // Starte Intervall-Timer nur EINMAL!
-        if (!window.__statsStarted) {
-            window.__statsStarted = true;
-            setInterval(updateMissionCounts, 1000);
-            setInterval(updateAverageEarnings, 1000);
-        }
-        // Egal wie oft das Event kommt: Statistikbox ggf. neu bauen!
-        ensureStatsContainerExists();
-    }
-
-    // Starte Statistik-Script, sobald Buttons da sind:
-    if (window.categoryButtonReady) {
-        startStats(false);
-    } else {
-        // Auf Event warten
-        document.addEventListener('categoryButtonReady', () => startStats(false));
-        // Fallback nach 2 Sekunden (wenn Script 1 nicht da)
-        setTimeout(() => {
-            if (!window.__statsStarted) startStats(true);
-        }, 2000);
-    }
-
-    // WICHTIG: Bei JEDEM categoryButtonReady-Event prüfen, ob Statistikbox fehlt und ggf. neu einfügen!
-    document.addEventListener('categoryButtonReady', () => {
-        ensureStatsContainerExists();
-    });
-
-    // Optional: missionData laden
+    // --- Scriptstart ---
     loadMissionDataFromStorage();
+    if(window.categoryButtonReady) startStats(false);
+    else {
+        document.addEventListener('categoryButtonReady',()=>startStats(false));
+        setTimeout(()=>{if(!window.__statsStarted)startStats(true);},2000);
+    }
 
 })();
