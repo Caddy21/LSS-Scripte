@@ -10,7 +10,7 @@ Hier findet Ihr nützliche oder weniger nützliche Scripte für das Spiel www.le
 
 Die Nutzung dieser geschieht auf **eigene Gefahr**. 
 
-Es sind nur die Scripte **fehlerfrei und ausführlich getestet** worden die im offiziellen Forum von LST vorgestellt worden sind! 
+Es sind nur die Scripte **ausführlich getestet** worden die im offiziellen Forum von LST vorgestellt worden sind! Fehler sind nicht ausgeschlossen!
 Dieses könnt Ihr über www.leitstellenspiel.de/forum erreichen. Im Bereich [Scripte und Zusatzprogramme](https://forum.leitstellenspiel.de/index.php?board/22-scripte-und-zusatzprogramme/) stelle ich meine vor.
 Um die Scripte nutzen zu können braucht Ihr die Erweiterung [Tampermonkey](https://www.tampermonkey.net/)
 
