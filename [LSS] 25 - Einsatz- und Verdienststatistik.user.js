@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Einsatz- und Verdienststatistik (Kompakt)
 // @namespace    https://github.com/Caddy21/LSS-Scripte
-// @version      1.1
+// @version      1.3
 // @description  Zeigt Einsatz- und Verdienststatistiken für Tag / Woche / Monat / Jahr in der Einsatzliste an
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de
@@ -12,10 +12,7 @@
 (function() {
     'use strict';
 
-    // --- Hilfsfunktionen ---
-    const MISSION_DATA_KEY = 'missionData_v1';
-    let missionData = {};
-
+    // --- Styles ---
     (function injectStyles() {
         const style = document.createElement('style');
         style.textContent = `
@@ -80,11 +77,6 @@
         return 1 + Math.floor((d - firstThu) / 86400000 / 7);
     }
 
-    function loadMissionDataFromStorage() {
-        const s = localStorage.getItem(MISSION_DATA_KEY);
-        if(s) try { missionData = JSON.parse(s); } catch { missionData = {}; }
-    }
-
     function statBlock(id, color, icon, label) {
         const w = document.createElement('div');
         w.className = `stat-block ${color}`; w.id = id;
@@ -96,8 +88,8 @@
 
     function fillBlock(wrapper, labels, values, unit='') {
         wrapper.innerHTML = labels.map((l,i) =>
-                                       `<div class="label">${l}</div><div class="value">${values[i]}${unit}</div>`
-                                      ).join('');
+            `<div class="label">${l}</div><div class="value">${typeof values[i] === "number" ? values[i].toLocaleString('de-DE') : values[i]}${unit}</div>`
+        ).join('');
     }
 
     // --- Statistik-Container ---
@@ -162,9 +154,18 @@
         for(const el of finished){
             const id=el.id;
             if(!cm.includes(id)){
-                const mid=el.getAttribute('mission_type_id'), add=el.getAttribute('data-additive-overlays');
-                let cr=250;
-                if(mid&&missionData[mid]){cr=missionData[mid].base_credits??250;if(add&&missionData[mid].overlays&&missionData[mid].overlays[add])cr=missionData[mid].overlays[add];}
+                let cr = 250;
+                const sortableData = el.getAttribute('data-sortable-by');
+                if (sortableData) {
+                    try {
+                        const data = JSON.parse(sortableData);
+                        if (typeof data.average_credits === "number") {
+                            cr = data.average_credits;
+                        }
+                    } catch (e) {
+                        // Fehlerhafte Daten ignorieren, Fallback bleibt 250
+                    }
+                }
                 te+=cr; we+=cr; me+=cr; ye+=cr; cm.push(id);
             }
         }
@@ -213,11 +214,12 @@
     }
 
     // --- Scriptstart ---
-    loadMissionDataFromStorage();
-    if(window.categoryButtonReady) startStats(false);
-    else {
-        document.addEventListener('categoryButtonReady',()=>startStats(false));
-        setTimeout(()=>{if(!window.__statsStarted)startStats(true);},2000);
-    }
+    (function(){
+        if(window.categoryButtonReady) startStats(false);
+        else {
+            document.addEventListener('categoryButtonReady',()=>startStats(false));
+            setTimeout(()=>{if(!window.__statsStarted)startStats(true);},2000);
+        }
+    })();
 
 })();
