@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Ausrückeverzögerung
+// @name         [LSS] Ausrückeverzögerer
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Fügt ein Eingabefeld zur Ausrückeverzögerung ein und setzt diese für alle Fahrzeuge einer Wache.
