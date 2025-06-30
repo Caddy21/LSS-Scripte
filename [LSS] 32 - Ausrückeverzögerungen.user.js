@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         [LSS] Ausrückeverzögerung
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Fügt ein Pulldown-Menü zur Ausrückeverzögerung ein und setzt diese für alle Fahrzeuge einer Wache, auch für neu gekaufte Fahrzeuge automatisch
-// @author       Du
+// @version      1.0
+// @description  Fügt ein Pulldown-Menü zur Ausrückeverzögerung ein und setzt diese für alle Fahrzeuge einer Wache
+// @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
@@ -33,8 +34,8 @@
         // IDs der schon bekannten Fahrzeuge merken
         const knownVehicleIds = new Set(
             Array.from(vehicleTableBody.querySelectorAll('tr')).map(tr =>
-                tr.querySelector('a[href^="/vehicles/"]')?.href.match(/\/vehicles\/(\d+)/)?.[1]
-            ).filter(Boolean)
+                                                                    tr.querySelector('a[href^="/vehicles/"]')?.href.match(/\/vehicles\/(\d+)/)?.[1]
+                                                                   ).filter(Boolean)
         );
 
         const observer = new MutationObserver((mutationsList) => {
@@ -137,17 +138,20 @@
             button.classList.add('disabled');
 
             updateDelayForAllVehicles(buildingId, parseInt(value, 10))
-                .then(() => alert(`Ausrückeverzögerung (${value}) für alle Fahrzeuge gesetzt.`))
+                .then(() => {
+                alert(`Ausrückeverzögerung (${value}) für alle Fahrzeuge gesetzt.`);
+                // Hier Lightbox-iframe neu laden:
+                iframe.src = iframe.src;
+            })
                 .catch(err => {
-                    alert("Fehler beim Setzen der Verzögerung: " + err.message);
-                    console.error(err);
-                })
+                alert("Fehler beim Setzen der Verzögerung: " + err.message);
+                console.error(err);
+            })
                 .finally(() => {
-                    button.textContent = 'Speichern';
-                    button.classList.remove('disabled');
-                });
+                button.textContent = 'Speichern';
+                button.classList.remove('disabled');
+            });
 
-            // Automatische Verzögerung für neu gekaufte Fahrzeuge aktivieren
             observeNewVehicles(iframe, parseInt(value, 10));
         });
 
