@@ -14,8 +14,6 @@
     if (window.pulldownScriptInitialized) return;
     window.pulldownScriptInitialized = true;
 
-    console.log("[Pulldown-Script] Initialisiert...");
-
     const DELAY_STORAGE_KEY = 'ausrucke_verzoegerung';
 
     // Haupt-Token aus Meta-Tag holen (für Fallback)
@@ -92,14 +90,11 @@
     function insertPulldown(iframe) {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (!iframeDoc) {
-            console.log("[Pulldown-Script] insertPulldown: Kein Zugriff auf iframe-Dokument!");
             return;
         }
-        console.log("[Pulldown-Script] insertPulldown gestartet.");
 
         const container = iframeDoc.querySelector('.dl-horizontal');
         if (!container) {
-            console.log("[Pulldown-Script] insertPulldown: .dl-horizontal Container NICHT gefunden.");
             return;
         }
 
@@ -170,13 +165,11 @@
 
     // Update-Funktion für alle Fahrzeuge wie gehabt
     async function updateDelayForAllVehicles(buildingId, delay) {
-        console.log("[Pulldown-Script] Fahrzeuge laden und Verzögerung setzen für Gebäude:", buildingId);
         const vehiclesResponse = await fetch('/api/vehicles');
         if (!vehiclesResponse.ok) throw new Error('Fehler beim Laden der Fahrzeuge');
         const vehiclesData = await vehiclesResponse.json();
 
         const vehicles = vehiclesData.filter(v => v.building_id == buildingId);
-        console.log(`[Pulldown-Script] ${vehicles.length} Fahrzeuge der Wache ${buildingId} gefunden.`);
 
         for (const vehicle of vehicles) {
             await updateDelayForSingleVehicle(vehicle.id, delay);
@@ -197,7 +190,6 @@
 
         const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
         if (!iframeDoc) {
-            console.log("[Pulldown-Script] Kein Zugriff auf iframe-Dokument!");
             return;
         }
 
@@ -238,7 +230,6 @@
                 currentUrl = null;
             }
             if (currentUrl && currentUrl !== lastIframeUrl) {
-                console.log(`[Pulldown-Script] iframe URL hat sich geändert: ${lastIframeUrl} → ${currentUrl}`);
                 lastIframeUrl = currentUrl;
                 checkAndInsert();
             }
