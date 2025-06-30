@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         [LSS] Ausrückeverzögerung
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Fügt ein Pulldown-Menü zur Ausrückeverzögerung ein und setzt diese für alle Fahrzeuge einer Wache, auch für neu gekaufte Fahrzeuge automatisch
-// @author       Du
+// @version      1.0
+// @description  Fügt ein Eingabefeld zur Ausrückeverzögerung ein und setzt diese für alle Fahrzeuge einer Wache.
+// @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
@@ -33,8 +34,8 @@
         // IDs der schon bekannten Fahrzeuge merken
         const knownVehicleIds = new Set(
             Array.from(vehicleTableBody.querySelectorAll('tr')).map(tr =>
-                tr.querySelector('a[href^="/vehicles/"]')?.href.match(/\/vehicles\/(\d+)/)?.[1]
-            ).filter(Boolean)
+                                                                    tr.querySelector('a[href^="/vehicles/"]')?.href.match(/\/vehicles\/(\d+)/)?.[1]
+                                                                   ).filter(Boolean)
         );
 
         const observer = new MutationObserver((mutationsList) => {
@@ -89,90 +90,141 @@
     // Pulldown-Menü einfügen
     function insertPulldown(iframe) {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        if (!iframeDoc) {
-            return;
-        }
+        if (!iframeDoc) return;
 
         const container = iframeDoc.querySelector('.dl-horizontal');
-        if (!container) {
-            return;
-        }
-
+        if (!container) return;
         if (iframeDoc.querySelector('#meinPulldown')) return;
 
         const dt = iframeDoc.createElement('dt');
-        dt.textContent = 'Ausrückeverzögerung';
+        dt.textContent = 'Ausrückeverzögerung:';
 
         const dd = iframeDoc.createElement('dd');
 
-        const select = iframeDoc.createElement('select');
-        select.id = 'meinPulldown';
-        select.style.marginRight = '10px';
-
-        select.add(new Option('Bitte wählen', ''));
-        [0, 50, 100, 150, 200, 250, 300].forEach(val => {
-            select.add(new Option(val.toString(), val.toString()));
-        });
+        const input = iframeDoc.createElement('input');
+        input.type = 'number';
+        input.id = 'meinPulldown';
+        input.style.marginRight = '10px';
+        input.style.width = '60px'; // Feld schmaler machen
+        input.min = '0';
+        input.max = '999'; // Maximal 3-stellige Zahl zulassen
+        input.step = '1';
+        input.placeholder = 'Sek.';
 
         // Vorbelegung aus localStorage
-        const savedDelay = localStorage.getItem(DELAY_STORAGE_KEY);
-        if (savedDelay) select.value = savedDelay;
+        const savedDelay = localStorage.getItem('ausrucke_verzoegerung');
+        if (savedDelay) input.value = savedDelay;
 
         const button = iframeDoc.createElement('a');
         button.textContent = 'Speichern';
         button.href = '#';
         button.className = 'btn btn-default btn-xs';
 
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const value = select.value;
-            if (!value) return alert("Bitte zuerst eine Verzögerung auswählen!");
-
-            localStorage.setItem(DELAY_STORAGE_KEY, value);
-
-            const buildingId = new URL(iframe.src).pathname.split('/').pop();
-            if (!buildingId) return alert("Gebäude-ID konnte nicht ermittelt werden.");
-
-            button.textContent = 'Wird gesetzt...';
-            button.classList.add('disabled');
-
-            updateDelayForAllVehicles(buildingId, parseInt(value, 10))
-                .then(() => alert(`Ausrückeverzögerung (${value}) für alle Fahrzeuge gesetzt.`))
-                .catch(err => {
-                    alert("Fehler beim Setzen der Verzögerung: " + err.message);
-                    console.error(err);
-                })
-                .finally(() => {
-                    button.textContent = 'Speichern';
-                    button.classList.remove('disabled');
-                });
-
-            // Automatische Verzögerung für neu gekaufte Fahrzeuge aktivieren
-            observeNewVehicles(iframe, parseInt(value, 10));
-        });
-
-        dd.appendChild(select);
+        dd.appendChild(input);
         dd.appendChild(button);
-
         container.appendChild(dt);
         container.appendChild(dd);
 
         // Falls bereits ein Wert gewählt ist, direkt Observer aktivieren
-        if (select.value) {
-            observeNewVehicles(iframe, parseInt(select.value, 10));
+        if (input.value) {
+            observeNewVehicles(iframe, parseInt(input.value, 10));
         }
+
+        button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const value = input.value;
+            if (!value || isNaN(value) || value < 0) return alert("Bitte eine gültige Zeit in Sekunden eingeben!");
+
+            localStorage.setItem('ausrucke_verzoegerung', value);
+
+            let buildingId;
+            try {
+                buildingId = new URL(iframe.contentWindow.location.href).pathname.split('/').pop();
+            } catch (e) {
+                return alert("Gebäude-ID konnte nicht ermittelt werden.");
+            }
+            if (!buildingId) return alert("Gebäude-ID konnte nicht ermittelt werden.");
+
+
+            button.textContent = 'Wird gesetzt...';
+            button.classList.add('disabled');
+
+            // Progressbar dynamisch erzeugen
+            const progressWrapper = iframeDoc.createElement('div');
+            progressWrapper.style.marginTop = '8px';
+            progressWrapper.style.width = '200px';
+
+            const progressBar = iframeDoc.createElement('div');
+            progressBar.style.width = '100%';
+            progressBar.style.background = '#eee';
+            progressBar.style.height = '12px';
+            progressBar.style.borderRadius = '4px';
+
+            const progressFill = iframeDoc.createElement('div');
+            progressFill.style.height = '100%';
+            progressFill.style.width = '0%';
+            progressFill.style.background = '#337ab7';
+            progressFill.style.borderRadius = '4px';
+            progressFill.style.transition = 'width 0.2s';
+
+            progressBar.appendChild(progressFill);
+            progressWrapper.appendChild(progressBar);
+            dd.appendChild(progressWrapper);
+
+            try {
+                await updateDelayForAllVehicles(buildingId, parseInt(value, 10), progressFill);
+
+                // Fahrzeugliste neu laden (AJAX-Reload)
+                let reloaded = false;
+                const reloadBtn = iframeDoc.querySelector('a.btn.btn-success[href*="/vehicles"]');
+                if (reloadBtn) {
+                    reloadBtn.click();
+                    reloaded = true;
+                } else {
+                    // Versuche, das Fahrzeug-Tab zu finden und zu klicken
+                    const tab = iframeDoc.querySelector('a[href$="/vehicles"]:not(.btn)');
+                    if (tab) {
+                        tab.click();
+                        reloaded = true;
+                    }
+                }
+                if (!reloaded) {
+                    // fallback: komplettes Iframe reloaden (wenn AJAX nicht greift)
+                    try {
+                        iframe.contentWindow.location.reload();
+                    } catch (e) {
+                        iframe.src = iframe.src;
+                    }
+                }
+
+                dd.removeChild(progressWrapper); // Progressbar entfernen
+                alert(`Ausrückeverzögerung (${value}) Sekunden für alle Fahrzeuge gesetzt.`);
+            } catch (err) {
+                dd.removeChild(progressWrapper);
+                alert("Fehler beim Setzen der Verzögerung: " + err.message);
+                console.error(err);
+            } finally {
+                button.textContent = 'Speichern';
+                button.classList.remove('disabled');
+            }
+
+            // Automatische Verzögerung für neu gekaufte Fahrzeuge aktivieren
+            observeNewVehicles(iframe, parseInt(value, 10));
+        });
     }
 
-    // Update-Funktion für alle Fahrzeuge wie gehabt
-    async function updateDelayForAllVehicles(buildingId, delay) {
+    // Update-Funktion für alle Fahrzeuge mit Fortschritt
+    async function updateDelayForAllVehicles(buildingId, delay, progressFill) {
         const vehiclesResponse = await fetch('/api/vehicles');
         if (!vehiclesResponse.ok) throw new Error('Fehler beim Laden der Fahrzeuge');
         const vehiclesData = await vehiclesResponse.json();
-
         const vehicles = vehiclesData.filter(v => v.building_id == buildingId);
 
-        for (const vehicle of vehicles) {
-            await updateDelayForSingleVehicle(vehicle.id, delay);
+        for (let i = 0; i < vehicles.length; i++) {
+            await updateDelayForSingleVehicle(vehicles[i].id, delay);
+            if (progressFill) {
+                progressFill.style.width = `${Math.round(((i + 1) / vehicles.length) * 100)}%`;
+            }
         }
     }
 
