@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         [LSS] Ausrückeverzögerung
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Fügt ein Pulldown-Menü zur Ausrückeverzögerung ein und setzt diese für alle Fahrzeuge einer Wache
+// @version      1.1
+// @description  Fügt ein Pulldown-Menü zur Ausrückeverzögerung ein und setzt diese für alle Fahrzeuge einer Wache, auch für neu gekaufte Fahrzeuge automatisch
 // @author       Du
 // @match        https://www.leitstellenspiel.de/*
 // @grant        none
@@ -24,7 +24,71 @@
         console.warn("[Pulldown-Script] CSRF-Meta-Token nicht gefunden!");
     }
 
-    // insertPulldown wie gehabt
+    // Fahrzeuge-Liste beobachten und für neue Fahrzeuge die Verzögerung setzen
+    function observeNewVehicles(iframe, delay) {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!iframeDoc) return;
+
+        const vehicleTableBody = iframeDoc.querySelector('#vehicle_table tbody');
+        if (!vehicleTableBody) return;
+
+        // IDs der schon bekannten Fahrzeuge merken
+        const knownVehicleIds = new Set(
+            Array.from(vehicleTableBody.querySelectorAll('tr')).map(tr =>
+                tr.querySelector('a[href^="/vehicles/"]')?.href.match(/\/vehicles\/(\d+)/)?.[1]
+            ).filter(Boolean)
+        );
+
+        const observer = new MutationObserver((mutationsList) => {
+            for (const mutation of mutationsList) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === 1 && node.matches('tr')) {
+                        const vehicleLink = node.querySelector('a[href^="/vehicles/"]');
+                        const match = vehicleLink?.href.match(/\/vehicles\/(\d+)/);
+                        const vehicleId = match?.[1];
+                        if (vehicleId && !knownVehicleIds.has(vehicleId)) {
+                            knownVehicleIds.add(vehicleId);
+                            updateDelayForSingleVehicle(vehicleId, delay);
+                        }
+                    }
+                }
+            }
+        });
+        observer.observe(vehicleTableBody, { childList: true });
+        // Optional: observer.disconnect() aufräumen, wenn iframe entfernt wird
+    }
+
+    // Einzelnes Fahrzeug aktualisieren
+    async function updateDelayForSingleVehicle(vehicleId, delay) {
+        const mainToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const editUrl = `/vehicles/${vehicleId}/edit`;
+        const updateUrl = `/vehicles/${vehicleId}`;
+        try {
+            const editResponse = await fetch(editUrl);
+            if (!editResponse.ok) return;
+            const editText = await editResponse.text();
+            const tokenMatch = editText.match(/name="authenticity_token" value="([^"]+)"/);
+            const token = tokenMatch ? tokenMatch[1] : mainToken;
+            if (!token) return;
+
+            const formData = new URLSearchParams();
+            formData.append('vehicle[start_delay]', delay);
+            formData.append('authenticity_token', token);
+            formData.append('_method', 'patch');
+
+            await fetch(updateUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+            // Optional: Erfolgsmeldung oder Logging
+        } catch (e) {
+            // Optional: Fehlerbehandlung
+            console.warn('Fehler beim Setzen der Verzögerung für Fahrzeug', vehicleId, e);
+        }
+    }
+
+    // Pulldown-Menü einfügen
     function insertPulldown(iframe) {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (!iframeDoc) {
@@ -55,6 +119,10 @@
             select.add(new Option(val.toString(), val.toString()));
         });
 
+        // Vorbelegung aus localStorage
+        const savedDelay = localStorage.getItem(DELAY_STORAGE_KEY);
+        if (savedDelay) select.value = savedDelay;
+
         const button = iframeDoc.createElement('a');
         button.textContent = 'Speichern';
         button.href = '#';
@@ -83,6 +151,9 @@
                     button.textContent = 'Speichern';
                     button.classList.remove('disabled');
                 });
+
+            // Automatische Verzögerung für neu gekaufte Fahrzeuge aktivieren
+            observeNewVehicles(iframe, parseInt(value, 10));
         });
 
         dd.appendChild(select);
@@ -90,9 +161,14 @@
 
         container.appendChild(dt);
         container.appendChild(dd);
+
+        // Falls bereits ein Wert gewählt ist, direkt Observer aktivieren
+        if (select.value) {
+            observeNewVehicles(iframe, parseInt(select.value, 10));
+        }
     }
 
-    // Update-Funktion mit Fallback auf mainToken
+    // Update-Funktion für alle Fahrzeuge wie gehabt
     async function updateDelayForAllVehicles(buildingId, delay) {
         console.log("[Pulldown-Script] Fahrzeuge laden und Verzögerung setzen für Gebäude:", buildingId);
         const vehiclesResponse = await fetch('/api/vehicles');
@@ -103,44 +179,23 @@
         console.log(`[Pulldown-Script] ${vehicles.length} Fahrzeuge der Wache ${buildingId} gefunden.`);
 
         for (const vehicle of vehicles) {
-            const editUrl = `/vehicles/${vehicle.id}/edit`;
-
-            const editResponse = await fetch(editUrl);
-            if (!editResponse.ok) {
-                console.warn(`Fehler beim Laden von ${editUrl}`);
-                continue;
-            }
-            const editText = await editResponse.text();
-
-            const tokenMatch = editText.match(/name="authenticity_token" value="([^"]+)"/);
-            const token = tokenMatch ? tokenMatch[1] : mainToken;
-
-            if (!token) {
-                console.warn(`authenticity_token nicht gefunden für Fahrzeug ${vehicle.id} und kein Fallback-Token vorhanden.`);
-                continue;
-            }
-
-            const formData = new URLSearchParams();
-            formData.append('vehicle[start_delay]', delay);
-            formData.append('authenticity_token', token);
-
-            const updateResponse = await fetch(editUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData.toString()
-            });
-
-            if (!updateResponse.ok) {
-                console.warn(`Fehler beim Aktualisieren von Fahrzeug ${vehicle.id}`);
-            } else {
-                console.log(`Verzögerung für Fahrzeug ${vehicle.id} gesetzt.`);
-            }
+            await updateDelayForSingleVehicle(vehicle.id, delay);
         }
     }
 
-    // Funktion watchIframeContent etc. wie gehabt
+    // watchIframeContent mit Fehlerabfang
     function watchIframeContent(iframe) {
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        function checkAndInsert() {
+            if (!iframe || !iframe.contentDocument) return false;
+            const container = iframe.contentDocument.querySelector('.dl-horizontal');
+            if (!container) return false;
+            if (iframe.contentDocument.querySelector('#meinPulldown')) return false;
+
+            insertPulldown(iframe);
+            return true;
+        }
+
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
         if (!iframeDoc) {
             console.log("[Pulldown-Script] Kein Zugriff auf iframe-Dokument!");
             return;
@@ -156,21 +211,6 @@
             clearInterval(iframe._urlCheckInterval);
         }
 
-        function checkAndInsert() {
-            const container = iframe.contentDocument.querySelector('.dl-horizontal');
-            if (!container) {
-                //console.log("[Pulldown-Script] .dl-horizontal Container NICHT gefunden.");
-                return false;
-            }
-
-            if (iframe.contentDocument.querySelector('#meinPulldown')) {
-                return false;
-            }
-
-            insertPulldown(iframe);
-            return true;
-        }
-
         if (iframeDoc.body) {
             const observer = new MutationObserver(() => {
                 checkAndInsert();
@@ -180,15 +220,24 @@
         }
 
         iframe._pollingInterval = setInterval(() => {
-            if (checkAndInsert()) {
-                clearInterval(iframe._pollingInterval);
-            }
+            checkAndInsert();
         }, 500);
 
-        let lastIframeUrl = iframe.contentWindow.location.href;
+        let lastIframeUrl = null;
+        try {
+            lastIframeUrl = iframe.contentWindow?.location?.href;
+        } catch (e) {
+            lastIframeUrl = null;
+        }
+
         iframe._urlCheckInterval = setInterval(() => {
-            let currentUrl = iframe.contentWindow.location.href;
-            if (currentUrl !== lastIframeUrl) {
+            let currentUrl = null;
+            try {
+                currentUrl = iframe.contentWindow?.location?.href;
+            } catch (e) {
+                currentUrl = null;
+            }
+            if (currentUrl && currentUrl !== lastIframeUrl) {
                 console.log(`[Pulldown-Script] iframe URL hat sich geändert: ${lastIframeUrl} → ${currentUrl}`);
                 lastIframeUrl = currentUrl;
                 checkAndInsert();
