@@ -82,6 +82,7 @@
             if (!label || label.querySelector('.einsatzhilfe-button')) return;
 
             const id = parseInt(input.value);
+            if (id === -1) return; // Eigener Einsatz überspringen
 
             const leftContainer = document.createElement('span');
             while (label.firstChild) {
