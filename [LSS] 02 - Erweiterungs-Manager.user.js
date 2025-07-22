@@ -156,6 +156,7 @@
             { id: 3, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
             { id: 4, name: 'SEG-Drohne', cost: 50000, coins: 15 },
             { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 },
+            { id: 6, name: 'Technik und Sicherheit', cost: 200000, coins: 25 },
         ],
 
         '13_normal': [ // Polizeihubschrauberstation
