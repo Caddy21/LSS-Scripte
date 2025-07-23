@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 02 - Erweiterungs-Manager
+// @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
 // @version      1.3.1
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen und Lagerräumen für deine Wachen und Gebäude.
