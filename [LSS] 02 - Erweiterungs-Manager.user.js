@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] Erweiterungs-Manager
+// @name         [LSS] 02 - Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.3.1
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen und Lagerräumen für deine Wachen und Gebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -292,7 +292,7 @@
             { id: 9, name: 'Fachruppe Schwere Bergung', cost: 200000, coins: 25 },
             { id: 10, name: 'Fachgruppe Elektroversorgung', cost: 200000, coins: 25 },
             { id: 11, name: 'Ortsverband-Mannschaftstransportwagen', cost: 50000, coins: 15 },
-            { id: 12, name: 'Trupp Unbemannte Luftfahrtsysteme', cost: 50000, coins: 15 },
+            { id: 12, name: 'Trupp Unbenannte Luftfahrtsysteme', cost: 50000, coins: 15 },
             { id: 13, name: 'Fachzug Führung und Kommunikation', cost: 300000, coins: 25 },
         ],
 
@@ -584,86 +584,98 @@
         }
 
         function createExtensionForm() {
-            const form = document.createElement('form');
+    const form = document.createElement('form');
 
-            for (const category in manualExtensions) {
-                const fieldset = document.createElement('fieldset');
-                fieldset.style.marginBottom = '12px';
+    for (const category in manualExtensions) {
+        const fieldset = document.createElement('fieldset');
+        fieldset.style.marginBottom = '12px';
 
-                const {legend, arrow} = createSpoilerLegend(buildingTypeNames[category] || category);
+        const { legend, arrow } = createSpoilerLegend(buildingTypeNames[category] || category);
 
-                const content = document.createElement('div');
-                content.style.display = 'none';
-                content.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
-                content.style.gap = '8px';
-                content.style.padding = '8px 0';
+        const content = document.createElement('div');
+        content.style.display = 'none';
+        content.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+        content.style.gap = '8px';
+        content.style.padding = '8px 0';
 
-                const allLabel = document.createElement('label');
-                allLabel.style.gridColumn = '1 / -1';
-                allLabel.style.display = 'flex';
-                allLabel.style.alignItems = 'center';
-                allLabel.style.gap = '6px';
-                allLabel.style.fontWeight = '500';
+        const allLabel = document.createElement('label');
+        allLabel.style.gridColumn = '1 / -1';
+        allLabel.style.display = 'flex';
+        allLabel.style.alignItems = 'center';
+        allLabel.style.gap = '6px';
+        allLabel.style.fontWeight = '500';
 
-                const selectAllCheckbox = document.createElement('input');
-                selectAllCheckbox.type = 'checkbox';
+        const selectAllCheckbox = document.createElement('input');
+        selectAllCheckbox.type = 'checkbox';
 
-                const selectAllText = document.createElement('span');
-                selectAllText.textContent = 'Alle Erweiterungen an-/abwählen';
-                selectAllText.style.fontWeight = 'bold';
-                selectAllText.style.color = 'var(--primary-color, #007bff)';
+        const selectAllText = document.createElement('span');
+        selectAllText.textContent = 'Alle Erweiterungen an-/abwählen';
+        selectAllText.style.fontWeight = 'bold';
+        selectAllText.style.color = 'var(--primary-color, #007bff)';
 
-                allLabel.appendChild(selectAllCheckbox);
-                allLabel.appendChild(selectAllText);
-                content.appendChild(allLabel);
+        allLabel.appendChild(selectAllCheckbox);
+        allLabel.appendChild(selectAllText);
+        content.appendChild(allLabel);
 
-                const checkboxes = [];
+        const checkboxes = [];
 
-                manualExtensions[category].forEach(ext => {
-                    const key = `${category}_${ext.id}`;
-                    const label = document.createElement('label');
-                    label.style.display = 'flex';
-                    label.style.alignItems = 'center';
-                    label.style.gap = '6px';
+        manualExtensions[category]
+            .slice()
+            .sort((a, b) => {
+                const aAlpha = /^[A-Za-z]/.test(a.name);
+                const bAlpha = /^[A-Za-z]/.test(b.name);
 
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.checked = settings[key];
-                    checkbox.dataset.key = key;
+                if (aAlpha && !bAlpha) return -1;
+                if (!aAlpha && bAlpha) return 1;
 
-                    checkbox.addEventListener('change', () => {
-                        settings[key] = checkbox.checked;
-                        const allChecked = checkboxes.every(cb => cb.checked);
-                        selectAllCheckbox.checked = allChecked;
-                    });
+                return a.name.localeCompare(b.name, 'de', { numeric: true });
+            })
+            .forEach(ext => {
+                const key = `${category}_${ext.id}`;
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '6px';
 
-                    label.appendChild(checkbox);
-                    label.append(` ${ext.name}`);
-                    content.appendChild(label);
-                    checkboxes.push(checkbox);
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = settings[key];
+                checkbox.dataset.key = key;
+
+                checkbox.addEventListener('change', () => {
+                    settings[key] = checkbox.checked;
+                    const allChecked = checkboxes.every(cb => cb.checked);
+                    selectAllCheckbox.checked = allChecked;
                 });
 
-                selectAllCheckbox.checked = checkboxes.every(cb => cb.checked);
-                selectAllCheckbox.addEventListener('change', () => {
-                    checkboxes.forEach(cb => {
-                        cb.checked = selectAllCheckbox.checked;
-                        settings[cb.dataset.key] = cb.checked;
-                    });
-                });
+                label.appendChild(checkbox);
+                label.append(` ${ext.name}`);
+                content.appendChild(label);
+                checkboxes.push(checkbox);
+            });
 
-                legend.addEventListener('click', () => {
-                    const open = content.style.display === 'grid';
-                    content.style.display = open ? 'none' : 'grid';
-                    arrow.textContent = open ? '▶' : '▼';
-                });
+        selectAllCheckbox.checked = checkboxes.every(cb => cb.checked);
+        selectAllCheckbox.addEventListener('change', () => {
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+                settings[cb.dataset.key] = cb.checked;
+            });
+        });
 
-                fieldset.appendChild(legend);
-                fieldset.appendChild(content);
-                form.appendChild(fieldset);
-            }
+        legend.addEventListener('click', () => {
+            const open = content.style.display === 'grid';
+            content.style.display = open ? 'none' : 'grid';
+            arrow.textContent = open ? '▶' : '▼';
+        });
 
-            return form;
-        }
+        fieldset.appendChild(legend);
+        fieldset.appendChild(content);
+        form.appendChild(fieldset);
+    }
+
+    return form;
+}
+
 
         function createStorageForm() {
             const form = document.createElement('form');
@@ -1250,6 +1262,9 @@
                 const key = `${baseKey}_${ext.id}`;
                 if (!settings[key] || isExtensionLimitReached(building, ext.id)) return false;
 
+                // Ergänzung: Bereits gebaute Erweiterung immer ausblenden!
+                if (existingExtensions.has(ext.id)) return false;
+
                 const isForbidden = (forbiddenIds) =>
                 forbiddenIds.some(id => existingExtensions.has(id)) && !forbiddenIds.includes(ext.id);
 
@@ -1261,7 +1276,7 @@
                     return !isForbidden([0, 6, 8, 13, 14, 16, 18, 19, 25]);
                 }
 
-                return !existingExtensions.has(ext.id);
+                return true;
             });
 
             const enabledStorages = (storageOptions || []).filter(opt => {
@@ -1841,7 +1856,7 @@
         // Filterzeile ergänzen
         filterRow.appendChild(createDropdownFilter(leitstellen, 'Leitstelle', 1));
         filterRow.appendChild(createDropdownFilter(wachen, 'Wache', 2));
-        filterRow.appendChild(createDropdownFilter(lagerArten, 'Lager', 3));
+        filterRow.appendChild(createDropdownFilter(lagerArten, 'Erweiterung', 3));
 
         const resetCell = document.createElement('th');
         const resetBtn = document.createElement('button');
@@ -2201,6 +2216,8 @@
             });
         });
     }
+
+    fetchBuildingsAndRender();
 
     // Ende des Bereichs für den Bau * einer Erweiterung * in einem Gebäude
 
