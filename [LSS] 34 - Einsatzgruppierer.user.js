@@ -12,7 +12,7 @@
     'use strict';
 
     function debugLog(...args) {
-        console.log('[LSS-Einsatz-Gruppierung]', ...args);
+        //console.log('[LSS-Einsatz-Gruppierung]', ...args);
     }
 
     function normalizeName(name) {
@@ -36,7 +36,7 @@
     }
 
     function handleTableLayout() {
-        debugLog('Versuche Tabelle zu gruppieren...');
+        //debugLog('Versuche Tabelle zu gruppieren...');
         const tbody = document.querySelector('tbody');
         if (!tbody) {
             debugLog('Kein tbody gefunden!');
@@ -112,7 +112,7 @@
                 tbody.appendChild(baseRow);
             }
         });
-        debugLog('Tabelle gruppiert.');
+        //debugLog('Tabelle gruppiert.');
     }
 
     function handleBoxLayout() {
@@ -159,10 +159,10 @@
             btnContainer.style.alignItems = 'center';
             btnContainer.style.gap = '5px';
 
-            const toggleBtn = createButton('Varianten anzeigen', () => {
+            const toggleBtn = createButton('Overlays', () => {
                 const visible = variantBox.style.display !== 'none';
                 variantBox.style.display = visible ? 'none' : '';
-                toggleBtn.textContent = visible ? 'Varianten anzeigen' : 'Varianten ausblenden';
+                toggleBtn.textContent = visible ? 'Overlays':'Overlays';
             });
 
             btnContainer.appendChild(toggleBtn);
@@ -179,7 +179,7 @@
             container.appendChild(variantBox);
         }
     });
-    debugLog('Boxenlayout gruppiert.');
+    //debugLog('Boxenlayout gruppiert.');
 }
 
     // Warte auf DOM fertig und ggf. weitere Ladezeiten
@@ -191,7 +191,7 @@
             tries++;
             if (document.readyState === 'complete' && (document.querySelector('tbody') || document.querySelector('.panel.mission_type_index_searchable'))) {
                 clearInterval(intervalId);
-                debugLog('Seite geladen, starte Gruppierung...');
+                //debugLog('Seite geladen, starte Gruppierung...');
                 if (document.querySelector('tbody')) {
                     handleTableLayout();
                 } else if (document.querySelector('.panel.mission_type_index_searchable')) {
@@ -200,7 +200,7 @@
             }
             if (tries >= maxTries) {
                 clearInterval(intervalId);
-                debugLog('Timeout beim Warten auf Elemente.');
+              //debugLog('Timeout beim Warten auf Elemente.');
             }
         }, 500);
     }
