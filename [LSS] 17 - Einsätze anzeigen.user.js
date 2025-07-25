@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         [LSS] Einsätze anzeigen
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
+// @author       Caddy21
 // @description  Blendet Einsätze basierend auf individuellen Kategorien und Einsatzarten aus.
 // @match        https://www.leitstellenspiel.de/einsaetze*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -13,7 +14,7 @@
     'use strict';
 
     // Grün hinterlegte Einsätze
-    let hideSuccess = loadSettings('einsatzHideSuccess', false);
+    let hideSuccess = loadSettings('einsatzHideSuccess', true);
 
     // --- Moduserkennung ---
     function getCurrentThemeMode() {
@@ -139,35 +140,49 @@
 
     // --- Einsätze ausblenden / anzeigen ---
     function hideMissions() {
-        document.querySelectorAll('.mission_type_index_searchable').forEach(el => {
-            let text = el.textContent || el.innerText;
+    const searchInput = document.getElementById('search_input_field_possible_mission');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
-            // Erfolgreiche Einsätze ausblenden
-            if (hideSuccess && el.classList.contains('success')) {
-                el.style.display = 'none';
-                return;
+    document.querySelectorAll('.mission_type_index_searchable').forEach(el => {
+        let text = el.textContent || el.innerText;
+        let textLower = text.toLowerCase();
+
+        // Standard: anzeigen
+        let visible = true;
+
+        // Erfolgreiche Einsätze ausblenden
+        if (hideSuccess && el.classList.contains('success')) {
+            visible = false;
+        }
+
+        // Voraussetzungsfilter
+        for (const [keyword, shouldHide] of Object.entries(filterOptions)) {
+            if (shouldHide && text.includes(keyword)) {
+                visible = false;
+                break;
             }
+        }
 
-            // Voraussetzungsfilter
-            for (const [keyword, shouldHide] of Object.entries(filterOptions)) {
-                if (shouldHide && text.includes(keyword)) {
-                    el.style.display = 'none';
-                    return;
-                }
-            }
-
-            // Einsatzartenfilter
+        // Einsatzartenfilter
+        if (visible) {
             for (const [typ, shouldHide] of Object.entries(missionTypeOptions)) {
                 if (shouldHide && text.includes(typ)) {
-                    el.style.display = 'none';
-                    return;
+                    visible = false;
+                    break;
                 }
             }
+        }
 
-            // Sonst anzeigen
-            el.style.display = '';
-        });
-    }
+        // Suchfilter anwenden (nur wenn vorher noch sichtbar)
+        if (visible && searchTerm !== '' && !textLower.includes(searchTerm)) {
+            visible = false;
+        }
+
+        // Anzeigen oder verstecken
+        el.style.display = visible ? '' : 'none';
+    });
+}
+
 
     // --- Modal UI erzeugen ---
     function showModal() {
@@ -360,19 +375,28 @@
     });
 
     // --- Haupt-Logik ---
-    function init() {
+  function init() {
+    insertButton();
+
+    // 🟢 Hauptbeobachter: prüft auf DOM-Änderungen (z. B. neue Einsätze oder Filter neu geladen)
+    const mainObserver = new MutationObserver(() => {
         insertButton();
-
-        // Mutation Observer um Buttons nachzuladen (falls dynamisch neu geladen)
-        const mainObserver = new MutationObserver(() => {
-            insertButton();
-            hideMissions();
-        });
-        mainObserver.observe(document.body, { childList: true, subtree: true });
-
-        // Erste Ausführung
         hideMissions();
+    });
+    mainObserver.observe(document.body, { childList: true, subtree: true });
+
+    // 🔎 Sucheingabe überwachen (z. B. bei "Auto" etc.)
+    const searchInput = document.getElementById('search_input_field_possible_mission');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            // Kurze Verzögerung, damit die Spielinterne Suche fertig ist
+            setTimeout(hideMissions, 50);
+        });
     }
+
+    // 🧠 Direkt beim Start filtern
+    hideMissions();
+}
 
     // Starte Script
     init();
