@@ -292,7 +292,7 @@
             { id: 9, name: 'Fachruppe Schwere Bergung', cost: 200000, coins: 25 },
             { id: 10, name: 'Fachgruppe Elektroversorgung', cost: 200000, coins: 25 },
             { id: 11, name: 'Ortsverband-Mannschaftstransportwagen', cost: 50000, coins: 15 },
-            { id: 12, name: 'Trupp Unbenannte Luftfahrtsysteme', cost: 50000, coins: 15 },
+            { id: 12, name: 'Trupp Unbemannte Luftfahrtsysteme', cost: 50000, coins: 15 },
             { id: 13, name: 'Fachzug Führung und Kommunikation', cost: 300000, coins: 25 },
         ],
 
@@ -323,6 +323,7 @@
             { id: 3, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
             { id: 4, name: 'SEG-Drohne', cost: 50000, coins: 15 },
             { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 },
+            { id: 6, name: 'Technik und Sicherheit', cost: 200000, coins: 25 },
         ],
 
         '13_normal': [ // Polizeihubschrauberstation
