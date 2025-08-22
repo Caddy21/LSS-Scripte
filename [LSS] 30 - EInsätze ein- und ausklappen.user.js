@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 30 - Einsätze ein-/ausklappen
+// @name         [LSS] Einsätze ein-/ausklappen
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Fügt lokale und globale Buttons zum Ein-/Ausklappen von Einsätzen hinzu
