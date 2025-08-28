@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.3.1
-// @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen und Lagerräumen für deine Wachen und Gebäude.
+// @version      1.4
+// @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
 // @grant        GM_xmlhttpRequest
@@ -44,29 +44,36 @@
         z-index: 10000;
         }
 
+        #extension-lightbox-header {
+        background: var(--background-color);
+        padding: 10px;
+        border-bottom: 1px solid var(--border-color);
+        text-align: right;
+        z-index: 2;
+        }
+
         #extension-lightbox-content {
         background: var(--background-color);
         color: var(--text-color);
         border: 1px solid var(--border-color);
         padding: 20px;
-        width: 80%;
+        width: 100%;
         max-width: 1500px;
         max-height: 90vh;
         overflow-y: auto;
         position: relative;
         text-align: center;
-        border-radius: 10px;
         }
 
-        #close-extension-helper {
-        position: absolute;
-        top: 10px; right: 10px;
-        background: red;
+        #extension-lightbox-header #close-extension-helper {
+        font-weight: 600;
+        background-color: #ff4d4d;
         color: white;
         border: none;
-        padding: 5px 10px;
+        padding: 6px 14px;
+        border-radius: 5px;
         cursor: pointer;
-        border-radius: 4px;
+        transition: background-color 0.3s ease;
         }
 
         #extension-lightbox table {
@@ -95,6 +102,13 @@
         border-bottom: 2px solid var(--border-color);
         }
 
+        #extension-lightbox      #loading-overlay {
+        background-color: #f0f0f0;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 15px;
+        }
+
         /* === Buttons === */
         #extension-lightbox button,
         .currency-button,
@@ -108,25 +122,38 @@
         transition: background-color 0.2s ease-in-out;
         }
 
-        #extension-lightbox .extension-button        { background-color: var(--button-background-color); }
-        #extension-lightbox .extension-button:hover:enabled { background-color: var(--button-hover-background-color); }
-
-        #extension-lightbox .build-selected-button   { background-color: blue; }
-        #extension-lightbox .build-all-button        { background-color: red; }
-        #extension-lightbox .spoiler-button          { background-color: green; }
-        #extension-lightbox .lager-button            { background-color: var(--warning-color); }
-        #extension-lightbox .lager-button:hover:enabled { background-color: var(--warning-hover); }
+        #extension-lightbox .spoiler-button               { background-color: green; }
+        #extension-lightbox .lager-button                 { background-color: darkorange; }
+        #extension-lightbox .level-button                 { background-color: brown; }
+        #extension-lightbox .build-selected-button        { background-color: blue; }
+        #extension-lightbox .build-all-button             { background-color: red; }
+        #extension-lightbox .build-selected-levels-button { background-color: purple; }
 
         #extension-lightbox .build-selected-button:hover:enabled,
+        #extension-lightbox .build-selected-levels-button:enabled,
         #extension-lightbox .build-all-button:hover:enabled {
         filter: brightness(90%);
         }
 
         #extension-lightbox .extension-button:disabled,
         #extension-lightbox .build-selected-button:disabled,
+        #extension-lightbox .build-selected-levels-button:disabled,
         #extension-lightbox .build-all-button:disabled {
         background-color: gray !important;
         cursor: not-allowed;
+        }
+
+        #extension-lightbox button.btn-danger,
+        #extension-lightbox button.btn-danger:hover,
+        #extension-lightbox button.btn-danger:focus,
+        #extension-lightbox button.btn-danger:active {
+        background-color: var(--coins-color) !important;
+        border-color: var(--coins-color) !important;
+        color: white !important;
+        box-shadow: none !important;
+        filter: none !important;
+        transition: none !important;
+        cursor: pointer;
         }
 
         /* Neue Flexbox-Regel für Button-Container mit Abständen */
@@ -186,9 +213,142 @@
         font-weight: bold;
         }
 
+        /* Bauprojekte Buttons */
+        #construction-lightbox .bau-btn {
+        border: none; padding: 4px 8px;
+        font-size: 13px;
+        border-radius: 3px;
+        cursor: pointer; color: #fff;
+        }
+
+        #construction-lightbox .bau-btn-danger {
+        background-color: var(--coins-color); /* rot */
+        }
+
+        #construction-lightbox .bau-btn-success {
+        background-color: var(--credits-color); /* grün */
+        }
+
+        #construction-lightbox .bau-btn-warning {
+        background-color: var(--warning-color); /* orange */
+        }
+
+        #construction-lightbox .bau-btn:hover {
+        filter: brightness(90%);
+        }
+
         `;
 
-    // Globale Variablen von Erweiterungen / Lager / Gebäudenamen
+
+    // Wende den Modus an, wenn das DOM bereit ist
+    window.addEventListener('load', () => {
+        applyMode();
+        observeLightbox(); // Beobachtet dynamische Änderungen
+    });
+
+    // Fügt die Stile hinzu
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = styles;
+    document.head.appendChild(styleElement);
+
+    // Erstelle die Lightbox
+    const lightbox = document.createElement('div');
+    lightbox.id = 'extension-lightbox';
+    lightbox.style.display = 'none';
+    lightbox.innerHTML = `
+        <div id="extension-lightbox-modal">
+          <div id="extension-lightbox-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px;">
+            <div id="user-balance" style="display:flex; gap:20px; text-align:left;">
+              <div>
+                <div>Aktuelle Credits: <span id="current-credits" style="color: var(--credits-color); font-weight:bold;">...</span></div>
+                <div>Aktuelle Coins: <span id="current-coins" style="color: var(--coins-color); font-weight:bold;">...</span></div>
+              </div>
+              <div>
+                <div>Ausgewählte Credits: <span id="selected-credits" style="color: var(--credits-color); font-weight:bold;">0</span></div>
+                <div>Ausgewählte Coins: <span id="selected-coins" style="color: var(--coins-color); font-weight:bold;">0</span></div>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button id="under-construction" style="background-color:#17a2b8; color:white; border:none; border-radius:4px; padding:5px 10px;">
+                Aktuell Im Bau oder Fertiggestellt
+              </button>
+              <button id="close-extension-helper" style="padding:5px 10px;">Schließen</button>
+            </div>
+          </div>
+          <div id="extension-lightbox-content">
+            <h3>🚒🏗️ <strong>Herzlich willkommen beim ultimativen Ausbau-Assistenten für eure Wachen!</strong> 🚒🏗️</h3>
+            <br>
+                <h2 style="margin:0;">Dem Erweiterungs-Manager</h2>
+            <h5>
+              <br><br>Dieses kleine Helferlein zeigt euch genau, wo noch Platz in euren Wachen ist: Welche <strong>Erweiterungen, Lagerräume</strong> und <strong>Ausbaustufen</strong> noch möglich sind – und mit nur ein paar Klicks geht’s direkt in den Ausbau.
+              <br><br>Einfacher wird’s nicht!
+              <br><br>Und das Beste: Über den
+              <button id="open-extension-settings" style="
+                font-weight:600;
+                color:#fff;
+                background-color: var(--primary-color, #007bff);
+                border:none;
+                padding:6px 14px;
+                border-radius:5px;
+                cursor:pointer;
+                transition: background-color 0.3s ease;
+                margin:0 5px;">
+                Einstellungen
+              </button>
+              -Button könnt ihr festlegen, welche Erweiterungen und Lagerräume euch pro Wachen-Typ angezeigt werden – ganz nach eurem Geschmack. Einmal gespeichert, für immer gemerkt.
+              <br><br>Kleiner Hinweis am Rande: Feedback, Verbesserungsvorschläge oder Kritik zum Skript sind jederzeit im
+              <a href="https://forum.leitstellenspiel.de/index.php?thread/27856-script-erweiterungs-manager/" target="_blank" style="color:#007bff; text-decoration:none;">
+                <strong>Forum</strong>
+              </a> willkommen. 💌
+              <br><br><br>Und nun viel Spaß beim Credits oder Coins ausgeben!
+              <br><br>
+              <div id="loading-container" style="display:none; padding:20px; text-align:center;">
+                <div id="loading-text" style="font-weight:bold; font-size:16px;">Lade Daten</div>
+              </div>
+              <div id="extension-list"></div>
+            </h5>
+          </div>
+        </div>
+        `;
+
+    // Werte nur aktualisieren, nicht die komplette HTML-Struktur ersetzen
+    getUserCredits().then(({ credits, coins }) => {
+        document.getElementById('current-credits').textContent = credits.toLocaleString();
+        document.getElementById('current-coins').textContent = coins.toLocaleString();
+
+        // Beispielhafte initiale Werte für "Ausgewählte" (später dynamisch anpassen)
+        updateSelectedAmounts();
+    }).catch(() => {
+        // Optional: Fehleranzeige bei Ladeproblemen
+        document.getElementById('current-credits').textContent = 'Fehler';
+        document.getElementById('current-coins').textContent = 'Fehler';
+    });
+
+    document.body.appendChild(lightbox);
+
+    const openBtn = document.getElementById('open-extension-settings');
+    const lightboxContent = lightbox.querySelector('#extension-lightbox-content');
+
+    openBtn.addEventListener('mouseenter', () => {
+        openBtn.style.backgroundColor = '#0056b3'; // dunkleres Blau beim Hover
+    });
+    openBtn.addEventListener('mouseleave', () => {
+        openBtn.style.backgroundColor = 'var(--primary-color, #007bff)';
+    });
+    openBtn.addEventListener('click', () => {
+        openExtensionSettingsOverlay();
+    });
+    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    // Globale Variablen
+    var user_premium = false;
+    let buildingsData = [];
+    let buildingGroups = {};
+    let currentCredits = 0;
+    let currentCoins = 0;
+    const storageGroups = {};
+    const selectedLevels = {};
+    const storageBuildQueue = {};
     const manualExtensions = {
         '0_normal': [ // Feuerwache (normal)
             { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
@@ -220,23 +380,19 @@
             { id: 26, name: '11te Ab-Stellplatz', cost: 150000, coins: 20 },
             { id: 27, name: '12te Ab-Stellplatz', cost: 150000, coins: 20 },
         ],
-
         '1_normal': [ // Feuerwehrschule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
-
         '2_normal': [ // Rettungswache
             { id: 0, name: 'Großwache', cost: 1000000, coins: 50 },
         ],
-
         '3_normal': [ // Rettungsschule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
-
         '4_normal': [ // Krankenhaus
             { id: 0, name: 'Allgemeine Innere', cost: 10000, coins: 10 },
             { id: 1, name: 'Allgemeine Chirugie', cost: 10000, coins: 10 },
@@ -249,11 +405,9 @@
             { id: 8, name: 'Kardiochirugie', cost: 70000, coins: 15 },
             { id: 9, name: 'Großkrankenhaus', cost: 200000, coins: 50 },
         ],
-
         '5_normal': [ // Rettungshubschrauber-Station
             { id: 0, name: 'Windenrettung', cost: 200000, coins: 15 },
         ],
-
         '6_normal': [ // Polizeiwache
             { id: 0, name: '1te Zelle', cost: 25000, coins: 5 },
             { id: 1, name: '2te Zelle', cost: 25000, coins: 5 },
@@ -272,13 +426,11 @@
             { id: 14, name: 'Großwache', cost: 1000000, coins: 50 },
             { id: 15, name: 'Großgewahrsam', cost: 200000, coins: 50 },
         ],
-
         '8_normal': [ // Polizeischule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
-
         '9_normal': [ // THW
             { id: 0, name: '1. Technischer Zug: Fachgruppe Bergung/Notinstandsetzung', cost: 25000, coins: 5 },
             { id: 1, name: '1. Technischer Zug: Zugtrupp', cost: 25000, coins: 5 },
@@ -295,13 +447,11 @@
             { id: 12, name: 'Trupp Unbemannte Luftfahrtsysteme', cost: 50000, coins: 15 },
             { id: 13, name: 'Fachzug Führung und Kommunikation', cost: 300000, coins: 25 },
         ],
-
         '10_normal': [ // THW-Bundesschule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
-
         '11_normal': [ // Bereitschaftspolizei
             { id: 0, name: '2. Zug der 1. Hundertschaft', cost: 25000, coins: 5 },
             { id: 1, name: '3. Zug der 1. Hundertschaft', cost: 25000, coins: 5 },
@@ -315,7 +465,6 @@
             { id: 9, name: 'Reiterstaffel', cost: 300000, coins: 25},
             { id: 10, name: 'Lautsprecherkraftwagen', cost: 100000, coins: 10},
         ],
-
         '12_normal': [ // SEG
             { id: 0, name: 'Führung', cost: 25000, coins: 5 },
             { id: 1, name: 'Sanitätsdienst', cost: 25500, coins: 5 },
@@ -325,12 +474,10 @@
             { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 },
             { id: 6, name: 'Technik und Sicherheit', cost: 200000, coins: 25 },
         ],
-
         '13_normal': [ // Polizeihubschrauberstation
             { id: 0, name: 'Außenlastbehälter', cost: 200000, coins: 15 },
             { id: 1, name: 'Windenrettung', cost: 200000, coins: 15 },
         ],
-
         '17_normal': [ // Polizeisondereinheit
             { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
             { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
@@ -339,7 +486,6 @@
             { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
 
         ],
-
         '0_small': [ // Feuerwehr (Kleinwache)
             { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
             { id: 1, name: '1te AB-Stellplatz', cost: 100000, coins: 20 },
@@ -355,7 +501,6 @@
             { id: 21, name: '2te Anhänger Stellplatz', cost: 75000, coins: 15 },
             { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
         ],
-
         '6_small': [ // Polizei (Kleinwache)
             { id: 0, name: '1te Zelle', cost: 25000, coins: 5 },
             { id: 1, name: '2te Zelle', cost: 25000, coins: 5 },
@@ -364,7 +509,6 @@
             { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
             { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
         ],
-
         '24_normal': [ // Reiterstaffel
             { id: 0, name: 'Reiterstaffel', cost: 300000, coins: 25 },
             { id: 1, name: 'Reiterstaffel', cost: 300000, coins: 25 },
@@ -373,20 +517,17 @@
             { id: 4, name: 'Reiterstaffel', cost: 300000, coins: 25 },
             { id: 5, name: 'Reiterstaffel', cost: 300000, coins: 25 },
         ],
-
         '25_normal': [ // Bergrettungswache
             { id: 0, name: 'Höhenrettung', cost: 50000, coins: 25 },
             { id: 1, name: 'Drohneneinheit', cost: 75000, coins: 25 },
             { id: 2, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
             { id: 3, name: 'Rettungsdienst', cost: 100000, coins: 20 },
         ],
-
         '27_normal': [ // Schule für Seefahrt und Seenotrettung
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ],
-
     };
     const manualStorageRooms = {
         '0_normal': [
@@ -398,23 +539,159 @@
             { id: 'additional_containers_5', name: '5te Zusätzlicher Lagerraum', cost: 100000, coins: 15, additionalStorage: 30 },
             { id: 'additional_containers_6', name: '6te Zusätzlicher Lagerraum', cost: 100000, coins: 15, additionalStorage: 30 },
             { id: 'additional_containers_7', name: '7te Zusätzlicher Lagerraum', cost: 100000, coins: 15, additionalStorage: 30 },
-        ],
-
+        ], // Feuerwache (Normal)
         '0_small': [
             { id: 'initial_containers', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
             { id: 'additional_containers_1', name: '1te Zusätzlicher Lagerraum', cost: 50000, coins: 10, additionalStorage: 30 },
             { id: 'additional_containers_2', name: '2te Zusätzlicher Lagerraum', cost: 50000, coins: 10, additionalStorage: 30 },
-        ],
-
+        ],  // Feuerwache (Kleinwache)
         '5_normal': [
             { id: 'initial_containers', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
+        ], // Rettungshubschrauber-Station
+    };
+    const manualLevels = {
+        '0_normal': [  // Feuerwache (Normal)
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+            { id: 5, name: '6', cost: 100000, coins: 20 },
+            { id: 6, name: '7', cost: 100000, coins: 20 },
+            { id: 7, name: '8', cost: 100000, coins: 20 },
+            { id: 8, name: '9', cost: 100000, coins: 20 },
+            { id: 9, name: '10', cost: 100000, coins: 20 },
+            { id: 10, name: '11', cost: 100000, coins: 20 },
+            { id: 11, name: '12', cost: 100000, coins: 20 },
+            { id: 12, name: '13', cost: 100000, coins: 20 },
+            { id: 13, name: '14', cost: 100000, coins: 20 },
+            { id: 14, name: '15', cost: 100000, coins: 20 },
+            { id: 15, name: '16', cost: 100000, coins: 20 },
+            { id: 16, name: '17', cost: 100000, coins: 20 },
+            { id: 17, name: '18', cost: 100000, coins: 20 },
+            { id: 18, name: '19', cost: 100000, coins: 20 },
+        ],
+
+        '0_small': [  // Feuerwache (Kleinwache)
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+        ],
+
+        '2_normal': [  // Rettungswache (Normal)
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+            { id: 5, name: '6', cost: 100000, coins: 20 },
+            { id: 6, name: '7', cost: 100000, coins: 20 },
+            { id: 7, name: '8', cost: 100000, coins: 20 },
+            { id: 8, name: '9', cost: 100000, coins: 20 },
+            { id: 9, name: '10', cost: 100000, coins: 20 },
+            { id: 10, name: '11', cost: 100000, coins: 20 },
+            { id: 11, name: '12', cost: 100000, coins: 20 },
+            { id: 12, name: '13', cost: 100000, coins: 20 },
+            { id: 13, name: '14', cost: 100000, coins: 20 },
+        ],
+
+        '2_small': [  // Rettungswache (Kleinwache)
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+        ],
+
+        '4_normal': [  // Krankenhaus
+            { id: 0, name: '1', cost: 19000, coins: 11 },
+            { id: 1, name: '2', cost: 19000, coins: 11 },
+            { id: 2, name: '3', cost: 19000, coins: 11 },
+            { id: 3, name: '4', cost: 19000, coins: 11 },
+            { id: 4, name: '5', cost: 19000, coins: 11 },
+            { id: 5, name: '6', cost: 19000, coins: 11 },
+            { id: 6, name: '7', cost: 19000, coins: 11 },
+            { id: 7, name: '8', cost: 19000, coins: 11 },
+            { id: 8, name: '9', cost: 19000, coins: 11 },
+            { id: 9, name: '10', cost: 19000, coins: 11 },
+            { id: 10, name: '11', cost: 19000, coins: 11 },
+            { id: 11, name: '12', cost: 19000, coins: 11 },
+            { id: 12, name: '13', cost: 19000, coins: 11 },
+            { id: 13, name: '14', cost: 19000, coins: 11 },
+            { id: 14, name: '15', cost: 19000, coins: 11 },
+            { id: 15, name: '16', cost: 19000, coins: 11 },
+            { id: 16, name: '17', cost: 19000, coins: 11 },
+            { id: 17, name: '18', cost: 19000, coins: 11 },
+            { id: 18, name: '19', cost: 19000, coins: 11 },
+            { id: 19, name: '20', cost: 19000, coins: 11 },
+        ],
+
+        '6_normal': [  // Polizeiwache (Normal)
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+            { id: 5, name: '6', cost: 100000, coins: 20 },
+            { id: 6, name: '7', cost: 100000, coins: 20 },
+            { id: 7, name: '8', cost: 100000, coins: 20 },
+            { id: 8, name: '9', cost: 100000, coins: 20 },
+            { id: 9, name: '10', cost: 100000, coins: 20 },
+            { id: 10, name: '11', cost: 100000, coins: 20 },
+            { id: 11, name: '12', cost: 100000, coins: 20 },
+            { id: 12, name: '13', cost: 100000, coins: 20 },
+            { id: 13, name: '14', cost: 100000, coins: 20 },
+        ],
+
+        '6_small': [  // Polizeiwache (Kleinwache)
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+        ],
+
+        '15_normal': [  // Wasserrettung
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+        ],
+
+        '25_normal': [  // Bergrettungswache
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+            { id: 5, name: '6', cost: 100000, coins: 20 },
+            { id: 6, name: '7', cost: 100000, coins: 20 },
+            { id: 7, name: '8', cost: 100000, coins: 20 },
+            { id: 8, name: '9', cost: 100000, coins: 20 },
+            { id: 9, name: '10', cost: 100000, coins: 20 },
+            { id: 10, name: '11', cost: 100000, coins: 20 },
+            { id: 11, name: '12', cost: 100000, coins: 20 },
+            { id: 12, name: '13', cost: 100000, coins: 20 },
+            { id: 13, name: '14', cost: 100000, coins: 20 },
+        ],
+
+        '26_normal': [  // Seenotrettungswache
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
         ],
     };
     const buildingTypeNames = {
         '0_normal': 'Feuerwache (Normal)',
         '0_small': 'Feuerwache (Kleinwache)',
         '1_normal': 'Feuerwehrschule',
-        '2_normal': 'Rettungswache',
+        '2_normal': 'Rettungswache (Normal)',
+        '2_small': 'Rettungswache (Kleinwache)',
         '3_normal': 'Rettungsschule',
         '4_normal': 'Krankenhaus',
         '5_normal': 'Rettungshubschrauber-Station',
@@ -426,16 +703,32 @@
         '11_normal': 'Bereitschaftspolizei',
         '12_normal': 'Schnelleinsatzgruppe (SEG)',
         '13_normal': 'Polizeihubschrauber-Station',
+        '15_normal': 'Wasserrettung',
         '17_normal': 'Polizei-Sondereinheiten',
         '24_normal': 'Reiterstaffel',
         '25_normal': 'Bergrettungswache',
+        '26_normal': 'Seenotrettungswache',
         '27_normal': 'Schule für Seefahrt und Seenotrettung',
     };
-
+    const allowedBuildings = new Set([
+        '0_normal',  // Feuerwache (Normal)
+        '0_small',   // Feuerwache (Kleinwache)
+        '4_normal',  // Krankenhaus
+        '6_normal',  // Polizeiwache (Normal)
+        '6_small',   // Polizeiwache (Kleinwache)
+        '2_normal',  // Rettungswache (Normal)
+        '2_small',   // Rettungswache (Kleinwache)
+        '15_small',  // Wasserrettung
+        '25_normal', // Bergrettungswache
+        '26_normal', // Seenotrettungswache)
+    ]);
+    const progressBars = {
+        activate: null,
+        cancel: null
+    };
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Bereich für das Userinterface
-
     const SETTINGS_KEY = 'enabledExtensions';
     const defaultExtensionSettings = {};
 
@@ -585,98 +878,97 @@
         }
 
         function createExtensionForm() {
-    const form = document.createElement('form');
+            const form = document.createElement('form');
 
-    for (const category in manualExtensions) {
-        const fieldset = document.createElement('fieldset');
-        fieldset.style.marginBottom = '12px';
+            for (const category in manualExtensions) {
+                const fieldset = document.createElement('fieldset');
+                fieldset.style.marginBottom = '12px';
 
-        const { legend, arrow } = createSpoilerLegend(buildingTypeNames[category] || category);
+                const { legend, arrow } = createSpoilerLegend(buildingTypeNames[category] || category);
 
-        const content = document.createElement('div');
-        content.style.display = 'none';
-        content.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
-        content.style.gap = '8px';
-        content.style.padding = '8px 0';
+                const content = document.createElement('div');
+                content.style.display = 'none';
+                content.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+                content.style.gap = '8px';
+                content.style.padding = '8px 0';
 
-        const allLabel = document.createElement('label');
-        allLabel.style.gridColumn = '1 / -1';
-        allLabel.style.display = 'flex';
-        allLabel.style.alignItems = 'center';
-        allLabel.style.gap = '6px';
-        allLabel.style.fontWeight = '500';
+                const allLabel = document.createElement('label');
+                allLabel.style.gridColumn = '1 / -1';
+                allLabel.style.display = 'flex';
+                allLabel.style.alignItems = 'center';
+                allLabel.style.gap = '6px';
+                allLabel.style.fontWeight = '500';
 
-        const selectAllCheckbox = document.createElement('input');
-        selectAllCheckbox.type = 'checkbox';
+                const selectAllCheckbox = document.createElement('input');
+                selectAllCheckbox.type = 'checkbox';
 
-        const selectAllText = document.createElement('span');
-        selectAllText.textContent = 'Alle Erweiterungen an-/abwählen';
-        selectAllText.style.fontWeight = 'bold';
-        selectAllText.style.color = 'var(--primary-color, #007bff)';
+                const selectAllText = document.createElement('span');
+                selectAllText.textContent = 'Alle Erweiterungen an-/abwählen';
+                selectAllText.style.fontWeight = 'bold';
+                selectAllText.style.color = 'var(--primary-color, #007bff)';
 
-        allLabel.appendChild(selectAllCheckbox);
-        allLabel.appendChild(selectAllText);
-        content.appendChild(allLabel);
+                allLabel.appendChild(selectAllCheckbox);
+                allLabel.appendChild(selectAllText);
+                content.appendChild(allLabel);
 
-        const checkboxes = [];
+                const checkboxes = [];
 
-        manualExtensions[category]
-            .slice()
-            .sort((a, b) => {
-                const aAlpha = /^[A-Za-z]/.test(a.name);
-                const bAlpha = /^[A-Za-z]/.test(b.name);
+                manualExtensions[category]
+                    .slice()
+                    .sort((a, b) => {
+                    const aAlpha = /^[A-Za-z]/.test(a.name);
+                    const bAlpha = /^[A-Za-z]/.test(b.name);
 
-                if (aAlpha && !bAlpha) return -1;
-                if (!aAlpha && bAlpha) return 1;
+                    if (aAlpha && !bAlpha) return -1;
+                    if (!aAlpha && bAlpha) return 1;
 
-                return a.name.localeCompare(b.name, 'de', { numeric: true });
-            })
-            .forEach(ext => {
-                const key = `${category}_${ext.id}`;
-                const label = document.createElement('label');
-                label.style.display = 'flex';
-                label.style.alignItems = 'center';
-                label.style.gap = '6px';
+                    return a.name.localeCompare(b.name, 'de', { numeric: true });
+                })
+                    .forEach(ext => {
+                    const key = `${category}_${ext.id}`;
+                    const label = document.createElement('label');
+                    label.style.display = 'flex';
+                    label.style.alignItems = 'center';
+                    label.style.gap = '6px';
 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.checked = settings[key];
-                checkbox.dataset.key = key;
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = settings[key];
+                    checkbox.dataset.key = key;
 
-                checkbox.addEventListener('change', () => {
-                    settings[key] = checkbox.checked;
-                    const allChecked = checkboxes.every(cb => cb.checked);
-                    selectAllCheckbox.checked = allChecked;
+                    checkbox.addEventListener('change', () => {
+                        settings[key] = checkbox.checked;
+                        const allChecked = checkboxes.every(cb => cb.checked);
+                        selectAllCheckbox.checked = allChecked;
+                    });
+
+                    label.appendChild(checkbox);
+                    label.append(` ${ext.name}`);
+                    content.appendChild(label);
+                    checkboxes.push(checkbox);
                 });
 
-                label.appendChild(checkbox);
-                label.append(` ${ext.name}`);
-                content.appendChild(label);
-                checkboxes.push(checkbox);
-            });
+                selectAllCheckbox.checked = checkboxes.every(cb => cb.checked);
+                selectAllCheckbox.addEventListener('change', () => {
+                    checkboxes.forEach(cb => {
+                        cb.checked = selectAllCheckbox.checked;
+                        settings[cb.dataset.key] = cb.checked;
+                    });
+                });
 
-        selectAllCheckbox.checked = checkboxes.every(cb => cb.checked);
-        selectAllCheckbox.addEventListener('change', () => {
-            checkboxes.forEach(cb => {
-                cb.checked = selectAllCheckbox.checked;
-                settings[cb.dataset.key] = cb.checked;
-            });
-        });
+                legend.addEventListener('click', () => {
+                    const open = content.style.display === 'grid';
+                    content.style.display = open ? 'none' : 'grid';
+                    arrow.textContent = open ? '▶' : '▼';
+                });
 
-        legend.addEventListener('click', () => {
-            const open = content.style.display === 'grid';
-            content.style.display = open ? 'none' : 'grid';
-            arrow.textContent = open ? '▶' : '▼';
-        });
+                fieldset.appendChild(legend);
+                fieldset.appendChild(content);
+                form.appendChild(fieldset);
+            }
 
-        fieldset.appendChild(legend);
-        fieldset.appendChild(content);
-        form.appendChild(fieldset);
-    }
-
-    return form;
-}
-
+            return form;
+        }
 
         function createStorageForm() {
             const form = document.createElement('form');
@@ -828,9 +1120,6 @@
         overlay.appendChild(panel);
         document.body.appendChild(overlay);
     }
-
-    // Ende des Userinterfaces
-
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Funktion zum Abrufen der Benutzereinstellungen vom API
@@ -838,7 +1127,7 @@
         try {
             const response = await fetch('https://www.leitstellenspiel.de/api/settings');
             const data = await response.json();
-            return data; // Gibt die vollständige Antwort zurück
+            return data;
         } catch (error) {
             console.error("Fehler beim Abrufen der Einstellungen: ", error);
             return null;
@@ -852,7 +1141,7 @@
             return;
         }
 
-        const mode = userSettings.design_mode; // Benutze jetzt "design_mode" anstelle von "mode"
+        const mode = userSettings.design_mode;
         // Warten auf das Lightbox-Element
         const lightboxContent = document.getElementById('extension-lightbox-content');
         if (!lightboxContent) {
@@ -863,22 +1152,22 @@
         lightboxContent.classList.remove('dark', 'light');
 
         // Modus anwenden
-        if (mode === 1 || mode === 4) { // Dunkelmodus
+        if (mode === 1 || mode === 4) {
             lightboxContent.classList.add('dark');
 
             // Dark Mode für Tabelle
             document.documentElement.style.setProperty('--background-color', '#333');
             document.documentElement.style.setProperty('--text-color', '#fff');
             document.documentElement.style.setProperty('--border-color', '#444');
-        } else if (mode === 2 || mode === 3) { // Hellmodus
+        } else if (mode === 2 || mode === 3) {
             lightboxContent.classList.add('light');
 
             // Light Mode für Tabelle
             document.documentElement.style.setProperty('--background-color', '#f2f2f2');
             document.documentElement.style.setProperty('--text-color', '#000');
             document.documentElement.style.setProperty('--border-color', '#ccc');
-        } else { // Standardmodus (wenn der Modus unbekannt ist)
-            lightboxContent.classList.add('light'); // Standardmäßig hell
+        } else {
+            lightboxContent.classList.add('light');
 
             // Standard Light Mode für Tabelle
             document.documentElement.style.setProperty('--background-color', '#f2f2f2');
@@ -898,88 +1187,14 @@
             // Überprüfe, ob das Content-Element in der Lightbox existiert
             const lightboxContent = document.getElementById('extension-lightbox-content');
             if (lightboxContent) {
-                applyMode(); // Wenn das Lightbox-Inhalt gefunden wird, Modus anwenden
-                observer.disconnect(); // Beende die Beobachtung, wenn die Lightbox gefunden wurde
+                applyMode();
+                observer.disconnect();
             }
         });
 
         // Beobachte das Hinzufügen von neuen Kindelementen (wie die Lightbox-Inhalte)
         observer.observe(lightboxContainer, { childList: true, subtree: true });
     }
-
-    // Wende den Modus an, wenn das DOM bereit ist
-    window.addEventListener('load', () => {
-        applyMode();
-        observeLightbox(); // Beobachtet dynamische Änderungen
-    });
-
-    // Fügt die Stile hinzu
-    const styleElement = document.createElement('style');
-    styleElement.innerHTML = styles;
-    document.head.appendChild(styleElement);
-
-    const lightbox = document.createElement('div');
-    lightbox.id = 'extension-lightbox';
-    lightbox.style.display = 'none';
-    lightbox.innerHTML = `
-        <div id="extension-lightbox-content">
-        <button id="close-extension-helper">Schließen</button>
-        <h3>🚒🏗️ <strong>Herzlich willkommen beim ultimativen Ausbau-Assistenten für eure Wachen!</strong> 🚒🏗️</h3>
-        <h2>
-        <br>Dem Erweiterungs-Manager
-        </h2>
-        <h5>
-        <br>
-        <br>Dieses kleine Helferlein zeigt euch genau, wo noch Platz in euren Wachen ist: Welche <strong>Erweiterungen</strong> und <strong>Lagerräume</strong> noch möglich sind – und mit nur ein paar Klicks geht’s direkt in den Ausbau. Einfacher wird’s nicht!
-        <br>
-        <br>Und das Beste: Über den
-        <button id="open-extension-settings" style="
-        font-weight: 600;
-        color: #fff;
-        background-color: var(--primary-color, #007bff);
-        border: none;
-        padding: 6px 14px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-        margin: 0 5px;
-        ">
-        Einstellungen
-        </button>
-        -Button könnt ihr festlegen, welche Erweiterungen und Lagerräume euch pro Wachen-Typ angezeigt werden – ganz nach eurem Geschmack. Einmal gespeichert, für immer gemerkt.
-        <br>
-        <br>Kleiner Hinweis am Rande: Feedback, Verbesserungsvorschläge oder Kritik zum Skript sind jederzeit im
-        <a href="https://forum.leitstellenspiel.de/index.php?thread/27856-script-erweiterungs-manager/" target="_blank" style="color:#007bff; text-decoration:none;">
-        <strong>Forum</strong>
-        </a> willkommen. 💌
-        <br>
-        <br>
-        <br>Und nun viel Spaß beim Credits oder Coins ausgeben!
-        <br>
-        <br>
-        <div id="extension-list">
-        Einen Moment Geduld bitte …
-        <br><br>
-        Gebäudedaten werden geladen, Kaffee kocht – gleich geht's los!
-        </div>
-        </h5>
-        </div>
-        `;
-
-    document.body.appendChild(lightbox);
-
-    const openBtn = document.getElementById('open-extension-settings');
-    const lightboxContent = lightbox.querySelector('#extension-lightbox-content');
-
-    openBtn.addEventListener('mouseenter', () => {
-        openBtn.style.backgroundColor = '#0056b3'; // dunkleres Blau beim Hover
-    });
-    openBtn.addEventListener('mouseleave', () => {
-        openBtn.style.backgroundColor = 'var(--primary-color, #007bff)';
-    });
-    openBtn.addEventListener('click', () => {
-        openExtensionSettingsOverlay();
-    });
 
     // Darkmode oder Whitemode anwenden
     function applyTheme() {
@@ -990,9 +1205,6 @@
 
     // Event-Listener für Theme-Änderungen
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-
-    // Theme initial anwenden
-    applyTheme();
 
     // Funktion zum Formatieren der Zahl
     function formatNumber(number) {
@@ -1012,26 +1224,22 @@
             console.error('Profilmenü (#menu_profile + .dropdown-menu) nicht gefunden. Der Button konnte nicht hinzugefügt werden.');
             return;
         }
-
-        // Prüfen, ob der Button bereits existiert
         if (profileMenu.querySelector('#open-extension-helper')) return;
 
-        // <li>-Element erstellen
         const menuButton = document.createElement('li');
         menuButton.setAttribute('role', 'presentation');
 
-        // <a>-Element erstellen (wie bei den anderen Einträgen)
         const link = document.createElement('a');
         link.id = 'open-extension-helper';
-        link.href = '#'; // notwendig, damit Styles greifen
-        link.innerHTML = `
-        <span class="glyphicon glyphicon-wrench"></span>&nbsp;&nbsp; Erweiterungs-Manager
-    `;
+        link.href = '#';
+        link.innerHTML = `<span class="glyphicon glyphicon-wrench"></span>&nbsp;&nbsp; Erweiterungs-Manager`;
 
-        // Verhalten wie bei einem normalen Menü-Eintrag
         link.addEventListener('click', (e) => {
-            e.preventDefault(); // verhindert Navigation
-            checkPremiumAndShowHint(); // deine Funktion
+            e.preventDefault();
+            document.getElementById('selected-credits').textContent = "0";
+            document.getElementById('selected-coins').textContent = "0";
+
+            checkPremiumAndShowHint();
         });
 
         // Elemente zusammenbauen
@@ -1045,12 +1253,6 @@
             profileMenu.appendChild(menuButton);
         }
     }
-
-    // Initial den Button hinzufügen
-    addMenuButton();
-
-    // Globale Variable definieren
-    var user_premium = false;
 
     // Funktion, um den Premium-Status zu überprüfen
     function checkPremiumStatus() {
@@ -1071,9 +1273,6 @@
             user_premium = false; // Standardwert setzen
         }
     }
-
-    // Rufen Sie die Funktion auf, um den Status zu überprüfen
-    checkPremiumStatus();
 
     // Funktion zur Prüfung von Premium und Hinweis
     async function checkPremiumAndShowHint() {
@@ -1143,33 +1342,58 @@
         const building = buildingsData.find(b => String(b.id) === String(buildingId));
         if (building) {
 
-            return building.caption; // Direkt den Gebäudennamen zurückgeben
+            return building.caption;
         }
 
         return 'Unbekanntes Gebäude';
     }
 
-    let buildingsData = []; // Globale Variable, um die abgerufenen Gebäudedaten zu speichern
-    let buildingGroups = {}; // Globale Definition
-    const storageGroups = {};
+    // Funktion um alle Daten zu sammeln
+    async function fetchBuildingsAndRender() {
+        const loadingText = document.getElementById('loading-text');
+        const loadingContainer = document.getElementById('loading-container');
+        const extensionList = document.getElementById('extension-list');
 
-    // Funktion zum Abrufen der Gebäudedaten
-    function fetchBuildingsAndRender() {
-        fetch('https://www.leitstellenspiel.de/api/buildings')
-            .then(response => {
-            if (!response.ok) {
-                throw new Error('Fehler beim Abrufen der Daten');
-            }
-            return response.json();
-        })
-            .then(data => {
-            buildingsData = data; // Speichern der Gebäudedaten in einer globalen Variablen
-            renderMissingExtensions(data); // Weiterverarbeiten der abgerufenen Daten
-        })
-            .catch(error => {
-            const list = document.getElementById('extension-list');
-            list.innerHTML = 'Fehler beim Laden der Gebäudedaten.';
-        });
+        let dotInterval;
+
+        function startLoadingAnimation() {
+            let dots = 0;
+            loadingText.textContent = 'Lade die Daten, je nach Größe kann dies einen Augenblick dauern';
+            dotInterval = setInterval(() => {
+                dots = (dots + 1) % 4; // 0 bis 3 Punkte
+                loadingText.textContent = 'Lade die Daten, je nach Anzahl der Gebäude und Serverlast kann dies einen Augenblick dauern' + '.'.repeat(dots);
+            }, 500);
+        }
+
+        function stopLoadingAnimation() {
+            clearInterval(dotInterval);
+        }
+
+        loadingContainer.style.display = 'block';
+        extensionList.style.display = 'none';
+        startLoadingAnimation();
+
+        try {
+            const response = await fetch('https://www.leitstellenspiel.de/api/buildings');
+            if (!response.ok) throw new Error('Fehler beim Abrufen der Daten');
+            const buildingsData = await response.json();
+
+            buildingsData.forEach(building => getBuildingLevelInfo(building));
+            await initUserCredits();
+            await renderMissingExtensions(buildingsData);
+            await initUserCredits(); // setzt currentCredits / currentCoins
+            updateSelectedAmounts(buildingsData); // nutzt jetzt die globalen Werte
+
+            stopLoadingAnimation();
+            loadingContainer.style.display = 'none';
+            extensionList.style.display = 'block';
+
+        } catch (error) {
+            stopLoadingAnimation();
+            loadingContainer.style.display = 'none';
+            extensionList.style.display = 'block';
+            extensionList.innerHTML = 'Fehler beim Laden der Gebäudedaten.';
+        }
     }
 
     // Funktion, um den Namen der zugehörigen Leitstelle zu ermitteln
@@ -1178,6 +1402,25 @@
 
         const leitstelle = buildingsData.find(b => b.id === building.leitstelle_building_id);
         return leitstelle ? leitstelle.caption : 'Unbekannt';
+    }
+
+    // Funktion um die Ausbaustufen zu ermitteln
+    function getBuildingLevelInfo(building) {
+        const type = building.building_type;
+        const size = building.small_building ? 'small' : 'normal';
+        const key = `${type}_${size}`;
+        const levelData = manualLevels[key];
+        if (!levelData) return null;
+
+        // currentLevel ist das Level im Gebäude-Objekt, >=0
+        const currentLevel = (typeof building.level === 'number' && building.level >= 0) ? building.level : -1;
+
+        // current = Stufe mit id == currentLevel, oder null falls Level -1
+        const current = currentLevel >= 0 ? levelData.find(l => l.id === currentLevel) : null;
+        // next = Level mit id currentLevel + 1, oder erstes Level wenn currentLevel -1 (noch kein Gebäude)
+        const next = currentLevel >= 0 ? levelData.find(l => l.id === currentLevel + 1) : levelData[0];
+
+        return { current, next, currentLevel };
     }
 
     // Funktion um die aktuelle Credits und Coins des Users abzurufen
@@ -1254,7 +1497,9 @@
             const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
             const extensions = manualExtensions[baseKey];
             const storageOptions = manualStorageRooms[baseKey];
-            if (!extensions && !storageOptions) return;
+
+            const hasLevelUpgrade = !!getBuildingLevelInfo(building)?.next;
+            if (!extensions && !storageOptions && !hasLevelUpgrade) return;
 
             const existingExtensions = new Set(building.extensions.map(e => e.type_id));
             const existingStorages = new Set((building.storage_upgrades || []).map(u => Object.keys(u)[0]));
@@ -1263,18 +1508,33 @@
                 const key = `${baseKey}_${ext.id}`;
                 if (!settings[key] || isExtensionLimitReached(building, ext.id)) return false;
 
-                // Ergänzung: Bereits gebaute Erweiterung immer ausblenden!
+                // Bereits gebaute Erweiterung ausblenden
                 if (existingExtensions.has(ext.id)) return false;
 
                 const isForbidden = (forbiddenIds) =>
                 forbiddenIds.some(id => existingExtensions.has(id)) && !forbiddenIds.includes(ext.id);
 
-                if (building.building_type === 6 && building.small_building) {
-                    return !isForbidden([10, 11, 12, 13]);
+                // Spezialfall: Klein-Feuerwache
+                if (building.building_type === 0 && building.small_building) {
+                    const limited = [0, 6, 8, 13, 14, 16, 18, 19, 25];
+                    const alwaysAllowed = [1, 2, 20, 21];
+
+                    // AB & Anhänger immer erlauben
+                    if (alwaysAllowed.includes(ext.id)) return true;
+
+                    // Limitierte Erweiterungen blocken, falls schon eine gebaut wurde
+                    return !isForbidden(limited);
                 }
 
-                if (building.building_type === 0 && building.small_building) {
-                    return !isForbidden([0, 6, 8, 13, 14, 16, 18, 19, 25]);
+                // Spezialfall: Klein-Polizeiwache
+                if (building.building_type === 6 && building.small_building) {
+                    const limited = [10, 11, 12, 13];
+                    const alwaysAllowed = [0, 1];
+
+                    if (alwaysAllowed.includes(ext.id)) return true;
+
+                    // Limitierte Erweiterungen blocken, falls schon eine gebaut wurde
+                    return !isForbidden(limited);
                 }
 
                 return true;
@@ -1285,13 +1545,11 @@
                 return settings[key] !== false && !existingStorages.has(opt.id.toString());
             });
 
-            // Nur Gebäude einfügen, wenn Erweiterungen oder Lager fehlen
-            if (allowedExtensions.length === 0 && enabledStorages.length === 0) return;
+            if (allowedExtensions.length === 0 && enabledStorages.length === 0 && !hasLevelUpgrade) return;
 
             buildingGroups[baseKey] = buildingGroups[baseKey] || [];
             buildingGroups[baseKey].push({ building, missingExtensions: allowedExtensions });
 
-            // Lagergruppen vorbereiten
             if (enabledStorages.length > 0) {
                 prepareStorageGroup(baseKey, [{ building }], settings);
             }
@@ -1302,7 +1560,8 @@
             const buildingType = buildingTypeNames[groupKey] || 'Unbekannt';
 
             const header = createHeader(buildingType);
-            const buttons = createButtonContainer(groupKey, group);
+            const buttons = createButtonContainer(groupKey, group, userInfo);
+            buttons.container.dataset.buildingType = groupKey;
 
             const hasEnabledStorage = group.some(({ building }) => {
                 const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
@@ -1324,7 +1583,6 @@
                 }
             }
 
-            // Erweiterungen prüfen
             const hasExtensions = group.some(({ missingExtensions }) => missingExtensions.length > 0);
 
             if (buttons.spoilerButton) {
@@ -1336,8 +1594,7 @@
                 }
             }
 
-            // Spoiler-Wrapper erzeugen (analog Lager-Wrapper)
-            const spoilerWrapper = hasExtensions
+            const spoilerWrapper = (hasExtensions && buttons.spoilerButton)
             ? createSpoilerContentWrapper(buttons.spoilerButton)
             : null;
 
@@ -1350,20 +1607,33 @@
             ? createLagerContentWrapper(buttons.lagerButton, group, userInfo, buttons.buildSelectedButton)
             : null;
 
+            const hasLevelUpgrades = group.some(({ building }) => {
+                const levelInfo = getBuildingLevelInfo(building);
+                return levelInfo?.next;
+            });
+
+            let levelWrapper = null;
+            if (buttons.levelButton) {
+                buttons.levelButton.disabled = !hasLevelUpgrades;
+                buttons.levelButton.style.opacity = hasLevelUpgrades ? '1' : '0.5';
+                buttons.levelButton.style.cursor = hasLevelUpgrades ? 'pointer' : 'not-allowed';
+
+                if (!hasLevelUpgrades) {
+                    buttons.levelButton.title = 'Keine weiteren Ausbaustufen verfügbar';
+                } else {
+                    levelWrapper = createLevelContentWrapper(buttons.levelButton, group, userInfo);
+                }
+            }
+
             list.append(header, buttons.container);
+            if (spoilerWrapper) list.appendChild(spoilerWrapper);
+            if (lagerWrapper) list.appendChild(lagerWrapper);
+            if (levelWrapper) list.appendChild(levelWrapper);
 
-            if (spoilerWrapper) {
-                list.appendChild(spoilerWrapper);
-            }
-
-            if (lagerWrapper) {
-                list.appendChild(lagerWrapper);
-            }
-
-            if (spoilerWrapper && lagerWrapper) {
-                spoilerWrapper.otherWrapper = lagerWrapper;
-                lagerWrapper.otherWrapper = spoilerWrapper;
-            }
+            const wrappers = [spoilerWrapper, lagerWrapper, levelWrapper].filter(Boolean);
+            wrappers.forEach(wrapper => {
+                wrapper.otherWrappers = wrappers.filter(w => w !== wrapper);
+            });
         });
     }
 
@@ -1376,11 +1646,21 @@
     }
 
     // Funktion um den ButtonContainer zu erstellen
-    function createButtonContainer(groupKey, group) {
+    function createButtonContainer(groupKey, group, userInfo) {
         const container = document.createElement('div');
         container.classList.add('button-container');
 
-        const spoilerButton = createButton('Erweiterungen anzeigen', ['btn', 'spoiler-button']);
+        const spoilerButton = createButton('Erweiterungen', ['btn', 'spoiler-button']);
+
+        const showLevelButton = group.some(({ building }) => {
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            return allowedBuildings.has(key);
+        });
+
+        let levelButton = null;
+        if (showLevelButton) {
+            levelButton = createButton('Ausbaustufen', ['btn', 'level-button']);
+        }
 
         const canBuildStorage = group.some(({ building }) => {
             const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
@@ -1389,26 +1669,31 @@
 
         let lagerButton = null;
         if (canBuildStorage) {
-            lagerButton = createButton('Lager anzeigen', ['btn','lager-button']);
-
+            lagerButton = createButton('Lagerräume', ['btn', 'lager-button']);
         }
 
         const buildSelectedButton = createButton('Ausgewählte Erweiterungen/Lager bauen', ['btn', 'build-selected-button']);
         buildSelectedButton.disabled = true;
         buildSelectedButton.onclick = () => buildSelectedExtensions();
 
+        const buildSelectedLevelsButton = createButton('Ausgewählte Stufen bauen', ['btn', 'build-selected-levels-button']);
+        buildSelectedLevelsButton.disabled = true;
+        buildSelectedLevelsButton.onclick = () => buildSelectedLevelsAll(buildingsData);
+
         const buildAllButton = createButton('Sämtliche Erweiterungen/Lager bei allen Wachen bauen', ['btn', 'build-all-button']);
         buildAllButton.onclick = () => showCurrencySelectionForAll(groupKey);
 
-        [spoilerButton, lagerButton, buildSelectedButton, buildAllButton]
+        [spoilerButton, lagerButton, buildSelectedButton, levelButton, buildSelectedLevelsButton, buildAllButton]
             .filter(Boolean)
             .forEach(btn => container.appendChild(btn));
 
         return {
             container,
             spoilerButton,
+            levelButton,
             lagerButton,
-            buildSelectedButton
+            buildSelectedLevelsButton,
+            buildSelectedButton,
         };
     }
 
@@ -1420,7 +1705,17 @@
         return btn;
     }
 
-    // Funktion um die Spoiler-Inhalte zu erstellen (Erweiterung/Lager)
+    // Funktion um die Spoiler-Inhalte zu erstellen (Erweiterung/Lager/Stufenausbau)
+    function resetButtonText(wrapper) {
+        if (!wrapper.associatedButton) return;
+        if (wrapper.classList.contains('spoiler-content')) {
+            wrapper.associatedButton.textContent = 'Erweiterungen';
+        } else if (wrapper.classList.contains('lager-wrapper')) {
+            wrapper.associatedButton.textContent = 'Lagerräume';
+        } else if (wrapper.classList.contains('level-wrapper')) {
+            wrapper.associatedButton.textContent = 'Ausbaustufen';
+        }
+    }
     function createSpoilerContentWrapper(spoilerButton) {
         const wrapper = document.createElement('div');
         wrapper.className = 'spoiler-content';
@@ -1429,26 +1724,22 @@
         spoilerButton.addEventListener('click', () => {
             const show = wrapper.style.display !== 'block';
 
-            // Erst alle anderen Wrapper schließen, wenn vorhanden
-            if (wrapper.otherWrapper) {
-                wrapper.otherWrapper.style.display = 'none';
-                const otherButton = wrapper.otherWrapper.associatedButton;
-                if (otherButton) otherButton.textContent = 'Lager anzeigen';
+            if (wrapper.otherWrappers) {
+                wrapper.otherWrappers.forEach(other => {
+                    other.style.display = 'none';
+                    if (other.associatedButton) {
+                        other.associatedButton.classList.remove('active-button');
+                        resetButtonText(other);
+                    }
+                });
             }
 
             wrapper.style.display = show ? 'block' : 'none';
-            spoilerButton.textContent = show ? 'Erweiterungen ausblenden' : 'Erweiterungen anzeigen';
+            spoilerButton.textContent = show ? 'Erweiterungen ausblenden' : 'Erweiterungen';
             spoilerButton.classList.toggle('active-button', show);
-
-            // Gegenstück deaktivieren, falls vorhanden
-            if (wrapper.otherWrapper && wrapper.otherWrapper.associatedButton) {
-                wrapper.otherWrapper.associatedButton.classList.remove('active-button');
-            }
         });
 
-        // Referenz für später (zum Rücksetzen anderer Buttons)
         wrapper.associatedButton = spoilerButton;
-
         return wrapper;
     }
     function createLagerContentWrapper(lagerButton, group, userInfo, buildSelectedButton) {
@@ -1463,74 +1754,108 @@
         lagerButton.addEventListener('click', () => {
             const show = wrapper.style.display !== 'block';
 
-            // Erst anderen Wrapper schließen, falls vorhanden
-            if (wrapper.otherWrapper) {
-                wrapper.otherWrapper.style.display = 'none';
-                const otherButton = wrapper.otherWrapper.associatedButton;
-                if (otherButton) otherButton.textContent = 'Erweiterungen anzeigen';
+            if (wrapper.otherWrappers) {
+                wrapper.otherWrappers.forEach(other => {
+                    other.style.display = 'none';
+                    if (other.associatedButton) {
+                        other.associatedButton.classList.remove('active-button');
+                        resetButtonText(other);
+                    }
+                });
             }
 
             wrapper.style.display = show ? 'block' : 'none';
-            lagerButton.textContent = show ? 'Lager ausblenden' : 'Lager anzeigen';
+            lagerButton.textContent = show ? 'Lagerräume ausblenden' : 'Lagerräume';
             lagerButton.classList.toggle('active-button', show);
-
-            // Gegenstück deaktivieren, falls vorhanden
-            if (wrapper.otherWrapper && wrapper.otherWrapper.associatedButton) {
-                wrapper.otherWrapper.associatedButton.classList.remove('active-button');
-            }
         });
 
-        // Referenz speichern
         wrapper.associatedButton = lagerButton;
+        return wrapper;
+    }
+    function createLevelContentWrapper(levelButton, group, userInfo, buildSelectedButton) {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('level-wrapper');
+        wrapper.style.display = 'none';
+        wrapper.style.marginTop = '10px';
 
+        const levelTable = createLevelTable(group, userInfo);
+        wrapper.appendChild(levelTable);
+
+        levelButton.addEventListener('click', () => {
+            const show = wrapper.style.display !== 'block';
+
+            if (wrapper.otherWrappers) {
+                wrapper.otherWrappers.forEach(other => {
+                    other.style.display = 'none';
+                    if (other.associatedButton) {
+                        other.associatedButton.classList.remove('active-button');
+                        resetButtonText(other);
+                    }
+                });
+            }
+            wrapper.style.display = show ? 'block' : 'none';
+            levelButton.textContent = show ? 'Ausbaustufen ausblenden' : 'Ausbaustufen';
+            levelButton.classList.toggle('active-button', show);
+        });
+
+        wrapper.associatedButton = levelButton;
         return wrapper;
     }
 
     // Funktion zur Prüfung der richtigen Baureihenfolge von Lagerräumen
-    function canBuildStorageInOrder(storageId, buildingType, builtStorages) {
-        const storageList = manualStorageRooms[buildingType];
-        if (!storageList) return true;
+    function canBuildStorageInOrder(buildingId, storageId) {
+        const building = buildingsData.find(b => String(b.id) === String(buildingId));
+        if (!building) return false;
 
+        const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+        const storageList = manualStorageRooms[buildingTypeKey] || [];
         const indexToBuild = storageList.findIndex(s => s.id === storageId);
-        if (indexToBuild === -1) return true;
+        if (indexToBuild === -1) return true; // Lagerraum nicht in Liste => keine Einschränkung
 
+        const currentState = getCurrentStorageState(buildingId);
+
+        // Prüfen, ob alle vorherigen Lagerräume bereits gebaut sind
         for (let i = 0; i < indexToBuild; i++) {
-            if (!builtStorages.includes(storageList[i].id)) {
-
+            if (!currentState.includes(storageList[i].id)) {
                 return false;
             }
         }
-
         return true;
     }
-    function canBuildAllSelectedInOrder(selectedStorages, buildingType, builtStorages) {
-        const storageList = manualStorageRooms[buildingType];
-        if (!storageList) return true;
+    function canBuildAllSelectedInOrder(buildingId, selectedStorages) {
+        const building = buildingsData.find(b => String(b.id) === String(buildingId));
+        if (!building) return false;
 
-        const allBuilt = new Set(builtStorages);
+        // Welche Reihenfolge gilt für diese Wache?
+        const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+        const storageOrder = manualStorageRooms[buildingTypeKey]?.map(s => s.id) || [];
 
-        for (let i = 0; i < storageList.length; i++) {
-            const currentStorageId = storageList[i].id;
+        // Aktueller Zustand: fertig + im Bau + Queue
+        const builtStorages = new Set(getCurrentStorageState(buildingId));
 
-            if (selectedStorages.includes(currentStorageId)) {
-                // Prüfe: sind alle vorherigen gebaut?
-                for (let j = 0; j < i; j++) {
-                    const prevStorageId = storageList[j].id;
-                    if (!allBuilt.has(prevStorageId)) {
-                        // Nicht erlaubt, weil vorherige Lager fehlen
-                        return false;
-                    }
-                }
+        // Prüfen für jede ausgewählte Erweiterung
+        for (let i = 0; i < selectedStorages.length; i++) {
+            const storageId = selectedStorages[i];
+            const requiredIndex = storageOrder.indexOf(storageId);
+            if (requiredIndex === -1) continue; // Lager nicht in der definierten Reihenfolge-Liste → ignorieren
 
-                // Temporär als "gebaut" markieren, um Reihenfolge in dieser Session zu tracken
-                allBuilt.add(currentStorageId);
+            // Alle vorherigen Lager müssen schon "gebaut oder im Bau" sein
+            const missing = storageOrder
+            .slice(0, requiredIndex)
+            .some(prevId => !builtStorages.has(prevId));
+
+            if (missing) {
+                return false; // Reihenfolge verletzt
             }
+
+            // Nach Prüfung: so behandeln, als wäre dieser Lagerraum auch gebaut
+            builtStorages.add(storageId);
         }
 
         return true;
     }
 
-    // Funktion um die Tabelle für Erweiterung und Lager zu erstellen
+    // Funktion um die Tabelle für Erweiterung, Lager und Ausbaustufen zu erstellen
     function createExtensionTable(groupKey, group, userInfo, buildSelectedButton) {
         const table = document.createElement('table');
         table.innerHTML = `
@@ -1609,19 +1934,78 @@
         resetCell.appendChild(resetBtn);
         filterRow.appendChild(resetCell);
 
-        filterRow.appendChild(document.createElement('th')); // leer lassen
-        table.querySelector('thead').appendChild(filterRow);
+        const uncheckAllCell = document.createElement('th');
+        uncheckAllCell.style.textAlign = 'center';
+        uncheckAllCell.style.padding = '4px 8px';
 
-        selectAllCheckbox.addEventListener('change', () => {
-            const rows = tbody.querySelectorAll('tr');
-            rows.forEach(row => {
+        const uncheckAllBtn = document.createElement('button');
+        uncheckAllBtn.textContent = 'Alle abwählen';
+        uncheckAllBtn.classList.add('btn', 'btn-sm', 'btn-warning');
+        uncheckAllBtn.style.padding = '2px 6px';
+        uncheckAllBtn.style.fontSize = '0.8em';
+
+        uncheckAllBtn.onclick = () => {
+            tbody.querySelectorAll('tr').forEach(row => {
                 if (row.style.display !== 'none') {
                     const cb = row.querySelector('.extension-checkbox');
-                    if (cb && !cb.disabled) cb.checked = selectAllCheckbox.checked;
+                    if (cb && !cb.disabled) {
+                        cb.checked = false;
+                    }
                 }
             });
             updateBuildSelectedButton();
             updateSelectAllCheckboxState();
+            updateSelectedAmounts(buildingsData);
+        };
+
+        uncheckAllCell.appendChild(uncheckAllBtn);
+        filterRow.appendChild(uncheckAllCell);
+
+        table.querySelector('thead').appendChild(filterRow);
+
+        selectAllCheckbox.addEventListener('change', (event) => {
+            const isChecked = selectAllCheckbox.checked;
+
+            let totalCredits = 0;
+            let totalCoins = 0;
+
+            const rows = tbody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const cb = row.querySelector('.extension-checkbox');
+                    if (cb && !cb.disabled) {
+                        if (isChecked) {
+                            totalCredits += Number(cb.dataset.creditCost) || 0;
+                            totalCoins += Number(cb.dataset.coinCost) || 0;
+                        }
+                    }
+                }
+            });
+
+            const canPayAllWithCredits = currentCredits >= totalCredits;
+            const canPayAllWithCoins = currentCoins >= totalCoins;
+
+            if (!canPayAllWithCredits && !canPayAllWithCoins) {
+                alert("Erweiterungen - Du hast nicht genug Credits oder Coins für die gesamte Auswahl!");
+                // Checkbox zurücksetzen, da nicht erlaubt
+                selectAllCheckbox.checked = false;
+                return;
+            }
+
+            // Checkboxen setzen
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const cb = row.querySelector('.extension-checkbox');
+                    if (cb && !cb.disabled) {
+                        cb.checked = isChecked;
+                    }
+                }
+            });
+
+            updateBuildSelectedButton();
+            updateSelectAllCheckboxState();
+            updateSelectedAmounts(buildingsData);
         });
 
         group.forEach(({ building, missingExtensions }) => {
@@ -1636,9 +2020,13 @@
                 checkbox.className = 'extension-checkbox';
                 checkbox.dataset.buildingId = building.id;
                 checkbox.dataset.extensionId = extension.id;
+                checkbox.dataset.creditCost = extension.cost;
+                checkbox.dataset.coinCost = extension.coins;
+
                 checkbox.disabled = userInfo.credits < extension.cost && userInfo.coins < extension.coins;
                 checkbox.addEventListener('change', () => {
                     updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
                 });
 
                 row.innerHTML = `
@@ -1658,7 +2046,19 @@
                 creditBtn.style.backgroundColor = '#28a745';
                 creditBtn.style.color = 'white';
                 creditBtn.disabled = userInfo.credits < extension.cost;
-                creditBtn.onclick = () => buildExtension(building, extension.id, 'credits', extension.cost, row);
+                creditBtn.onclick = async () => {
+                    await buildExtension(building, extension.id, 'credits', extension.cost, row);
+
+                    // Auswahl für diese Erweiterung zurücksetzen
+                    const cb = row.querySelector('.extension-checkbox');
+                    if (cb) cb.checked = false;
+
+                    // Guthaben neu laden und anzeigen
+                    await initUserCredits();
+
+                    updateSelectedAmounts(buildingsData);
+                };
+
                 creditCell.appendChild(creditBtn);
                 row.appendChild(creditCell);
 
@@ -1670,7 +2070,17 @@
                 coinBtn.style.backgroundColor = '#dc3545';
                 coinBtn.style.color = 'white';
                 coinBtn.disabled = userInfo.coins < extension.coins;
-                coinBtn.onclick = () => buildExtension(building, extension.id, 'coins', extension.coins, row);
+                coinBtn.onclick = async () => {
+                    await buildExtension(building, extension.id, 'coins', extension.coins, row);
+
+                    const cb = row.querySelector('.extension-checkbox');
+                    if (cb) cb.checked = false;
+
+                    await initUserCredits();
+
+                    updateSelectedAmounts(buildingsData);
+                };
+
                 coinsCell.appendChild(coinBtn);
                 row.appendChild(coinsCell);
 
@@ -1710,22 +2120,31 @@
     }
     function createLagerTable(group, userInfo, buildSelectedButton, currentGroupKey) {
         const settings = getExtensionSettings();
+        const liveBuiltStorages = {};  // Live-Tracking der gebauten Lager pro Gebäude
+
+        // Initialisiere liveBuiltStorages mit aktuellen Upgrades
+        group.forEach(({ building }) => {
+            liveBuiltStorages[building.id] = new Set(
+                (building.storage_upgrades || []).map(u => u.type_id)
+            );
+        });
 
         const table = document.createElement('table');
         table.innerHTML = `
-        <thead style="background-color: #f2f2f2; font-weight: bold; border-bottom: 2px solid #ccc;">
-            <tr>
-                <th style="padding: 10px; text-align: center;">Alle An- / Abwählen</th>
-                <th>Leitstelle</th>
-                <th>Wache</th>
-                <th>Baubare Lager</th>
-                <th>Lagerkapazität</th>
-                <th>Credits</th>
-                <th>Coins</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    `;
+            <thead style="background-color: #f2f2f2; font-weight: bold; border-bottom: 2px solid #ccc;">
+                <tr>
+                    <th style="padding: 10px; text-align: center;">Alle An- / Abwählen</th>
+                    <th>Leitstelle</th>
+                    <th>Wache</th>
+                    <th>Baubare Lager</th>
+                    <th>Lagerkapazität</th>
+                    <th>Credits</th>
+                    <th>Coins</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            `;
+
 
         const tbody = table.querySelector('tbody');
         const filters = {};
@@ -1770,12 +2189,14 @@
             const options = manualStorageRooms[baseKey];
             if (!options) return;
 
-            const current = new Set((building.storage_upgrades || []).map(u => u.type_id));
+            // Hier liveBuiltStorages für das Gebäude verwenden
+            const current = liveBuiltStorages[building.id];
 
             options.forEach(opt => {
                 const id = opt.id;
 
-                if (current.has(id)) return;
+                if (current.has(id)) return; // Bereits gebaut, nicht anzeigen
+
                 const storageKey = `${baseKey}_storage_${opt.name.replace(/\s+/g, '_')}`;
                 if (settings[storageKey] === false) return;
 
@@ -1791,9 +2212,12 @@
                 checkbox.className = 'storage-checkbox';
                 checkbox.dataset.buildingId = building.id;
                 checkbox.dataset.storageType = id;
+                checkbox.dataset.creditCost = opt.cost;
+                checkbox.dataset.coinCost = opt.coins;
                 checkbox.disabled = userInfo.credits < opt.cost && userInfo.coins < opt.coins;
                 checkbox.addEventListener('change', () => {
                     updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
                 });
 
                 const checkboxCell = document.createElement('td');
@@ -1813,18 +2237,28 @@
                 creditBtn.style.backgroundColor = '#28a745';
                 creditBtn.style.color = 'white';
                 creditBtn.disabled = userInfo.credits < opt.cost;
-                creditBtn.onclick = () => {
-                    const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-                    const built = (building.storage_upgrades || []).map(u => Object.keys(u)[0]);
+                creditBtn.onclick = async () => {
+                    const built = [...liveBuiltStorages[building.id]];
 
-                    if (!canBuildStorageInOrder(id, baseKey, built)) {
-                        alert("Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n4. 3te zusätzlicher Lagerraum\n5. 4te zusätzlicher Lagerraum\n6. 5te zusätzlicher Lagerraum.\n7. 6te zusätzlicher Lagerraum\n8. 7te zusätzlicher Lagerraum");
-
+                    if (!canBuildStorageInOrder(building.id, id)) {   // ✅ Korrekte Parameter
+                        alert("Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n4. 3te zusätzlicher Lagerraum\n5. 4te zusätzlicher Lagerraum\n6. 5te zusätzlicher Lagerraum\n7. 6te zusätzlicher Lagerraum\n8. 7te zusätzlicher Lagerraum");
                         return;
                     }
 
-                    buildStorage(building, id, 'credits', opt.cost, row);
+
+                    await buildStorage(building, id, 'credits', opt.cost, row);
+
+                    liveBuiltStorages[building.id].add(id);
+
+                    creditBtn.disabled = true;
+                    coinBtn.disabled = true;
+                    checkbox.disabled = true;
+
+                    await initUserCredits();
+                    updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
                 };
+
                 creditCell.appendChild(creditBtn);
                 row.appendChild(creditCell);
 
@@ -1836,17 +2270,27 @@
                 coinBtn.style.color = 'white';
                 coinBtn.disabled = userInfo.coins < opt.coins;
                 coinBtn.onclick = () => {
-                    const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-                    const built = (building.storage_upgrades || []).map(u => Object.keys(u)[0]);
+                    const built = [...liveBuiltStorages[building.id]];
 
-                    if (!canBuildStorageInOrder(id, baseKey, built)) {
-                        alert("Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n4. 3te zusätzlicher Lagerraum\n5. 4te zusätzlicher Lagerraum\n6. 5te zusätzlicher Lagerraum\nusw.");
-
+                    if (!canBuildStorageInOrder(building.id, id)) {   // ✅ Korrekte Parameter
+                        alert("Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n4. 3te zusätzlicher Lagerraum\n5. 4te zusätzlicher Lagerraum\n6. 5te zusätzlicher Lagerraum\n7. 6te zusätzlicher Lagerraum\n8. 7te zusätzlicher Lagerraum");
                         return;
                     }
 
+
                     buildStorage(building, id, 'coins', opt.coins, row);
+
+                    liveBuiltStorages[building.id].add(id);
+
+                    creditBtn.disabled = true;
+                    coinBtn.disabled = true;
+                    checkbox.disabled = true;
+
+                    initUserCredits();
+                    updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
                 };
+
                 coinsCell.appendChild(coinBtn);
                 row.appendChild(coinsCell);
 
@@ -1873,20 +2317,78 @@
         };
         resetCell.appendChild(resetBtn);
         filterRow.appendChild(resetCell);
-        filterRow.appendChild(document.createElement('th')); // Coins-Spalte leer lassen
+
+        // Leere Spalte "Bauen mit Coins" ersetzen durch einen globalen Abwähl-Button
+        const uncheckAllCell = document.createElement('th');
+        uncheckAllCell.style.textAlign = 'center';
+        uncheckAllCell.style.padding = '4px 8px';
+
+        const uncheckAllBtn = document.createElement('button');
+        uncheckAllBtn.textContent = 'Alle abwählen';
+        uncheckAllBtn.classList.add('btn', 'btn-sm', 'btn-warning');
+        uncheckAllBtn.style.padding = '2px 6px';
+        uncheckAllBtn.style.fontSize = '0.8em';
+
+        uncheckAllBtn.onclick = () => {
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const cb = row.querySelector('.storage-checkbox');
+                    if (cb && !cb.disabled) {
+                        cb.checked = false;
+                    }
+                }
+            });
+            updateBuildSelectedButton();
+            updateSelectAllCheckboxState();
+            updateSelectedAmounts(buildingsData);
+        };
+
+        uncheckAllCell.appendChild(uncheckAllBtn);
+        filterRow.appendChild(uncheckAllCell);
 
         table.querySelector('thead').appendChild(filterRow);
 
-        selectAllCheckbox.addEventListener('change', () => {
+        selectAllCheckbox.addEventListener('change', (event) => {
+            const isChecked = selectAllCheckbox.checked;
+
+            let totalCredits = 0;
+            let totalCoins = 0;
+
             const rows = tbody.querySelectorAll('tr');
+
             rows.forEach(row => {
                 if (row.style.display !== 'none') {
                     const cb = row.querySelector('.storage-checkbox');
-                    if (cb && !cb.disabled) cb.checked = selectAllCheckbox.checked;
+                    if (cb && !cb.disabled) {
+                        if (isChecked) {
+                            totalCredits += Number(cb.dataset.creditCost) || 0;
+                            totalCoins += Number(cb.dataset.coinCost) || 0;
+                        }
+                    }
                 }
             });
-            updateSelectAllCheckboxState()
+
+            const canPayAllWithCredits = currentCredits >= totalCredits;
+            const canPayAllWithCoins = currentCoins >= totalCoins;
+
+            if (!canPayAllWithCredits && !canPayAllWithCoins) {
+                alert("Lager - Du hast nicht genug Credits oder Coins für die gesamte Auswahl!");
+                selectAllCheckbox.checked = false;
+                return;
+            }
+
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const cb = row.querySelector('.storage-checkbox');
+                    if (cb && !cb.disabled) {
+                        cb.checked = isChecked;
+                    }
+                }
+            });
+
+            updateSelectAllCheckboxState();
             updateBuildSelectedButton();
+            updateSelectedAmounts(buildingsData);
         });
 
         function applyAllFilters() {
@@ -1918,7 +2420,7 @@
 
         updateSelectAllCheckboxState();
 
-        // Speichere die Lagerdaten für die Bau-Funktion
+        // Speichere die Lagerdaten für die Bau-Funktion (das bleibt unverändert)
         if (!storageGroups[currentGroupKey]) storageGroups[currentGroupKey] = [];
 
         group.forEach(({ building }) => {
@@ -1941,7 +2443,7 @@
                     id,
                     cost: opt.cost,
                     coins: opt.coins,
-                    isStorage: true // <- Markiere es als Lager
+                    isStorage: true
                 });
             });
 
@@ -1951,6 +2453,481 @@
         });
 
         return table;
+    }
+    function createLevelTable(group, userInfo) {
+        function updateBuildButtons(building, selectedLevelId, creditCell, coinCell, levelList, currentLevel) {
+            let totalCredits = 0;
+            let totalCoins = 0;
+
+            if (selectedLevelId === null) {
+                creditCell.innerHTML = '';
+                coinCell.innerHTML = '';
+
+                const creditBtn = document.createElement('button');
+                creditBtn.textContent = '0 Credits';
+                creditBtn.classList.add('btn', 'btn-sm');
+                creditBtn.style.backgroundColor = '#28a745';
+                creditBtn.style.color = 'white';
+                creditBtn.disabled = true;
+                creditCell.appendChild(creditBtn);
+
+                const coinBtn = document.createElement('button');
+                coinBtn.textContent = '0 Coins';
+                coinBtn.classList.add('btn', 'btn-sm');
+                coinBtn.style.backgroundColor = '#dc3545';
+                coinBtn.style.color = 'white';
+                coinBtn.disabled = true;
+                coinCell.appendChild(coinBtn);
+                return;
+            }
+
+            if (selectedLevelId >= currentLevel) {
+                for (let i = currentLevel; i <= selectedLevelId; i++) {
+                    const stufe = levelList[i];
+                    if (!stufe) continue;
+                    totalCredits += stufe.cost || 0;
+                    totalCoins += stufe.coins || 0;
+                }
+            } else {
+                totalCredits = 0;
+                totalCoins = 0;
+            }
+
+            creditCell.innerHTML = '';
+            const creditBtn = document.createElement('button');
+            creditBtn.textContent = `${totalCredits.toLocaleString()} Credits`;
+            creditBtn.classList.add('btn', 'btn-sm');
+            creditBtn.style.backgroundColor = '#28a745';
+            creditBtn.style.color = 'white';
+            creditBtn.disabled = userInfo.credits < totalCredits || totalCredits === 0;
+            creditBtn.onclick = async () => {
+                if (userInfo.credits < totalCredits) {
+                    alert('Nicht genug Credits!');
+                    return;
+                }
+                try {
+                    await buildLevel(building.id, 'credits', selectedLevelId);
+                    for (const b of group) {
+                        const currentLevel = getBuildingLevelInfo(b.building)?.currentLevel ?? 0;
+                        selectedLevels[b.building.id] = currentLevel;
+                    }
+                    fetchBuildingsAndRender();
+                    updateSelectedAmounts(buildingsData);
+                    updateBuildSelectedLevelsButtonState(group);
+                } catch {
+                    alert('Fehler beim Bauen mit Credits.');
+                }
+            };
+            creditCell.appendChild(creditBtn);
+
+            coinCell.innerHTML = '';
+            const coinBtn = document.createElement('button');
+            coinBtn.textContent = `${totalCoins.toLocaleString()} Coins`;
+            coinBtn.classList.add('btn', 'btn-sm');
+            coinBtn.style.backgroundColor = '#dc3545';
+            coinBtn.style.color = 'white';
+            coinBtn.disabled = userInfo.coins < totalCoins || totalCoins === 0;
+            coinBtn.onclick = async () => {
+                if (userInfo.coins < totalCoins) {
+                    alert('Nicht genug Coins!');
+                    return;
+                }
+                try {
+                    await buildLevel(building.id, 'coins', selectedLevelId);
+                    for (const b of group) {
+                        const currentLevel = getBuildingLevelInfo(b.building)?.currentLevel ?? 0;
+                        selectedLevels[b.building.id] = currentLevel;
+                    }
+                    fetchBuildingsAndRender();
+                    updateSelectedAmounts(buildingsData);
+                    updateBuildSelectedLevelsButtonState(group);
+                } catch {
+                    alert('Fehler beim Bauen mit Coins.');
+                }
+            };
+            coinCell.appendChild(coinBtn);
+        }
+
+        const isDarkMode = () => document.body.classList.contains('dark');
+        const updateButtonColors = (container) => {
+            container.querySelectorAll('button').forEach(btn => {
+                if (btn.dataset.active === 'true') {
+                    btn.style.backgroundColor = '#28a745';
+                    btn.style.color = '#fff';
+                } else {
+                    if (isDarkMode()) {
+                        btn.style.backgroundColor = '#444';
+                        btn.style.color = '#fff';
+                    } else {
+                        btn.style.backgroundColor = '#e0e0e0';
+                        btn.style.color = '#000';
+                    }
+                }
+            });
+        };
+
+        // --- Tabelle mit Head und Body ---
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.innerHTML = `
+        <thead style="background-color: #f2f2f2; font-weight: bold; border-bottom: 2px solid #ccc;">
+            <tr>
+                <th style="padding: 10px; text-align: center;">Leitstelle</th>
+                <th style="padding: 10px; text-align: center;">Wache</th>
+                <th style="padding: 10px; text-align: center;">Stufe</th>
+                <th style="padding: 10px; text-align: center;">Ausbaustufe wählen</th>
+                <th style="padding: 10px; text-align: center;">Bauen mit Credits</th>
+                <th style="padding: 10px; text-align: center;">Bauen mit Coins</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+        const tbody = table.querySelector('tbody');
+        const thead = table.querySelector('thead');
+
+        // --- Filter-Row bauen ---
+        const filterRow = document.createElement('tr');
+        // Zellen für Filter (Leitstelle + Wache) + Leer für Rest + Reset-Button am Ende
+        const leitstelleOptions = [...new Set(group.map(({ building }) => getLeitstelleName(building)))].sort();
+        const wacheOptions = [...new Set(group.map(({ building }) => building.caption || '-'))].sort();
+        const stufeOptions = [...new Set(
+            group
+            .filter(({ building }) => {
+                const info = getBuildingLevelInfo(building);
+                if (!info) return false;
+                const type = building.building_type;
+                const size = building.small_building ? 'small' : 'normal';
+                const key = `${type}_${size}`;
+                const levelList = manualLevels[key];
+                if (!levelList) return false;
+
+                // Nur Gebäude, die nicht komplett ausgebaut sind
+                return info.currentLevel < levelList.length;
+            })
+            .map(({ building }) => {
+                const info = getBuildingLevelInfo(building);
+                return info ? info.currentLevel.toString() : null;
+            })
+            .filter(x => x !== null && x !== '-1')
+        )].sort((a, b) => Number(a) - Number(b));
+
+
+        function createFilterCell(options, placeholder) {
+            const th = document.createElement('th');
+            th.style.padding = '4px 8px';
+            const select = document.createElement('select');
+            select.style.width = '100%';
+            select.innerHTML = `<option value="">🔽 ${placeholder}</option>`;
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                select.appendChild(option);
+            });
+            th.appendChild(select);
+            return { th, select };
+        }
+
+        const leitstelleFilter = createFilterCell(leitstelleOptions, 'Leitstellen');
+        const wacheFilter = createFilterCell(wacheOptions, 'Wachen');
+        const ausbaustufeFilter = createFilterCell(stufeOptions, 'Stufe');
+
+        filterRow.appendChild(leitstelleFilter.th);
+        filterRow.appendChild(wacheFilter.th);
+        filterRow.appendChild(ausbaustufeFilter.th);
+
+        // --- Neuer globaler "Stufenauswahl löschen" Button ---
+        const clearLevelsTh = document.createElement('th');
+        clearLevelsTh.style.textAlign = 'center';
+        clearLevelsTh.style.padding = '4px 8px';
+
+        const clearLevelsBtn = document.createElement('button');
+        clearLevelsBtn.textContent = 'Stufenauswahl löschen';
+        clearLevelsBtn.classList.add('btn', 'btn-sm', 'btn-warning');
+        clearLevelsBtn.style.padding = '2px 6px';
+        clearLevelsBtn.style.fontSize = '0.8em';
+        clearLevelsBtn.onclick = () => {
+            // Alle Auswahl zurücksetzen
+            for (const id in selectedLevels) {
+                selectedLevels[id] = null;
+            }
+            // Alle Buttons zurücksetzen
+            tbody.querySelectorAll('tr').forEach(row => {
+                const levelChoiceCell = row.children[3];
+                if (levelChoiceCell) {
+                    levelChoiceCell.querySelectorAll('button').forEach(btn => btn.dataset.active = 'false');
+                    updateButtonColors(levelChoiceCell);
+                }
+                // buildingId direkt aus row holen
+                const buildingId = row.dataset.buildingId;
+                const buildingData = group.find(g => g.building.id == buildingId);
+                if (buildingData) {
+                    const levelInfo = getBuildingLevelInfo(buildingData.building);
+                    const key = `${buildingData.building.building_type}_${buildingData.building.small_building ? 'small' : 'normal'}`;
+                    const levelList = manualLevels[key];
+                    updateBuildButtons(buildingData.building, null, row.children[4], row.children[5], levelList, levelInfo.currentLevel);
+                }
+            });
+            updateSelectedAmounts(buildingsData);
+            updateBuildSelectedLevelsButtonState(group);
+        };
+
+        clearLevelsTh.appendChild(clearLevelsBtn);
+        filterRow.appendChild(clearLevelsTh);
+        filterRow.appendChild(document.createElement('th'));
+
+        // Reset Button
+        const resetTh = document.createElement('th');
+        resetTh.style.textAlign = 'center';
+        resetTh.style.padding = '4px 8px';
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = 'Filter zurdücksetzen';
+        resetBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+        resetBtn.style.padding = '2px 6px';
+        resetBtn.style.fontSize = '0.8em';
+        resetBtn.onclick = () => {
+            leitstelleFilter.select.selectedIndex = 0;
+            wacheFilter.select.selectedIndex = 0;
+            ausbaustufeFilter.select.selectedIndex = 0;
+            applyFilters();
+        };
+        resetTh.appendChild(resetBtn);
+        filterRow.appendChild(resetTh);
+
+        thead.appendChild(filterRow);
+
+        // --- Filterfunktion ---
+        function applyFilters() {
+            const selectedLeitstelle = leitstelleFilter.select.value;
+            const selectedWache = wacheFilter.select.value;
+            const selectedStufe = ausbaustufeFilter.select.value;
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                const leitstelleText = row.children[0].textContent;
+                const wacheText = row.children[1].textContent;
+                const stufeText = row.children[2].textContent;
+
+                const matchLeitstelle = !selectedLeitstelle || leitstelleText === selectedLeitstelle;
+                const matchWache = !selectedWache || wacheText === selectedWache;
+                const matchStufe = !selectedStufe || stufeText === selectedStufe;
+
+                row.style.display = (matchLeitstelle && matchWache && matchStufe) ? '' : 'none';
+            });
+        }
+
+        // --- Tabellenzeilen aufbauen (dein Originalcode vereinfacht) ---
+        group.forEach(({ building }) => {
+            const levelInfo = getBuildingLevelInfo(building);
+            if (!levelInfo) return;
+
+            const leitstelleName = getLeitstelleName(building);
+            const wache = building.caption || '-';
+            const currentLevel = levelInfo.currentLevel;
+
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const levelList = manualLevels[key];
+            if (!levelList) return;
+
+            const maxLevel = levelList.length;
+            if (currentLevel >= maxLevel) return;
+
+            selectedLevels[building.id] = null;
+
+            const row = document.createElement('tr');
+            row.style.borderBottom = '1px solid #ddd';
+            row.dataset.buildingId = building.id; // ← Hier speichern wir die ID
+
+            function createCell(text, center = true) {
+                const td = document.createElement('td');
+                td.style.padding = '8px';
+                if (center) td.style.textAlign = 'center';
+                td.textContent = text;
+                return td;
+            }
+
+            const leitstelleCell = createCell(leitstelleName);
+            const wacheCell = createCell(wache);
+            const currentLevelCell = createCell(currentLevel.toString());
+
+            const levelChoiceCell = document.createElement('td');
+            levelChoiceCell.style.padding = '8px';
+            levelChoiceCell.style.textAlign = 'center';
+
+            const creditCell = document.createElement('td');
+            creditCell.style.textAlign = 'center';
+            const coinCell = document.createElement('td');
+            coinCell.style.textAlign = 'center';
+
+            row.appendChild(leitstelleCell);
+            row.appendChild(wacheCell);
+            row.appendChild(currentLevelCell);
+            row.appendChild(levelChoiceCell);
+            row.appendChild(creditCell);
+            row.appendChild(coinCell);
+
+            // Credit- und Coin-Buttons initial auf 0 setzen
+            updateBuildButtons(building, null, creditCell, coinCell, levelList, currentLevel);
+
+            // Level-Auswahl Buttons
+            levelList.forEach(stufe => {
+                if (stufe.id >= currentLevel) {
+                    const lvlBtn = document.createElement('button');
+                    lvlBtn.textContent = (stufe.id + 1).toString();
+                    lvlBtn.className = 'expand_direct';
+                    lvlBtn.setAttribute('level', stufe.id.toString());
+                    lvlBtn.style.display = 'inline-block';
+                    lvlBtn.style.padding = '2px 6px';
+                    lvlBtn.style.margin = '0 2px';
+                    lvlBtn.style.fontSize = '11px';
+                    lvlBtn.style.borderRadius = '12px';
+                    lvlBtn.style.border = 'none';
+                    lvlBtn.style.cursor = 'pointer';
+                    lvlBtn.style.fontWeight = 'bold';
+                    lvlBtn.style.transition = 'background-color 0.2s, color 0.2s';
+                    lvlBtn.dataset.active = 'false';
+
+                    lvlBtn.addEventListener('mouseenter', () => {
+                        if (lvlBtn.dataset.active !== 'true') {
+                            lvlBtn.style.backgroundColor = isDarkMode() ? '#666' : '#ccc';
+                        }
+                    });
+                    lvlBtn.addEventListener('mouseleave', () => {
+                        if (lvlBtn.dataset.active !== 'true') {
+                            updateButtonColors(levelChoiceCell);
+                        }
+                    });
+
+                    lvlBtn.onclick = () => {
+                        let totalCredits = 0;
+                        let totalCoins = 0;
+                        for (let i = currentLevel; i <= stufe.id; i++) {
+                            const s = levelList[i];
+                            if (!s) continue;
+                            totalCredits += s.cost || 0;
+                            totalCoins += s.coins || 0;
+                        }
+
+                        const canPayWithCredits = userInfo.credits >= totalCredits && totalCredits > 0;
+                        const canPayWithCoins = userInfo.coins >= totalCoins && totalCoins > 0;
+                        if (!canPayWithCredits && !canPayWithCoins) {
+                            alert('Levelauswahl - Nicht genug Credits oder Coins für diese Stufe!');
+                            return;
+                        }
+
+                        levelChoiceCell.querySelectorAll('button').forEach(btn => btn.dataset.active = 'false');
+                        lvlBtn.dataset.active = 'true';
+                        updateButtonColors(levelChoiceCell);
+                        selectedLevels[building.id] = stufe.id;
+                        updateBuildButtons(building, stufe.id, creditCell, coinCell, levelList, currentLevel);
+                        updateSelectedAmounts(buildingsData);
+                        updateBuildSelectedLevelsButtonState(group);
+                    };
+
+                    levelChoiceCell.appendChild(lvlBtn);
+                }
+            });
+
+            // Reset-Button pro Zeile
+            const trashBtn = document.createElement('button');
+            trashBtn.innerHTML = '🗑️';
+            trashBtn.title = 'Auswahl zurücksetzen';
+            trashBtn.classList.add('btn', 'btn-sm', 'btn-danger');
+            trashBtn.style.display = 'inline-block';
+            trashBtn.style.padding = '2px 6px';
+            trashBtn.style.margin = '0 2px';
+            trashBtn.style.fontSize = '11px';
+            trashBtn.style.borderRadius = '12px';
+            trashBtn.style.border = 'none';
+            trashBtn.style.cursor = 'pointer';
+            trashBtn.style.fontWeight = 'bold';
+            trashBtn.onclick = () => {
+                selectedLevels[building.id] = null;
+                levelChoiceCell.querySelectorAll('button').forEach(btn => btn.dataset.active = 'false');
+                updateButtonColors(levelChoiceCell);
+                updateBuildButtons(building, null, creditCell, coinCell, levelList, currentLevel);
+                updateSelectedAmounts(buildingsData);
+                updateBuildSelectedLevelsButtonState(group);
+            };
+
+            levelChoiceCell.appendChild(trashBtn);
+            updateButtonColors(levelChoiceCell);
+
+            tbody.appendChild(row);
+        });
+
+
+        // --- Eventlistener auf Filter setzen ---
+        leitstelleFilter.select.addEventListener('change', applyFilters);
+        wacheFilter.select.addEventListener('change', applyFilters);
+        ausbaustufeFilter.select.addEventListener('change', applyFilters);
+
+        return table;
+    }
+
+    // Funktion um aktuelle Credtis/Coins in den Header einzufügen
+    async function initUserCredits() {
+        try {
+            const data = await getUserCredits();
+            currentCredits = data.credits;
+            currentCoins = data.coins;
+            // Hier könntest du die Werte auch anzeigen, z.B.:
+            document.getElementById('current-credits').textContent = currentCredits.toLocaleString();
+            document.getElementById('current-coins').textContent = currentCoins.toLocaleString();
+        } catch (e) {
+            // Fehlerbehandlung
+            alert("Konnte Guthaben nicht laden.");
+        }
+    }
+
+    // Funktion zur Gesamtkostenberechnung
+    function updateSelectedAmounts(buildingsData) {
+        if (!Array.isArray(buildingsData)) {
+            return;
+        }
+
+        let totalCredits = 0;
+        let totalCoins = 0;
+
+        // Kosten der Erweiterungen und Lager
+        document.querySelectorAll('.extension-checkbox:checked, .storage-checkbox:checked').forEach(cb => {
+            totalCredits += Number(cb.dataset.creditCost) || 0;
+            totalCoins += Number(cb.dataset.coinCost) || 0;
+        });
+
+        // Alle Gebäude durchgehen
+        buildingsData.forEach(building => {
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const levelList = manualLevels[key];
+            if (!levelList) return;
+
+            const apiLevel = getBuildingLevelInfo(building)?.currentLevel ?? 0;
+            let currentLevelIndex = levelList.findIndex(l => Number(l.name) === Number(apiLevel));
+            if (currentLevelIndex === -1) currentLevelIndex = -1;
+
+            const selectedLevelIndex = selectedLevels[building.id] ?? currentLevelIndex;
+
+            if (selectedLevelIndex <= currentLevelIndex) return;
+
+            for (let i = currentLevelIndex + 1; i <= selectedLevelIndex; i++) {
+                const stufe = levelList[i];
+                if (!stufe) continue;
+                totalCredits += stufe.cost || 0;
+                totalCoins += stufe.coins || 0;
+            }
+        });
+
+        // Ergebnisse anzeigen
+        document.getElementById('selected-credits').textContent = totalCredits.toLocaleString();
+        document.getElementById('selected-coins').textContent = totalCoins.toLocaleString();
+
+        // Prüfen, ob Spieler genug hat
+        const canPayAllWithCredits = currentCredits >= totalCredits;
+        const canPayAllWithCoins = currentCoins >= totalCoins;
+
+        if (!canPayAllWithCredits && !canPayAllWithCoins) {
+            alert("Deine Auswahl übersteigt dein aktuelles Credits- oder Coinguthaben.");
+        }
     }
 
     // Filterfunktion über Dropdowns
@@ -1973,10 +2950,10 @@
             const leitstelle = row.cells[1]?.textContent.toLowerCase() || "";
             const wachenName = row.cells[2]?.textContent.toLowerCase() || "";
             const erweiterung = row.cells[3]?.textContent.toLowerCase() || "";
-            const isBuilt = row.classList.contains("built"); // Prüft, ob bereits gebaut
+            const isBuilt = row.classList.contains("built");
 
             if (isBuilt) {
-                row.style.display = "none"; // Gebaute Zeilen bleiben unsichtbar
+                row.style.display = "none";
             } else if (leitstelle.includes(searchTerm) || wachenName.includes(searchTerm) || erweiterung.includes(searchTerm)) {
                 row.style.display = "";
             } else {
@@ -1987,7 +2964,7 @@
 
     // Funktion zur Unterscheidung der Erweiterungswarteschlange zwischen Premium und Nicht Premium User
     function isExtensionLimitReached(building, extensionId) {
-        const fireStationSmallAlwaysAllowed = [1, 2, 10, 11];
+        const fireStationSmallAlwaysAllowed = [1, 2, 20, 21];
         const fireStationSmallLimited = [0, 6, 8, 13, 14, 16, 18, 19, 25];
 
         const policeStationSmallAlwaysAllowed = [0, 1];
@@ -2103,13 +3080,9 @@
         buildingGroups = {};
         buildingsData = [];
     });
-
-    // Initial den Button hinzufügen
-    addMenuButton();
-
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    // Anfang des Bereichs für den Bau einer Erweiterung in einem Gebäude
+    // Anfang des Bereichs für den Einzelbau in einem Gebäude
 
     // Funktion zum Bau einer Erweiterung, eines Lagerraumes
     async function buildExtension(building, extensionId, currency, amount, row) {
@@ -2141,7 +3114,7 @@
                             );
                             allRows.forEach(otherRow => {
                                 if (otherRow !== row) {
-                                    otherRow.style.display = 'none'; // Alle anderen Zeilen ausblenden
+                                    otherRow.style.display = 'none';
                                 }
                             });
                         }
@@ -2162,17 +3135,17 @@
                             );
                             allRows.forEach(otherRow => {
                                 if (otherRow !== row) {
-                                    otherRow.style.display = 'none'; // Alle anderen Zeilen ausblenden
+                                    otherRow.style.display = 'none';
                                 }
                             });
                         }
 
                         if (row) {
-                            row.classList.add("built"); // Markiert die Zeile als gebaut
-                            row.style.display = "none"; // Blendet sie weiterhin aus
+                            row.classList.add("built");
+                            row.style.display = "none";
                         }
 
-                        row.style.display = 'none'; // Die ausgebaute Zeile wird ausgeblendet
+                        row.style.display = 'none';
                     }
 
                     resolve(response);
@@ -2184,7 +3157,6 @@
             });
         });
     }
-
     async function buildStorage(building, storageId, currency, cost, row) {
         const csrfToken = getCSRFToken();
         const buildUrl = `https://www.leitstellenspiel.de/buildings/${building.id}/storage_upgrade/${currency}/${storageId}?redirect_building_id=${building.id}`;
@@ -2197,14 +3169,24 @@
                     'X-CSRF-Token': csrfToken,
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                data: '', // kein body nötig
-                withCredentials: true, // <-- wichtig
+                data: '',
+                withCredentials: true,
                 onload: function(response) {
                     if (response.status >= 200 && response.status < 400) {
+                        // UI aktualisieren
                         if (row) {
                             row.classList.add("built");
                             row.style.display = "none";
                         }
+
+                        // Lokale Queue aktualisieren, damit Reihenfolge-Prüfung sofort weiß: "im Bau"
+                        if (!storageBuildQueue[building.id]) {
+                            storageBuildQueue[building.id] = [];
+                        }
+                        if (!storageBuildQueue[building.id].includes(storageId)) {
+                            storageBuildQueue[building.id].push(storageId);
+                        }
+
                     } else {
                         console.error(`Fehler beim Bau des Lagerraums in Gebäude ${building.id}`, response);
                     }
@@ -2217,11 +3199,54 @@
             });
         });
     }
+    async function buildLevel(buildingId, currency, level) {
+        const csrfToken = getCSRFToken();
+        const initialUrl = `https://www.leitstellenspiel.de/buildings/${buildingId}/expand_do/${currency}?level=${level}`;
 
-    fetchBuildingsAndRender();
+        function doGetRequest(url) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    withCredentials: true,
+                    headers: {
+                        'X-CSRF-Token': csrfToken,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    onload: (response) => resolve(response),
+                    onerror: (error) => reject(error)
+                });
+            });
+        }
 
-    // Ende des Bereichs für den Bau * einer Erweiterung * in einem Gebäude
+        try {
+            const response1 = await doGetRequest(initialUrl);
 
+            if (response1.status === 302) {
+                // Redirect URL auslesen
+                const locationHeader = (response1.responseHeaders.match(/location:\s*(.+)/i) || [])[1];
+                if (!locationHeader) throw new Error('Redirect ohne Location-Header');
+
+                const redirectUrl = locationHeader.trim();
+
+                // Zweite Anfrage an Redirect-URL
+                const response2 = await doGetRequest(redirectUrl);
+
+                if (response2.status >= 200 && response2.status < 400) {
+                    return response2;
+                } else {
+                    throw new Error(`Fehler nach Redirect: Status ${response2.status}`);
+                }
+            } else if (response1.status >= 200 && response1.status < 400) {
+                return response1;
+            } else {
+                throw new Error(`Fehler beim Ausbau: Status ${response1.status}`);
+            }
+        } catch (err) {
+            console.error(err);
+            throw err;
+        }
+    }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Anfang der Funktion für * Bau von ausgewählten Erweiterungen *
@@ -2280,6 +3305,29 @@
         return true;
     }
 
+    // Hilfsfunktion: ermittelt aktuelle Lagerzustände eines Gebäudes
+    function getCurrentStorageState(buildingId) {
+        const building = buildingsData.find(b => String(b.id) === String(buildingId));
+        if (!building) return [];
+
+        // Bereits gebaute Erweiterungen
+        const builtExtensions = building.extensions ? building.extensions.map(e => e.type_id) : [];
+
+        // Lager: sowohl fertig als auch im Bau (API kennt beides)
+        const builtStorages = new Set(
+            (building.storage_upgrades || [])
+            // verfügbar = fertig, !verfügbar = im Bau → beides soll gezählt werden
+            .map(s => s.type_id)
+        );
+
+        // Falls du noch eine lokale Queue für Zwischenschritte hast, ebenfalls reinnehmen
+        if (storageBuildQueue[buildingId]) {
+            storageBuildQueue[buildingId].forEach(s => builtStorages.add(s));
+        }
+
+        return Array.from(new Set([...builtExtensions, ...builtStorages]));
+    }
+
     // Funktion zum Bau der ausgewählten Erweiterungen
     async function buildSelectedExtensions() {
         const selectedExtensions = document.querySelectorAll('.extension-checkbox:checked');
@@ -2291,12 +3339,10 @@
         // Erweiterungen erfassen
         selectedExtensions.forEach(checkbox => {
             const buildingId = checkbox.dataset.buildingId;
-            const extensionId = checkbox.dataset.extensionId;
+            const extensionId = parseInt(checkbox.dataset.extensionId, 10);
 
-            if (!selectedExtensionsByBuilding[buildingId]) {
-                selectedExtensionsByBuilding[buildingId] = [];
-            }
-            selectedExtensionsByBuilding[buildingId].push(parseInt(extensionId, 10));
+            if (!selectedExtensionsByBuilding[buildingId]) selectedExtensionsByBuilding[buildingId] = [];
+            selectedExtensionsByBuilding[buildingId].push(extensionId);
         });
 
         // Lager erfassen
@@ -2304,31 +3350,39 @@
             const buildingId = checkbox.dataset.buildingId;
             const storageType = checkbox.dataset.storageType;
 
-            if (!selectedStoragesByBuilding[buildingId]) {
-                selectedStoragesByBuilding[buildingId] = [];
-            }
+            if (!selectedStoragesByBuilding[buildingId]) selectedStoragesByBuilding[buildingId] = [];
             selectedStoragesByBuilding[buildingId].push(storageType);
         });
 
-        // Regeln für Kleinwachen prüfen
+        // === Prüfung auf ungültige Erweiterungen für Kleinwachen ===
         for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
             const building = buildingsData.find(b => String(b.id) === String(buildingId));
             if (!building) continue;
 
             if (building.small_building) {
                 if (building.building_type === 0) {
-                    const invalid = [0, 6, 8, 13, 14, 16, 18, 19, 25];
-                    if (extensions.filter(id => invalid.includes(id)).length > 1) {
-                        showError("Information zu deinem Bauvorhaben:\n\nDiese Erweiterungen für die Feuerwehr-Kleinwache können nicht zusammen gebaut werden.\n\nBitte wähle nur eine Erweiterung aus.");
+                    const invalidCombinationsFeuerwache = [0, 6, 8, 13, 14, 16, 18, 19, 25];
+                    const selectedInvalidExtensionsFeuerwache = extensions.filter(extId =>
+                                                                                  invalidCombinationsFeuerwache.includes(extId)
+                                                                                 );
+
+                    if (selectedInvalidExtensionsFeuerwache.length > 1) {
+                        showError("Information zu deinem Bauvorhaben:\n\nDiese Erweiterungen für die Feuerwache (Kleinwache) können nicht zusammen gebaut werden.\n\n Eine Erweiterung + 2 AB-Stellplätze sowie 2 Anh-Stellplätze sind erlaubt.");
+                        document.querySelector('.select-all-checkbox').checked = false;
                         updateBuildSelectedButton();
                         return;
                     }
                 }
 
                 if (building.building_type === 6) {
-                    const invalid = [10, 11, 12, 13];
-                    if (extensions.filter(id => invalid.includes(id)).length > 1) {
-                        showError("Information zu deinem Bauvorhaben:\n\nDiese Erweiterungen für die Polizei-Kleinwache können nicht zusammen gebaut werden.\n\nBitte wähle nur eine Erweiterung aus.");
+                    const invalidCombinationsPolizei = [10, 11, 12, 13];
+                    const selectedInvalidExtensionsPolizei = extensions.filter(extId =>
+                                                                               invalidCombinationsPolizei.includes(extId)
+                                                                              );
+
+                    if (selectedInvalidExtensionsPolizei.length > 1) {
+                        showError("Information zu deinem Bauvorhaben:\n\nDiese Erweiterungen für die Polizeiwache (Kleinwache) können nicht zusammen gebaut werden.\n\nEs ist maximal eine Erweiterung + 2 Zellen erlaubt.");
+                        document.querySelector('.select-all-checkbox').checked = false;
                         updateBuildSelectedButton();
                         return;
                     }
@@ -2336,95 +3390,94 @@
             }
         }
 
-        // Prüfung Lagerreihenfolge
-        for (const [buildingId, selectedStorageTypes] of Object.entries(selectedStoragesByBuilding)) {
-            const building = buildingsData.find(b => String(b.id) === String(buildingId));
-            if (!building) continue;
-
-            const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const builtStorages = building.extensions || [];
-
-            if (!canBuildAllSelectedInOrder(selectedStorageTypes, buildingTypeKey, builtStorages)) {
-                showError(`Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge für das Gebäude ${getBuildingCaption(buildingId)} gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n4. 3te zusätzlicher Lagerraum\n5. 4te zusätzlicher Lagerraum\n6. 5te zusätzlicher Lagerraum.\n7. 6te zusätzlicher Lagerraum\n8. 7te zusätzlicher Lagerraum'
-`);
+        // === Prüfung Lagerreihenfolge wachenweise ===
+        for (const [buildingId, storageTypes] of Object.entries(selectedStoragesByBuilding)) {
+            if (!canBuildAllSelectedInOrder(buildingId, storageTypes)) {
+                showError(`Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n...`);
                 updateBuildSelectedButton();
                 return;
             }
         }
 
+        // === Credits und Coins berechnen ===
         const userInfo = await getUserCredits();
-        if (!user_premium) {
-            for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
-                if (extensions.length > 2) {
-                    alert(`Zu viele Erweiterungen für Gebäude ${getBuildingCaption(buildingId)} ausgewählt.\n\nOhne Premium-Account sind maximal 2 Ausbauten möglich.`);
-                    updateBuildSelectedButton();
-                    return;
-                }
-            }
-        }
-
         let totalCredits = 0;
         let totalCoins = 0;
 
-        // Erweiterungen berechnen
         for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
             extensions.forEach(extensionId => {
                 const row = document.querySelector(`.row-${buildingId}-${extensionId}`);
                 if (!row) return;
-
                 const creditElement = row.querySelector('.credit-button');
                 const coinElement = row.querySelector('.coins-button');
-
-                if (creditElement) {
-                    totalCredits += parseInt(creditElement.innerText.replace(/\D/g, '') || '0', 10);
-                }
-                if (coinElement) {
-                    totalCoins += parseInt(coinElement.innerText.replace(/\D/g, '') || '0', 10);
-                }
+                if (creditElement) totalCredits += parseInt(creditElement.innerText.replace(/\D/g, '') || '0', 10);
+                if (coinElement) totalCoins += parseInt(coinElement.innerText.replace(/\D/g, '') || '0', 10);
             });
         }
 
-        // Lager berechnen
         for (const [buildingId, storageTypes] of Object.entries(selectedStoragesByBuilding)) {
             const building = buildingsData.find(b => String(b.id) === String(buildingId));
             if (!building) continue;
-
             const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
             const storageDefs = manualStorageRooms[buildingTypeKey];
-            if (!storageDefs) {
-                console.warn(`⚠️ Keine Lagerdefinitionen für Gebäudetyp ${buildingTypeKey}`);
-                continue;
-            }
+            if (!storageDefs) continue;
 
             storageTypes.forEach(storageType => {
                 const storageDef = storageDefs.find(s => s.id === storageType);
-                if (!storageDef) {
-                    console.warn(`⚠️ Keine Lagerdefinition für Typ "${storageType}" in ${buildingTypeKey}`);
-                    return;
-                }
-
+                if (!storageDef) return;
                 totalCredits += storageDef.cost || 0;
                 totalCoins += storageDef.coins || 0;
             });
         }
 
-        // Zeige Coin/Credit-Auswahl inkl. Lager
         showCurrencySelection(selectedExtensionsByBuilding, userInfo, selectedStoragesByBuilding);
 
         // Checkboxen zurücksetzen
         setTimeout(() => {
-            [...selectedExtensions, ...selectedStorages].forEach(checkbox => {
-                checkbox.checked = false;
+            [...selectedExtensions, ...selectedStorages].forEach(checkbox => checkbox.checked = false);
+            document.querySelectorAll('.select-all-checkbox, .select-all-checkbox-lager').forEach(cb => {
+                cb.checked = false;
+                cb.dispatchEvent(new Event('change'));
             });
-
-            document.querySelectorAll('.select-all-checkbox, .select-all-checkbox-lager').forEach(checkbox => {
-                checkbox.checked = false;
-                checkbox.dispatchEvent(new Event('change'));
-            });
-
             updateBuildSelectedButton();
         }, 100);
     }
+
+    // Funktion zum Aktivieren/Deaktivieren des "Ausgewählte Erweiterungen/Lagern bauen"-Buttons
+    function updateBuildSelectedButton() {
+        const buttonContainers = document.querySelectorAll('.button-container');
+
+        buttonContainers.forEach(container => {
+            const buildSelectedButton = container.querySelector('.build-selected-button');
+            if (!buildSelectedButton) return;
+
+            const spoilerContent = container.nextElementSibling?.classList.contains('spoiler-content')
+            ? container.nextElementSibling
+            : null;
+
+            const lagerWrapper = spoilerContent?.nextElementSibling?.classList.contains('lager-wrapper')
+            ? spoilerContent.nextElementSibling
+            : container.nextElementSibling?.classList.contains('lager-wrapper')
+            ? container.nextElementSibling
+            : null;
+
+            const selectedExtensionCheckboxes = spoilerContent
+            ? spoilerContent.querySelectorAll('.extension-checkbox:checked')
+            : [];
+
+            const selectedStorageCheckboxes = lagerWrapper
+            ? lagerWrapper.querySelectorAll('.storage-checkbox:checked')
+            : [];
+
+            const isAnySelected = selectedExtensionCheckboxes.length > 0 || selectedStorageCheckboxes.length > 0;
+            buildSelectedButton.disabled = !isAnySelected;
+        });
+    }
+
+    // Event Listener für alle Checkboxen, damit der Button immer aktuell ist
+    document.querySelectorAll('.extension-checkbox, .storage-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateBuildSelectedButton);
+    });
 
     // Funktion zur Auswahl der Zahlmöglichkeit sowie Prüfung der ausgewählten Erweiterungen
     async function showCurrencySelection(selectedExtensionsByBuilding, userInfo, selectedStoragesByBuilding) {
@@ -2573,6 +3626,8 @@
 
             progress.close();
             document.body.removeChild(selectionDiv);
+
+            await fetchBuildingsAndRender();
         };
 
         const coinsButton = document.createElement('button');
@@ -2606,6 +3661,8 @@
 
             progress.close();
             document.body.removeChild(selectionDiv);
+
+            await fetchBuildingsAndRender();
         };
 
         const cancelButton = document.createElement('button');
@@ -2629,68 +3686,329 @@
         document.body.appendChild(selectionDiv);
     }
 
-    // Funktion um den "Ausgewählte Erweiterungen bauen"-Button zu aktivieren
-    function updateBuildSelectedButton() {
-        const buttonContainers = document.querySelectorAll('.button-container');
-
-        buttonContainers.forEach(container => {
-            const buildSelectedButton = container.querySelector('.build-selected-button');
-            if (!buildSelectedButton) return;
-
-            // Nächstes .spoiler-content und .lager-wrapper-Element im DOM
-            const spoilerContent = container.nextElementSibling?.classList.contains('spoiler-content')
-            ? container.nextElementSibling
-            : null;
-
-            const lagerWrapper = spoilerContent?.nextElementSibling?.classList.contains('lager-wrapper')
-            ? spoilerContent.nextElementSibling
-            : container.nextElementSibling?.classList.contains('lager-wrapper')
-            ? container.nextElementSibling
-            : null;
-
-            const selectedExtensionCheckboxes = spoilerContent
-            ? spoilerContent.querySelectorAll('.extension-checkbox:checked')
-            : [];
-
-            const selectedStorageCheckboxes = lagerWrapper
-            ? lagerWrapper.querySelectorAll('.storage-checkbox:checked')
-            : [];
-
-            const isAnySelected = selectedExtensionCheckboxes.length > 0 || selectedStorageCheckboxes.length > 0;
-            buildSelectedButton.disabled = !isAnySelected;
-        });
-    }
-
     // Funktiom um eine Fehlermeldung auszugeben
     function showError(message) {
-        // Verstecke den Währungscontainer, falls er existiert
         const currencyContainer = document.getElementById('currency-container');
         if (currencyContainer) {
             currencyContainer.style.display = 'none';
         }
 
-        // Fehlercontainer abrufen
         const errorMessageDiv = document.getElementById('error-message');
 
         if (errorMessageDiv) {
-            errorMessageDiv.textContent = message; // Fehlermeldung setzen
-            errorMessageDiv.style.display = 'block'; // Sichtbar machen
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.style.display = 'block';
         } else {
-            alert(message); // Falls das Element nicht existiert, nutze ein Alert
+            alert(message);
             updateBuildSelectedButton();
 
         }
     }
 
-    // Event-Listener für Checkbox-Änderungen hinzufügen
-    document.addEventListener('change', (event) => {
+    document.addEventListener('click', (event) => {
         if (event.target.classList.contains('extension-checkbox') || event.target.classList.contains('storage-checkbox')) {
-            updateBuildSelectedButton();
+            const cb = event.target;
+            const willBeChecked = !cb.checked;
+
+            let totalCredits = 0;
+            let totalCoins = 0;
+
+            document.querySelectorAll('.extension-checkbox:checked, .storage-checkbox:checked').forEach(el => {
+                totalCredits += Number(el.dataset.creditCost) || 0;
+                totalCoins += Number(el.dataset.coinCost) || 0;
+            });
+
+            if (willBeChecked) {
+                totalCredits += Number(cb.dataset.creditCost) || 0;
+                totalCoins += Number(cb.dataset.coinCost) || 0;
+            }
+
+            const canPayAllWithCredits = currentCredits >= totalCredits;
+            const canPayAllWithCoins = currentCoins >= totalCoins;
+
+            if (!canPayAllWithCredits && !canPayAllWithCoins) {
+                alert("document.querySelectorAll - Du hast nicht genug Credits ODER Coins für die gesamte Auswahl!");
+                event.preventDefault();
+            } else {
+                setTimeout(() => updateSelectedAmounts(), 0);
+                updateBuildSelectedButton();
+            }
         }
     });
+    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    // Ende der Funktion für * Bau von ausgewählten Erweiterungen *
+    // Anfang der Funktion für * Bau von ausgewählten Stufen *
 
+    // Funktion zum Bau der ausgewählten Stufen
+    async function buildSelectedLevelsAll(buildingsData, userInfo) {
+        console.info('buildSelectedLevelsAll gestartet');
+
+        let totalCredits = 0;
+        let totalCoins = 0;
+        const levelRows = [];
+
+        for (const building of buildingsData) {
+            const level = selectedLevels[building.id];
+            if (level === undefined || level === null) continue;
+
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const levelList = manualLevels[key];
+            if (!levelList) continue;
+
+            const currentLevel = getBuildingLevelInfo(building)?.currentLevel ?? -1;
+
+            const start = currentLevel === -1 ? 0 : Math.min(currentLevel, level);
+            const end = Math.max(currentLevel, level);
+
+            let buildingCredits = 0;
+            let buildingCoins = 0;
+
+            for (let i = start; i <= end; i++) {
+                const stufe = levelList[i];
+                if (!stufe) continue;
+                buildingCredits += stufe.cost || 0;
+                buildingCoins += stufe.coins || 0;
+            }
+
+            if (buildingCredits === 0 && buildingCoins === 0) continue;
+
+            totalCredits += buildingCredits;
+            totalCoins += buildingCoins;
+
+            levelRows.push({
+                buildingId: building.id,
+                targetLevel: level,
+                buildingCredits,
+                buildingCoins
+            });
+        }
+
+        console.info('LevelRows:', levelRows);
+        console.info(`Total Credits: ${totalCredits}, Total Coins: ${totalCoins}`);
+
+        if (levelRows.length === 0) {
+            alert("Keine Leveländerungen ausgewählt.");
+            return;
+        }
+
+        // Übergabe von userInfo, hier befüllt mit den globalen Werten
+        userInfo = userInfo || { credits: currentCredits, coins: currentCoins };
+        await showCurrencySelectionForLevelsAll(levelRows, userInfo, totalCredits, totalCoins);
+    }
+
+    // Funktion um den Ausgewählte Stufen Button zu aktivieren
+    function updateBuildSelectedLevelsButtonState(group) {
+        if (!group.length) {
+            console.warn('⚠️ Gruppe ist leer');
+            return;
+        }
+
+        const typeKey = `${group[0].building.building_type}_${group[0].building.small_building ? 'small' : 'normal'}`;
+        console.info('updateBuildSelectedLevelsButtonState für Typ:', typeKey);
+
+        const container = document.querySelector(`.button-container[data-building-type="${typeKey}"]`);
+        if (!container) {
+            console.warn(`⚠️ Kein Button-Container für Typ ${typeKey} gefunden`);
+            return;
+        }
+
+        const buildSelectedLevelsButton = container.querySelector('.build-selected-levels-button');
+        if (!buildSelectedLevelsButton) {
+            console.warn(`⚠️ Build-Selected-Level-Button für Typ ${typeKey} nicht gefunden`);
+            return;
+        }
+
+        let hasSelectedLevels = false;
+
+        for (const { building } of group) {
+            const currentLevel = getBuildingLevelInfo(building)?.currentLevel ?? -1;
+            const selectedLevel = selectedLevels[building.id] ?? null;
+            console.info(`Gebäude ID ${building.id}: aktuelles Level=${currentLevel}, ausgewähltes Level=${selectedLevel}`);
+
+            if (selectedLevel !== null && selectedLevel >= currentLevel) {
+                hasSelectedLevels = true;
+                break;
+            }
+        }
+
+        buildSelectedLevelsButton.disabled = !hasSelectedLevels;
+        console.info(`Button-Status für Typ ${typeKey}:`, buildSelectedLevelsButton.disabled ? 'disabled' : 'enabled');
+    }
+
+    // Auswahlfenster für Level-Ausbau
+    async function showCurrencySelectionForLevelsAll(levelRows, userInfo, totalCredits, totalCoins) {
+        const userSettings = await getUserMode();
+        const isDarkMode = userSettings && (userSettings.design_mode === 1 || userSettings.design_mode === 4);
+
+        const fehlendeCredits = Math.max(0, totalCredits - userInfo.credits);
+        const fehlendeCoins = Math.max(0, totalCoins - userInfo.coins);
+
+        if (userInfo.credits < totalCredits && userInfo.coins < totalCoins) {
+            alert(`Du hast nicht genug Ressourcen!\n\n- Fehlende Credits: ${formatNumber(fehlendeCredits)}\n- Fehlende Coins: ${formatNumber(fehlendeCoins)}`);
+            return;
+        }
+
+        const selectionDiv = document.createElement('div');
+        selectionDiv.className = 'currency-selection';
+        selectionDiv.style.position = 'fixed';
+        selectionDiv.style.top = '50%';
+        selectionDiv.style.left = '50%';
+        selectionDiv.style.transform = 'translate(-50%, -50%)';
+        selectionDiv.style.zIndex = '10001';
+        selectionDiv.style.background = isDarkMode ? '#333' : '#fff';
+        selectionDiv.style.color = isDarkMode ? '#fff' : '#000';
+        selectionDiv.style.border = `1px solid ${isDarkMode ? '#444' : '#ccc'}`;
+        selectionDiv.style.padding = '20px';
+        selectionDiv.style.borderRadius = '8px';
+        selectionDiv.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+        selectionDiv.style.minWidth = '320px';
+        selectionDiv.style.textAlign = 'center';
+
+        const totalText = document.createElement('p');
+        totalText.innerHTML = `Wähle zwischen <b style="color:green">Credits (grün)</b> oder <b style="color:red">Coins (rot)</b><br><br>
+        Info:<br>Sollte eine Währung <b>nicht</b> ausreichend vorhanden sein,<br>kannst Du diese nicht auswählen`;
+        selectionDiv.appendChild(totalText);
+
+        function showProgress() {
+            const container = document.createElement('div');
+            container.style.position = 'fixed';
+            container.style.top = '50%';
+            container.style.left = '50%';
+            container.style.transform = 'translate(-50%, -50%)';
+            container.style.zIndex = '10002';
+            container.style.background = isDarkMode ? '#333' : '#fff';
+            container.style.padding = '20px';
+            container.style.borderRadius = '8px';
+            container.style.textAlign = 'center';
+            container.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+            container.innerHTML = 'Bitte warten...';
+
+            const progressBar = document.createElement('div');
+            progressBar.style.height = '10px';
+            progressBar.style.width = '100%';
+            progressBar.style.backgroundColor = '#e0e0e0';
+            progressBar.style.marginTop = '10px';
+            progressBar.style.borderRadius = '5px';
+
+            const progressFill = document.createElement('div');
+            progressFill.style.height = '100%';
+            progressFill.style.width = '0%';
+            progressFill.style.backgroundColor = '#76c7c0';
+            progressFill.style.borderRadius = '5px';
+            progressBar.appendChild(progressFill);
+
+            const progressText = document.createElement('p');
+            progressText.style.marginTop = '8px';
+            progressText.textContent = `0 von ${levelRows.length} Gebäude gebaut`;
+
+            container.appendChild(progressBar);
+            container.appendChild(progressText);
+
+            document.body.appendChild(container);
+
+            return {
+                container,
+                update: (done) => {
+                    progressFill.style.width = `${(done / levelRows.length) * 100}%`;
+                    progressText.textContent = `${done} von ${levelRows.length} Gebäude gebaut`;
+                },
+                close: () => {
+                    document.body.removeChild(container);
+                }
+            };
+        }
+
+        const creditsButton = document.createElement('button');
+        creditsButton.className = 'currency-button credits-button';
+        creditsButton.textContent = `${formatNumber(totalCredits)} Credits`;
+        creditsButton.disabled = userInfo.credits < totalCredits;
+        creditsButton.style.margin = '5px';
+        creditsButton.style.padding = '10px 20px';
+        creditsButton.style.backgroundColor = '#28a745';
+        creditsButton.style.color = 'white';
+        creditsButton.style.border = 'none';
+        creditsButton.style.borderRadius = '5px';
+        creditsButton.style.cursor = creditsButton.disabled ? 'not-allowed' : 'pointer';
+
+        creditsButton.onclick = async () => {
+            const progress = showProgress();
+            let done = 0;
+
+            for (const lvl of levelRows) {
+                if (userInfo.credits < lvl.buildingCredits) {
+                    alert(`Nicht genügend Credits für Gebäude ID ${lvl.buildingId}`);
+                    break;
+                }
+
+                await buildLevel(lvl.buildingId, 'credits', lvl.targetLevel);
+                userInfo.credits -= lvl.buildingCredits;
+                done++;
+                progress.update(done);
+            }
+
+            progress.close();
+            document.body.removeChild(selectionDiv);
+
+            initUserCredits();       // aktualisiert globale Werte
+            fetchBuildingsAndRender(); // rendert alles neu
+        };
+
+        const coinsButton = document.createElement('button');
+        coinsButton.className = 'currency-button coins-button';
+        coinsButton.textContent = `${formatNumber(totalCoins)} Coins`;
+        coinsButton.disabled = userInfo.coins < totalCoins;
+        coinsButton.style.margin = '5px';
+        coinsButton.style.padding = '10px 20px';
+        coinsButton.style.backgroundColor = '#dc3545';
+        coinsButton.style.color = 'white';
+        coinsButton.style.border = 'none';
+        coinsButton.style.borderRadius = '5px';
+        coinsButton.style.cursor = coinsButton.disabled ? 'not-allowed' : 'pointer';
+
+        coinsButton.onclick = async () => {
+            const progress = showProgress();
+            let done = 0;
+
+            for (const lvl of levelRows) {
+                if (userInfo.coins < lvl.buildingCoins) {
+                    alert(`Nicht genügend Coins für Gebäude ID ${lvl.buildingId}`);
+                    break;
+                }
+                userInfo.coins -= lvl.buildingCoins;
+
+                await buildLevel(lvl.buildingId, 'coins', lvl.targetLevel);
+                userInfo.credits -= lvl.buildingCredits;
+                done++;
+                progress.update(done);
+            }
+
+            progress.close();
+            document.body.removeChild(selectionDiv);
+
+            initUserCredits();       // aktualisiert globale Werte
+            fetchBuildingsAndRender(); // rendert alles neu
+        };
+
+        const cancelButton = document.createElement('button');
+        cancelButton.className = 'cancel-button';
+        cancelButton.textContent = 'Abbrechen';
+        cancelButton.style.margin = '5px';
+        cancelButton.style.padding = '10px 20px';
+        cancelButton.style.backgroundColor = '#6c757d';
+        cancelButton.style.color = 'white';
+        cancelButton.style.border = 'none';
+        cancelButton.style.borderRadius = '5px';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.onclick = () => {
+            document.body.removeChild(selectionDiv);
+        };
+
+        selectionDiv.appendChild(creditsButton);
+        selectionDiv.appendChild(coinsButton);
+        selectionDiv.appendChild(cancelButton);
+
+        document.body.appendChild(selectionDiv);
+    }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Anfang der Funktion * Alle Erweiterungen * in einem Gebäude bauen
@@ -2809,8 +4127,6 @@
             }
 
             removeProgressBar(progressContainer);
-
-            // Tabelle aktualisieren
             renderMissingExtensions(buildingsData);
         } catch (error) {
             console.error('Fehler beim Abrufen der Credits und Coins:', error);
@@ -2835,23 +4151,22 @@
         progressContainer.style.boxShadow = '0px 0px 10px rgba(0,0,0,0.2)';
         progressContainer.style.width = '300px';
         progressContainer.style.textAlign = 'center';
-        progressContainer.style.zIndex = '10002'; // Sicherstellen, dass der Fortschrittsbalken oben bleibt
+        progressContainer.style.zIndex = '10002';
 
-        // Set background color based on mode
         progressContainer.style.background = isDarkMode ? '#333' : '#fff';
         progressContainer.style.color = isDarkMode ? '#fff' : '#000';
 
         const progressText = document.createElement('p');
         progressText.textContent = `0 / ${totalExtensions} Erweiterungen gebaut`;
-        progressText.style.fontWeight = 'bold'; // Fettschrift für bessere Lesbarkeit
-        progressText.style.fontSize = '16px'; // Größere Schrift für bessere Sichtbarkeit
+        progressText.style.fontWeight = 'bold';
+        progressText.style.fontSize = '16px';
 
         const progressBar = document.createElement('div');
         progressBar.style.width = '100%';
-        progressBar.style.background = isDarkMode ? '#555' : '#ddd';  // Hintergrund für die Progressbar
+        progressBar.style.background = isDarkMode ? '#555' : '#ddd';
         progressBar.style.borderRadius = '5px';
         progressBar.style.marginTop = '10px';
-        progressBar.style.overflow = 'hidden'; // Hinzugefügt um sicherzustellen, dass der Fortschrittsbalken den Container nicht verlässt
+        progressBar.style.overflow = 'hidden';
 
         const progressFill = document.createElement('div');
         progressFill.style.width = '0%';
@@ -2877,9 +4192,10 @@
     function removeProgressBar(progressContainer) {
         setTimeout(() => {
             document.body.removeChild(progressContainer);
-        }, 500); // 500ms Pause bevor die Fortschrittsanzeige entfernt wird
+        }, 500);
     }
 
+    // Funktion um einfach alles zu bauen was man eingestellt hat
     async function buildAllExtensionsWithPause(groupKey, currency) {
         const wachenGroup = buildingGroups[groupKey] || [];
         const lagerGroup = storageGroups[groupKey] || [];
@@ -2916,5 +4232,712 @@
 
         removeProgressBar(progressContainer);
     }
+    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    // Anfang des Bereiches * Im Bau *
+
+    // Funktion um im Bau befindliche Erweiterungen zu laden
+    async function fetchConstructionProjects() {
+        try {
+            const response = await fetch('https://www.leitstellenspiel.de/api/buildings');
+            if (!response.ok) throw new Error("Fehler beim Abrufen der Daten");
+
+            const buildingsData = await response.json();
+            const constructionList = document.getElementById("construction-list");
+            constructionList.innerHTML = "";
+
+            buildingsData.forEach(building => {
+                // Erweiterungen im Bau
+                building.extensions?.forEach(ext => {
+                    if (!ext.available && ext.available_at) {
+                        addConstructionRow(building, ext.caption, new Date(ext.available_at), "extension", ext.type_id);
+                    }
+                    // Fertige Erweiterungen aktivieren
+                    if (ext.available && !ext.enabled) {
+                        addConstructionRow(building, ext.caption, null, "extension-ready", ext.type_id);
+                    }
+                });
+
+                // Lager im Bau (fertige Lager sind sofort aktiv, kein ready-Button nötig)
+                building.storage_upgrades?.forEach(stor => {
+                    if (!stor.available && stor.available_at) {
+                        addConstructionRow(building, stor.upgrade_type, new Date(stor.available_at), "storage", stor.type_id);
+                    }
+                });
+            });
+        } catch (err) {
+            console.error(err);
+            document.getElementById("construction-list").innerHTML =
+                `<tr><td colspan="5">Fehler beim Laden der Bauprojekte.</td></tr>`;
+        }
+    }
+
+    // Funktion für das Modal mit Tabelle & Filter
+    function openConstructionModal() {
+        const modal = document.createElement("div");
+        modal.id = "construction-lightbox";
+        Object.assign(modal.style, {
+            position: "fixed",
+            top: "0",
+            left: "0",
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
+            paddingTop: "20px",
+            zIndex: "10001"
+        });
+
+        const container = document.createElement("div");
+        Object.assign(container.style, {
+            background: "var(--background-color)",
+            color: "var(--text-color)",
+            border: "1px solid var(--border-color)",
+            padding: "15px",
+            width: "100%",
+            maxWidth: "2000px",
+            maxHeight: "85vh",
+            overflowY: "auto",
+            overflowX: "hidden",
+            borderRadius: "6px"
+        });
+
+        // HEADER
+        const header = document.createElement("div");
+        Object.assign(header.style, {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "10px"
+        });
+
+        const title = document.createElement("h3");
+        title.textContent = "Laufende Bauprojekte";
+        title.style.margin = "0";
+
+        header.appendChild(title);
+
+        // BUTTONS
+        const btnContainer = document.createElement("div");
+        btnContainer.style.display = "flex";
+        btnContainer.style.gap = "10px";
+
+        // Alle aktivieren
+        const activateAllBtn = createButton("Alle aktivieren (0)", ["bau-btn", "bau-btn-success"]);
+        activateAllBtn.addEventListener("click", async () => {
+            const rows = Array.from(document.querySelectorAll("#construction-list tr"))
+            .filter(row => row.style.display !== "none" && row.dataset.actionType === "activate");
+
+            const { wrapper, bar } = getOrCreateProgressBar("activate", container, "#4caf50");
+            const total = rows.length;
+
+            if (total === 0) {
+                bar.style.width = "100%";
+                bar.textContent = "0 von 0 aktiviert";
+                setTimeout(() => wrapper.style.display = "none", 1500);
+                return;
+            }
+
+            for (let i = 0; i < total; i++) {
+                const row = rows[i];
+                const buildingId = row.dataset.buildingId;
+                const typeId = row.dataset.typeId;
+                const csrfToken = getCSRFToken();
+
+                try {
+                    await fetch(`/buildings/${buildingId}/extension_ready/${typeId}/${buildingId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRF-Token": csrfToken },
+                        credentials: "same-origin"
+                    });
+                    row.remove();
+                } catch (err) {
+                    console.warn("Fehler beim Aktivieren:", err);
+                }
+
+                const done = i + 1;
+                const percent = Math.round((done / total) * 100);
+                bar.style.width = `${percent}%`;
+                bar.textContent = `${done} von ${total} aktiviert`;
+
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
+            fetchBuildingsAndRender();
+            updateConstructionButtonCounts();
+
+            setTimeout(() => wrapper.style.display = "none", 1000);
+        });
+        btnContainer.appendChild(activateAllBtn);
+
+        // Alle abbrechen
+        const cancelAllBtn = createButton("Alle abbrechen (0)", ["bau-btn", "bau-btn-danger"]);
+        cancelAllBtn.addEventListener("click", async () => {
+            const tbody = document.getElementById("construction-list");
+
+            // Vor dem Abbruch sortieren (von lang -> kurz)
+            sortConstructionByTime(false);
+
+            let rows = Array.from(tbody.querySelectorAll("tr"))
+            .filter(row => row.style.display !== "none" && row.dataset.actionType === "cancel");
+
+            if (!rows.length) return;
+
+            console.info(`Starte Abbruch von ${rows.length} Bauprojekten (längste zuerst)…`);
+
+            const { wrapper, bar } = getOrCreateProgressBar("cancel", container, "#f44336");
+            const total = rows.length;
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const typeId = row.dataset.typeId;
+                const type = row.dataset.actionTypeDetail;
+                const buildingId = row.dataset.buildingId;
+                const csrfToken = getCSRFToken();
+
+                const url = type === "extension"
+                ? `/buildings/${buildingId}/extension_cancel/${typeId}?redirect_building_id=${buildingId}`
+                : `/buildings/${buildingId}/storage_cancel/${typeId}?redirect_building_id=${buildingId}`;
+
+                console.info(`(${i + 1}/${total}) Breche ab: Building ${buildingId}, Typ ${type}, ID ${typeId}, Restzeit: ${getRemainingTime(row)}ms`);
+
+                try {
+                    await fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            "X-CSRF-Token": csrfToken
+                        },
+                        credentials: "same-origin"
+                    });
+                    row.remove();
+                } catch (err) {
+                    console.warn("Fehler beim Abbrechen:", err);
+                }
+
+                const done = i + 1;
+                const percent = Math.round((done / total) * 100);
+                bar.style.width = `${percent}%`;
+                bar.textContent = `${done} von ${total} abgebrochen`;
+
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
+            fetchBuildingsAndRender();
+            updateConstructionButtonCounts();
+
+            setTimeout(() => wrapper.style.display = "none", 1000);
+        });
+        btnContainer.appendChild(cancelAllBtn);
+
+        // Reset-Button
+        const resetBtn = createButton("Filter zurücksetzen", ["bau-btn", "bau-btn-warning"]);
+        resetBtn.addEventListener("click", () => {
+            document.querySelectorAll("#construction-lightbox select").forEach(select => select.value = "");
+            filterConstructionTable();
+            updateConstructionButtonCounts();
+        });
+        btnContainer.appendChild(resetBtn);
+
+        // Schließen-Button
+        const closeBtn = createButton("Schließen", ["bau-btn", "bau-btn-danger"]);
+        closeBtn.addEventListener("click", () => modal.remove());
+        btnContainer.appendChild(closeBtn);
+
+        header.appendChild(btnContainer);
+
+        // TABELLE
+        const table = document.createElement("table");
+        Object.assign(table.style, {
+            width: "100%",
+            minWidth: "900px",
+            borderCollapse: "collapse",
+            fontSize: "14px",
+            textAlign: "center",
+            tableLayout: "auto"
+        });
+
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        const createFilterHeader = (label, id) => {
+            const th = document.createElement("th");
+            Object.assign(th.style, {
+                border: "1px solid var(--border-color)",
+                padding: "6px",
+                background: "var(--background-color)",
+                textAlign: "center",
+                verticalAlign: "middle",
+                whiteSpace: "nowrap"
+            });
+
+            const span = document.createElement("div");
+            span.textContent = label;
+            span.style.marginBottom = "4px";
+
+            const select = document.createElement("select");
+            select.id = id;
+            select.innerHTML = `<option value="">${label}</option>`;
+            select.style.width = "80%";
+            select.addEventListener("change", () => {
+                filterConstructionTable();
+                updateConstructionButtonCounts();
+            });
+
+            th.appendChild(span);
+            th.appendChild(select);
+            return th;
+        };
+
+        headRow.appendChild(createFilterHeader("Alle Leitstellen", "filter-leitstelle"));
+        headRow.appendChild(createFilterHeader("Alle Wachentypen", "filter-wachentyp"));
+        headRow.appendChild(createFilterHeader("Alle Wachen", "filter-wache"));
+        headRow.appendChild(createFilterHeader("Alle Erweiterungen", "filter-erweiterung"));
+
+        const thRestzeit = document.createElement("th");
+        thRestzeit.textContent = "Restzeit ▼";
+        Object.assign(thRestzeit.style, {
+            border: "1px solid var(--border-color)",
+            padding: "6px",
+            background: "var(--background-color)",
+            textAlign: "center",
+            cursor: "pointer",
+            userSelect: "none"
+        });
+        let sortAsc = true;
+        thRestzeit.addEventListener("click", () => {
+            sortConstructionByTime(sortAsc);
+            thRestzeit.textContent = `Restzeit ${sortAsc ? "▲" : "▼"}`;
+            sortAsc = !sortAsc;
+        });
+
+        const thAktion = document.createElement("th");
+        Object.assign(thAktion.style, {
+            border: "1px solid var(--border-color)",
+            padding: "6px",
+            background: "var(--background-color)",
+            textAlign: "center",
+            verticalAlign: "middle"
+        });
+
+        const actionLabel = document.createElement("div");
+        actionLabel.textContent = "Aktion";
+        actionLabel.style.marginBottom = "4px";
+
+        const actionFilter = document.createElement("select");
+        actionFilter.id = "filter-aktion";
+        actionFilter.innerHTML = `
+        <option value="">Auswahl</option>
+        <option value="cancel">Im Bau</option>
+        <option value="activate">Einsatzbereit schalten</option>
+    `;
+        actionFilter.style.width = "50%";
+        actionFilter.addEventListener("change", () => {
+            filterConstructionTable();
+            updateConstructionButtonCounts();
+        });
+
+        thAktion.appendChild(actionLabel);
+        thAktion.appendChild(actionFilter);
+
+        headRow.appendChild(thRestzeit);
+        headRow.appendChild(thAktion);
+        thead.appendChild(headRow);
+
+        const tbody = document.createElement("tbody");
+        tbody.id = "construction-list";
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+
+        container.appendChild(header);
+        container.appendChild(table);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+
+        // --- Funktion zum Update der Button-Zahlen ---
+        function updateConstructionButtonCounts() {
+            const rows = Array.from(document.querySelectorAll("#construction-list tr"))
+            .filter(row => row.style.display !== "none");
+            const activateCount = rows.filter(row => row.dataset.actionType === "activate").length;
+            const cancelCount = rows.filter(row => row.dataset.actionType === "cancel").length;
+
+            activateAllBtn.textContent = `Alle aktivieren (${activateCount})`;
+            cancelAllBtn.textContent = `Alle abbrechen (${cancelCount})`;
+        }
+
+        // Bauprojekte laden
+        fetchConstructionProjects().then(() => {
+            updateConstructionButtonCounts();
+        });
+    }
+
+    // Funktion um die Ausbauten hinzufügen
+    function addConstructionRow(building, caption, endTime, type, type_id) {
+        const tbody = document.getElementById("construction-list");
+        const row = document.createElement("tr");
+
+        // Wachentyp ermitteln (Mapping-Key bilden)
+        const typeKey = building.building_type + (building.small_building ? '_small' : '_normal');
+        const wachentypName = buildingTypeNames[typeKey] || `Typ ${building.building_type}`;
+
+        // Daten für Filter speichern
+        row.dataset.leitstelle = getLeitstelleName(building);
+        row.dataset.wachentyp = wachentypName;
+        row.dataset.wache = building.caption;
+        row.dataset.erweiterung = caption;
+
+        if (type === "extension" || type === "storage") row.dataset.actionType = "cancel";
+        else if (type === "extension-ready") row.dataset.actionType = "activate";
+
+        row.dataset.buildingId = building.id;
+        row.dataset.typeId = type_id;
+        row.dataset.actionTypeDetail = type;
+
+        // Reihenfolge der sichtbaren Spalten: Leitstelle → Wachentyp → Wache → Erweiterung
+        const values = [
+            row.dataset.leitstelle,
+            row.dataset.wachentyp,
+            row.dataset.wache,
+            row.dataset.erweiterung
+        ];
+
+        values.forEach(txt => {
+            const td = document.createElement("td");
+            td.textContent = txt;
+            Object.assign(td.style, {
+                border: "1px solid var(--border-color)",
+                padding: "6px",
+                textAlign: "center",
+                verticalAlign: "middle",
+                whiteSpace: "nowrap"
+            });
+            row.appendChild(td);
+        });
+
+        // Countdown-Zelle
+        const countdownTd = document.createElement("td");
+        countdownTd.classList.add("countdown"); // <-- neu
+        Object.assign(countdownTd.style, {
+            border: "1px solid var(--border-color)",
+            padding: "6px",
+            textAlign: "center",
+            verticalAlign: "middle",
+            whiteSpace: "nowrap"
+        });
+
+        countdownTd.textContent = endTime ? "" : "Ausbau fertiggestellt";
+        row.appendChild(countdownTd);
+
+        // Action-Zelle
+        const actionTd = document.createElement("td");
+        Object.assign(actionTd.style, {
+            border: "1px solid var(--border-color)",
+            padding: "6px",
+            textAlign: "center",
+            verticalAlign: "middle",
+            whiteSpace: "nowrap"
+        });
+
+        if (type === "extension" || type === "storage") {
+            const cancelButton = createButton("Bau abbrechen", ["bau-btn", "bau-btn-danger"]);
+            cancelButton.onclick = async () => {
+                cancelButton.disabled = true;
+                const csrfToken = getCSRFToken();
+                try {
+                    const url = type === "extension"
+                    ? `/buildings/${building.id}/extension_cancel/${type_id}?redirect_building_id=${building.id}`
+                    : `/buildings/${building.id}/storage_cancel/${type_id}?redirect_building_id=${building.id}`;
+                    await fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRF-Token": csrfToken }, credentials: "same-origin" });
+                    row.remove();
+                    fetchBuildingsAndRender();
+                } catch (err) {
+                    console.warn("Fehler beim Abbrechen:", err);
+                    cancelButton.disabled = false;
+                }
+            };
+            actionTd.appendChild(cancelButton);
+        } else if (type === "extension-ready") {
+            const activateButton = createButton("Einsatzbereit schalten", ["bau-btn", "bau-btn-success"]);
+            activateButton.onclick = async () => {
+                activateButton.disabled = true;
+                const csrfToken = getCSRFToken();
+                try {
+                    const url = `/buildings/${building.id}/extension_ready/${type_id}/${building.id}`;
+                    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRF-Token": csrfToken }, credentials: "same-origin" });
+                    if (!res.ok) throw new Error("Fehler beim Aktivieren der Erweiterung");
+                    row.remove();
+                    fetchConstructionProjects();
+                } catch (err) {
+                    console.warn("Fehler beim Aktivieren der Erweiterung:", err);
+                    activateButton.disabled = false;
+                }
+            };
+            actionTd.appendChild(activateButton);
+        }
+
+        row.appendChild(actionTd);
+        tbody.appendChild(row);
+
+        // Countdown nur für Bauprojekte
+        if (endTime) {
+            function updateCountdown() {
+                const now = new Date();
+                const remaining = endTime - now;
+                if (remaining <= 0) {
+                    countdownTd.textContent = "Fertig!";
+                    clearInterval(interval);
+                    return;
+                }
+                const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+                countdownTd.textContent = `${days} Tag(e), ${hours} Stunde(n), ${minutes} Minute(n), ${seconds} Sekunde(n)`;
+            }
+            updateCountdown();
+            const interval = setInterval(updateCountdown, 1000);
+        }
+
+        // Dropdowns automatisch füllen
+        const addOptionIfMissing = (selectId, value) => {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            if (!Array.from(select.options).some(opt => opt.value === value)) {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            }
+        };
+        addOptionIfMissing("filter-leitstelle", row.dataset.leitstelle);
+        addOptionIfMissing("filter-wachentyp", row.dataset.wachentyp);
+        addOptionIfMissing("filter-wache", row.dataset.wache);
+        addOptionIfMissing("filter-erweiterung", row.dataset.erweiterung);
+    }
+
+    // Filterfunktion
+    function filterConstructionTable() {
+        const leitstelle = document.getElementById("filter-leitstelle").value;
+        const wachentyp = document.getElementById("filter-wachentyp").value;
+        const wache = document.getElementById("filter-wache").value;
+        const erweiterung = document.getElementById("filter-erweiterung").value;
+        const aktion = document.getElementById("filter-aktion").value;
+
+        const rows = Array.from(document.querySelectorAll("#construction-list tr"));
+
+        // Sets zum Sammeln gültiger Optionen
+        const validLeitstellen = new Set();
+        const validWachentypen = new Set();
+        const validWachen = new Set();
+        const validErweiterungen = new Set();
+        const validAktionen = new Set();
+
+        rows.forEach(row => {
+            const matchLeitstelle = !leitstelle || row.dataset.leitstelle === leitstelle;
+            const matchWachentyp = !wachentyp || row.dataset.wachentyp === wachentyp;
+            const matchWache = !wache || row.dataset.wache === wache;
+            const matchErweiterung = !erweiterung || row.dataset.erweiterung === erweiterung;
+            const matchAktion = !aktion || row.dataset.actionType === aktion;
+
+            const isVisible = matchLeitstelle && matchWachentyp && matchWache && matchErweiterung && matchAktion;
+            row.style.display = isVisible ? "" : "none";
+
+            // Nur sichtbare Zeilen zählen für Dropdowns
+            if (isVisible) {
+                validLeitstellen.add(row.dataset.leitstelle);
+                validWachentypen.add(row.dataset.wachentyp);
+                validWachen.add(row.dataset.wache);
+                validErweiterungen.add(row.dataset.erweiterung);
+                validAktionen.add(row.dataset.actionType);
+            }
+        });
+
+        // Dropdowns aktualisieren: nur gültige Optionen anzeigen
+        updateDropdownOptions("filter-leitstelle", validLeitstellen, leitstelle);
+        updateDropdownOptions("filter-wachentyp", validWachentypen, wachentyp);
+        updateDropdownOptions("filter-wache", validWachen, wache);
+        updateDropdownOptions("filter-erweiterung", validErweiterungen, erweiterung);
+        updateDropdownOptions("filter-aktion", validAktionen, aktion);
+    }
+
+    // Funktion um die Pulldowns der Filterungen anzupassen
+    function updateDropdownOptions(selectId, validSet, currentValue) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+
+        const preservedValue = validSet.has(currentValue) ? currentValue : "";
+        select.innerHTML = "";
+
+        // Default-Optionen Mapping
+        const defaultLabels = {
+            "filter-leitstelle": "Alle Leitstellen",
+            "filter-wachentyp": "Alle Wachentypen",
+            "filter-wache": "Alle Wachen",
+            "filter-erweiterung": "Alle Erweiterungen",
+            "filter-aktion": "Auswahl"
+        };
+
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = defaultLabels[selectId] || "";
+        select.appendChild(defaultOption);
+
+        // Mapping für Aktions-Pulldown
+        const actionLabels = {
+            cancel: "Im Bau",
+            activate: "Einsatzbereit schalten"
+        };
+
+        Array.from(validSet).sort().forEach(val => {
+            const option = document.createElement("option");
+            option.value = val;
+
+            if (selectId === "filter-aktion") {
+                option.textContent = actionLabels[val] || val;
+            } else {
+                option.textContent = val;
+            }
+
+            select.appendChild(option);
+        });
+
+        select.value = preservedValue;
+    }
+
+    // Sortierfunktion Restzeit
+    function sortConstructionByTime(asc = true) {
+        const tbody = document.getElementById("construction-list");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        rows.sort((a, b) => {
+            const aTime = getRemainingTime(a);
+            const bTime = getRemainingTime(b);
+            return asc ? aTime - bTime : bTime - aTime;
+        });
+
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+    // Funktion um die restliche Zeit zu holen
+    function getRemainingTime(row) {
+        const countdownCell = row.querySelector(".countdown");
+        if (!countdownCell) return Number.MAX_SAFE_INTEGER;
+
+        if (countdownCell.dataset.endTime) {
+            return new Date(countdownCell.dataset.endTime).getTime() - Date.now();
+        }
+
+        // Fallback: Text parsen
+        return parseTimeToSeconds(countdownCell.textContent) * 1000;
+    }
+
+    // Funktion um die Zeiten zu parsen
+    function parseTimeToSeconds(text) {
+        if (!text || text.includes("Fertig")) return 0;
+        const days = (text.match(/(\d+) Tag/) || [0,0])[1];
+        const hours = (text.match(/(\d+) Stunde/) || [0,0])[1];
+        const minutes = (text.match(/(\d+) Minute/) || [0,0])[1];
+        const seconds = (text.match(/(\d+) Sekunde/) || [0,0])[1];
+        return days*86400 + hours*3600 + minutes*60 + +seconds;
+    }
+
+    // Countdown-Funktion
+    function startConstructionCountdowns() {
+        const countdownCells = document.querySelectorAll("#construction-list .countdown");
+
+        function updateCountdown() {
+            const now = new Date();
+
+            countdownCells.forEach(cell => {
+                const endTime = new Date(cell.dataset.endTime);
+                let diff = Math.floor((endTime - now) / 1000); // Sekunden
+
+                if (diff <= 0) {
+                    cell.textContent = "Fertig";
+                    return;
+                }
+
+                const days = Math.floor(diff / 86400);
+                diff %= 86400;
+                const hours = Math.floor(diff / 3600);
+                diff %= 3600;
+                const minutes = Math.floor(diff / 60);
+                const seconds = diff % 60;
+
+                cell.textContent = `${days} Tag(e), ${hours} Stunde(n), ${minutes} Minute(n), ${seconds} Sekunde(n)`;
+            });
+        }
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    }
+
+    // Mittig platzierte Fortschrittsbalken
+    function getOrCreateProgressBar(type, container, color) {
+        if (progressBars[type]) {
+            // existierender Balken wieder sichtbar machen & zurücksetzen
+            progressBars[type].wrapper.style.display = "flex";
+            progressBars[type].bar.style.width = "0%";
+            progressBars[type].bar.textContent = "";
+            return progressBars[type];
+        }
+
+        const wrapper = document.createElement("div");
+        Object.assign(wrapper.style, {
+            width: "80%",
+            maxWidth: "400px",
+            height: "25px",
+            background: "#f0f0f0",
+            border: "1px solid #aaa",
+            borderRadius: "6px",
+            overflow: "hidden",
+            margin: "15px auto",
+            display: "flex",
+            justifyContent: "flex-start",
+            alignItems: "center",
+            fontSize: "14px",
+            color: "#fff",
+            fontWeight: "bold",
+            textAlign: "center",
+            transition: "all 0.3s"
+        });
+
+        const bar = document.createElement("div");
+        Object.assign(bar.style, {
+            height: "100%",
+            width: "0%",
+            background: color,
+            lineHeight: "25px",
+            textAlign: "center",
+            transition: "width 0.3s"
+        });
+
+        wrapper.appendChild(bar);
+
+        // Balken an den Anfang des Containers einfügen (oben, mittig)
+        container.insertBefore(wrapper, container.firstChild);
+
+        // In deinem vorgegebenen progressBars-Objekt speichern
+        progressBars[type] = { wrapper, bar };
+        return progressBars[type];
+    }
+
+
+    // Event
+    document.getElementById("under-construction").addEventListener("click", async () => {
+        openConstructionModal();
+        await applyMode();
+    });
+
+    // Initiale Aufrufe
+    applyTheme();
+    addMenuButton();
+    checkPremiumStatus();
+    initUserCredits();
+    fetchBuildingsAndRender();
+    updateBuildSelectedButton();
+    startConstructionCountdowns();
 
 })();
