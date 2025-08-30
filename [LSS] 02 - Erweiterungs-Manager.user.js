@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.4.1
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -546,8 +546,11 @@
             { id: 'additional_containers_2', name: '2te Zusätzlicher Lagerraum', cost: 50000, coins: 10, additionalStorage: 30 },
         ],  // Feuerwache (Kleinwache)
         '5_normal': [
-            { id: 'initial_containers', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
-        ], // Rettungshubschrauber-Station
+            { id: 'initial_helicopter_equipment', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
+        ],// Rettungshubschrauber-Wache
+        '13_normal': [
+            { id: 'initial_helicopter_equipment', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
+        ],//Polizeihubschrauber-Wache
     };
     const manualLevels = {
         '0_normal': [  // Feuerwache (Normal)
