@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 35 - Zuweisungsbutton
+// @name         [LSS] Zuweisungsbutton
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Fügt einen Zuweisungs-Button neben den Bearbeiten-Button in Fahrzeugtabellen ein.
