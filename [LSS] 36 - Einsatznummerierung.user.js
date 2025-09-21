@@ -12,8 +12,21 @@
 (function() {
     'use strict';
 
-    function nummeriereEinsaetze() {
-        const einsaetze = Array.from(document.querySelectorAll('#mission_list .missionSideBarEntry'));
+    // 🔧 Einstellungen
+    const ZAHLEN_FARBE  = "#ff8000";   // Orange
+    const ZAHLEN_GROESSE = "x-large";  // z. B. "large", "x-large", "24px", "120%"
+
+    // alle relevanten Container-IDs
+    const LIST_IDS = [
+        "mission_list",
+        "mission_list_sicherheitswache",
+        "mission_list_sicherheitswache_alliance",
+        "mission_list_alliance",
+        "mission_list_alliance_event"
+    ];
+
+    function nummeriereEinsaetze(container) {
+        const einsaetze = Array.from(container.querySelectorAll('.missionSideBarEntry'));
 
         // Nach Erstellungszeitpunkt sortieren (created_at aus data-sortable-by)
         einsaetze.sort((a, b) => {
@@ -37,21 +50,25 @@
             nummer.classList.add("einsatz-nummer");
             nummer.style.fontWeight = "bold";
             nummer.style.marginRight = "6px";
-            nummer.style.fontSize = "medium";
-            nummer.style.color = "#ff8000"; // kräftiges Orange
+            nummer.style.fontSize = ZAHLEN_GROESSE;
+            nummer.style.color = ZAHLEN_FARBE;
 
             heading.insertBefore(nummer, alarmButton);
         });
     }
 
-    // Beim Laden und bei Änderungen der Einsatzliste ausführen
-    const missionList = document.getElementById("mission_list");
-    if (missionList) {
-        const observer = new MutationObserver(nummeriereEinsaetze);
-        observer.observe(missionList, { childList: true, subtree: true });
+    function beobachteListe(container) {
+        if (!container) return;
+        const observer = new MutationObserver(() => nummeriereEinsaetze(container));
+        observer.observe(container, { childList: true, subtree: true });
+        nummeriereEinsaetze(container);
     }
 
-    // Initial
-    nummeriereEinsaetze();
+    // alle definierten Container überwachen
+    LIST_IDS.forEach(id => {
+        const container = document.getElementById(id);
+        if (container) beobachteListe(container);
+    });
 
 })();
+
