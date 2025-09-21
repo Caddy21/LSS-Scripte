@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] Alliance Credit Filter
+// @name         [LSS] Lukrative Einsätze
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Zeigt nur Einsätze über einer gewählten Mindest-Credit-Grenze in der Verbandsfreigabe an
+// @description  Zeigt Einsätze über einer gewählten Mindest-Credit-Grenze in den Verbandsfreigabe an
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
