@@ -2,7 +2,7 @@
 // @name         [LSS] 36 - Einsatznummerierung
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Nummeriert alle Einsätze im mission_list nach Erstellungszeitpunkt und fügt die Zahl vor dem Alarmbutton ein, in Orange hervorgehoben
+// @description  Nummeriert alle Einsätze der Reihe nach durch.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
