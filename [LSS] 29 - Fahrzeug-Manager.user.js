@@ -53,14 +53,6 @@
         }
     }
 
-    document.addEventListener('click', e=>{
-        if(e.target && e.target.id==='fahrzeug-manager-btn'){
-            e.preventDefault();
-            $('#fahrzeugManagerModal').modal('show');
-            loadBuildingsFromAPI();
-        }
-    });
-
     // Modal HTML
     const modalHTML = `
         <div class="modal fade" id="fahrzeugManagerModal" tabindex="-1" role="dialog" aria-labelledby="fahrzeugManagerLabel">
@@ -70,7 +62,8 @@
                   <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                       <h3 class="modal-title" id="fahrzeugManagerLabel" style="font-weight: bold; margin: 0;">🚒 Der Fahrzeug-Manager🚒</h3>
                       <div style="display: flex; gap: 10px; align-items: center;">
-                          <button type="button" class="fm-config-btn" id="fm-config-btn">Fahrzeugkonfiguration</button>
+                          <button type="button" class="fm-config-btn" id="fm-config-btn">Fahrzeugkonfiguration ⚙️</button>
+                          <button type="button" class="fm-log-btn" id="fm-log-btn">Kaufprotokoll 📝</button>
                           <button type="button" class="fm-close-btn" data-dismiss="modal">Schließen ✖</button>
                       </div>
                   </div>
@@ -117,14 +110,57 @@
             </div>
           </div>
         </div>`;
+
+    // Kaufprotokoll-Modal
+    const logModalHTML = `
+        <div class="modal fade" id="fahrzeugLogModal" tabindex="-1" role="dialog" aria-labelledby="fahrzeugLogLabel">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="modal-title" id="fahrzeugLogLabel">📝 Kaufprotokoll 📝</h3>
+            <button type="button" class="fm-reset-log-btn" id="fm-reset-log-btn">Protokoll zurücksetzen</button>
+            <button type="button" class="fm-close-btn" data-dismiss="modal">Schließen ✖</button>
+          </div>
+          <div class="modal-body" id="fahrzeug-log-content">
+            <p>Lade Protokoll...</p>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     document.body.insertAdjacentHTML('beforeend', configModalHTML);
+    document.body.insertAdjacentHTML('beforeend', logModalHTML);
 
     document.addEventListener('click', e => {
         if (e.target && e.target.id === 'fm-config-btn') {
             e.preventDefault();
             $('#fahrzeugConfigModal').modal('show');
             loadVehicleConfig();
+        }
+    });
+    document.addEventListener('click', e => {
+        if (e.target && e.target.id === 'fm-log-btn') {
+            e.preventDefault();
+            $('#fahrzeugLogModal').modal('show');
+            showPurchaseLog();
+        }
+    });
+    document.addEventListener('click', e => {
+        if (e.target && e.target.id === 'fm-reset-log-btn') {
+            if (confirm('Möchtest du das Kaufprotokoll wirklich zurücksetzen?')) {
+                const now = Date.now();
+                localStorage.setItem('fm-purchase-log', JSON.stringify([]));
+                localStorage.setItem('fm-purchase-log-reset', now.toString());
+                showPurchaseLog(); // Aktualisiere die Anzeige sofort
+            }
+        }
+    });
+    document.addEventListener('click', e=>{
+        if(e.target && e.target.id==='fahrzeug-manager-btn'){
+            e.preventDefault();
+            $('#fahrzeugManagerModal').modal('show');
+            loadBuildingsFromAPI();
         }
     });
 
@@ -160,7 +196,13 @@
         #fahrzeugConfigModal .modal-content { width: 100%; overflow-x: auto; }
         #fahrzeugConfigModal { z-index: 10001 !important; }  /* höher als FahrzeugManager */
         #fahrzeugConfigModal + .modal-backdrop { z-index: 10000 !important; }
-
+        #fahrzeugLogModal { z-index: 10002 !important; }
+        #fahrzeugLogModal .modal-content { width: 100%; overflow-x: auto; }
+        #fahrzeugLogModal .modal-dialog { max-width: 1500px; width: 70%; margin: 30px auto; }
+        #fahrzeugLogModal + .modal-backdrop { z-index: 10001 !important; }
+        .fm-log-btn { background-color: #17a2b8; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+        .fm-reset-log-btn { background-color: #ffc107; color: #333; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; margin-left: 10px; }
+        .fm-reset-log-btn:hover { background-color: #e0a800; }
     `);
 
     // FERTIGER Patch: Stellplatzberechnung für alle Gebäudetypen (auch SEG, THW, Wasserrettung usw.)
@@ -924,6 +966,30 @@
     async function buyVehicles(rows, currency, confirmBeforeBuy = true) {
         if (!rows || rows.length === 0) return;
 
+        // Hilfsfunktion für Protokoll-Eintrag
+        function logPurchase({ time, buildingId, buildingName, vehicleId, vehicleName, price, currency }) {
+            const LOG_KEY = 'fm-purchase-log';
+            const RESET_KEY = 'fm-purchase-log-reset';
+
+            // Check for auto-reset
+            let lastReset = parseInt(localStorage.getItem(RESET_KEY), 10) || 0;
+            const now = Date.now();
+            const ONE_MONTH = 1000 * 60 * 60 * 24 * 30; // Millisekunden für 30 Tage
+
+            if (now - lastReset > ONE_MONTH) {
+                // Reset log if older than 1 month
+                localStorage.setItem(LOG_KEY, JSON.stringify([]));
+                localStorage.setItem(RESET_KEY, now.toString());
+            }
+
+            // Save log entry
+            let log = [];
+            try { log = JSON.parse(localStorage.getItem(LOG_KEY)) || []; } catch {}
+            log.push({ time, buildingId, buildingName, vehicleId, vehicleName, price, currency });
+            localStorage.setItem(LOG_KEY, JSON.stringify(log));
+        }
+
+        // Kaufplan erstellen aus den Zeilen
         const buyPlanMap = {};
         rows.forEach(row => {
             const vehicleIds = JSON.parse(row.dataset.missingVehicleIds || '[]');
@@ -934,10 +1000,11 @@
             });
         });
 
+        // Frische Fahrzeugdaten laden
         let freshVehiclesData = [];
         try {
-            freshVehiclesData = await fetch('/api/vehicles').then(r=>r.json());
-        } catch(e) {
+            freshVehiclesData = await fetch('/api/vehicles').then(r => r.json());
+        } catch (e) {
             alert("Fehler beim Nachladen der aktuellen Fahrzeugliste. Der Kauf wird abgebrochen.");
             return;
         }
@@ -947,13 +1014,13 @@
             freshVehicleMap[v.building_id].push(v);
         });
 
-        // Bau finale Kauf-Liste: Pro Typ/Wache wirklich nur Differenz!
+        // Finale Kaufliste erstellen
         const filteredBuyList = [];
         Object.entries(buyPlanMap).forEach(([key, wanted]) => {
             const [buildingId, vehicleTypeId] = key.split('-').map(Number);
             if (wanted > 0) {
                 for (let i = 0; i < wanted; ++i) {
-                    filteredBuyList.push({buildingId, vehicleId: vehicleTypeId});
+                    filteredBuyList.push({ buildingId, vehicleId: vehicleTypeId });
                 }
             }
         });
@@ -963,21 +1030,21 @@
             return;
         }
 
-        // --- Gesamtkosten berechnen ---
+        // Gesamtkosten berechnen
         let totalCost = 0;
         filteredBuyList.forEach(v => {
             const vt = vehicleTypeMapGlobal[v.vehicleId];
             if (!vt) return;
-            totalCost += currency === 'Credits' ? vt.credits : vt.coins;
+            totalCost += currency === 'credits' ? vt.credits : vt.coins;
         });
 
-        const available = currency === 'Credits' ? currentCredits : currentCoins;
+        const available = currency === 'credits' ? currentCredits : currentCoins;
         if (totalCost > available) {
-            alert(`❌ Nicht genug ${currency}!\nBenötigt: ${totalCost.toLocaleString()} ${currency}\nVorhanden: ${available.toLocaleString()} ${currency}`);
+            alert(`❌ Nicht genug ${currency === 'credits' ? 'Credits' : 'Coins'}!\nBenötigt: ${totalCost.toLocaleString()} ${currency === 'credits' ? 'Credits' : 'Coins'}\nVorhanden: ${available.toLocaleString()} ${currency === 'credits' ? 'Credits' : 'Coins'}`);
             return;
         }
 
-        if (confirmBeforeBuy && !confirm(`Möchtest du wirklich ${filteredBuyList.length} Fahrzeuge für ${totalCost.toLocaleString()} ${currency} kaufen?`)) {
+        if (confirmBeforeBuy && !confirm(`Möchtest du wirklich ${filteredBuyList.length} Fahrzeuge für ${totalCost.toLocaleString()} ${currency === 'credits' ? 'Credits' : 'Coins'} kaufen?`)) {
             return;
         }
 
@@ -988,11 +1055,11 @@
         progressContainer.style.display = 'block';
         progressText.style.display = 'block';
         progressBar.style.width = '0%';
-        progressText.textContent = `0 / ${filteredBuyList.length} Fahrzeuge gekauft`;
+        progressText.textContent = `Kauf gestartet...`;
 
-        // Hole Gebäudenamen für Logging
+        // Gebäudenamen für Logging
         const buildingsById = {};
-        (buildingDataGlobal||[]).forEach(b => buildingsById[b.id] = b.caption);
+        (buildingDataGlobal || []).forEach(b => buildingsById[b.id] = b.caption);
 
         let boughtCount = 0;
         for (let i = 0; i < filteredBuyList.length; i++) {
@@ -1000,13 +1067,22 @@
             const vehicleName = vehicleTypeMapGlobal?.[vehicleId]?.caption || `Typ ${vehicleId}`;
             const buildingName = buildingsById?.[buildingId] || buildingId;
             const url = `/buildings/${buildingId}/vehicle/${buildingId}/${vehicleId}/${currency}?building=${buildingId}`;
-
-            console.info(`[Kauf] Starte Kauf: Typ ${vehicleId} (${vehicleName}) auf Wache ${buildingId} (${buildingName})`);
+            const vt = vehicleTypeMapGlobal?.[vehicleId];
 
             try {
                 const res = await fetch(url, { method: 'GET' });
                 if (res.ok) {
                     boughtCount++;
+                    // Protokoll-Eintrag speichern:
+                    logPurchase({
+                        time: Date.now(),
+                        buildingId,
+                        buildingName,
+                        vehicleId,
+                        vehicleName,
+                        price: currency === 'credits' ? vt.credits : vt.coins,
+                        currency: currency === 'credits' ? 'Credits' : 'Coins'
+                    });
                     console.info(`[Kauf] Erfolgreich gekauft: Typ ${vehicleId} (${vehicleName}) auf Wache ${buildingId} (${buildingName})`);
                 } else {
                     let text = '';
@@ -1018,7 +1094,7 @@
             }
 
             progressText.textContent = `${i + 1} / ${filteredBuyList.length} Fahrzeuge gekauft`;
-            progressBar.style.width = `${Math.round(((i+1)/filteredBuyList.length)*100)}%`;
+            progressBar.style.width = `${Math.round(((i + 1) / filteredBuyList.length) * 100)}%`;
             if (confirmBeforeBuy) await new Promise(r => setTimeout(r, 1000));
         }
 
@@ -1066,4 +1142,30 @@
 
     // Expose updateSelectedCosts globally in case listeners need it
     window.fm_updateSelectedCosts = updateSelectedCosts;
+
+    // Funktion zum füllen der Kaufprotokolltabelle
+    function showPurchaseLog() {
+        const content = document.getElementById('fahrzeug-log-content');
+        let log = [];
+        try { log = JSON.parse(localStorage.getItem('fm-purchase-log')) || []; } catch {}
+
+        if (log.length === 0) {
+            content.innerHTML = '<div class="alert alert-info">Keine Käufe protokolliert.</div>';
+            return;
+        }
+
+        let html = '<table class="table table-striped"><thead><tr><th>Zeitpunkt</th><th>Wache</th><th>Fahrzeug</th><th>Preis</th><th>Währung</th></tr></thead><tbody>';
+        log.slice().reverse().forEach(entry => {
+            const dateStr = new Date(entry.time).toLocaleString();
+            html += `<tr>
+            <td>${dateStr}</td>
+            <td>${entry.buildingName}</td>
+            <td>${entry.vehicleName}</td>
+            <td>${entry.price.toLocaleString()}</td>
+            <td>${entry.currency}</td>
+        </tr>`;
+        });
+        html += '</tbody></table>';
+        content.innerHTML = html;
+    }
 })();
