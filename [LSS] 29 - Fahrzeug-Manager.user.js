@@ -66,14 +66,20 @@
         <div class="modal fade" id="fahrzeugManagerModal" tabindex="-1" role="dialog" aria-labelledby="fahrzeugManagerLabel">
           <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
-              <div class="modal-header" style="display: flex; flex-direction: column; gap: 5px;">
+              <div class="modal-header" fm-sticky-header">
                   <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                      <h3 class="modal-title" id="fahrzeugManagerLabel" style="font-weight: bold; margin: 0;">🚒 Fahrzeug-Manager</h3>
+                      <h3 class="modal-title" id="fahrzeugManagerLabel" style="font-weight: bold; margin: 0;">🚒 Der Fahrzeug-Manager🚒</h3>
                       <div style="display: flex; gap: 10px; align-items: center;">
                           <button type="button" class="fm-config-btn" id="fm-config-btn">Fahrzeugkonfiguration</button>
                           <button type="button" class="fm-close-btn" data-dismiss="modal">Schließen ✖</button>
                       </div>
                   </div>
+                    <div class="fm-description"
+                         style="font-size: 14px; color: #555; background-color: var(--spoiler-body-bg); padding: 5px 0; line-height: 1.5;">
+                      Nutze den <strong>Fahrzeug-Manager</strong>, um deine Fahrzeugflotte effizient zu verwalten.<br>
+                      Du kannst pro Wachentyp deine Fahrzeuge individuell konfigurieren – über den Button oben rechts.<br>
+                      Außerdem kannst du deine Wachen deutlich schneller mit Fahrzeugen bestücken und behältst dabei stets die Kosten im Blick.
+                    </div>
                   <div style="display: grid; grid-template-columns: max-content 1fr; gap: 15px; row-gap: 3px; align-items: center; font-size: 14px;">
                       <div>Aktuelle Credits: <span id="fm-credits" style="color: #5cb85c; font-weight: bold;">0</span></div>
                       <div>Ausgewählte Credits: <span id="fm-costs-credits" style="color: #5cb85c; font-weight: bold;">0</span></div>
@@ -127,6 +133,9 @@
         #fahrzeugManagerModal .modal-dialog { max-width: 2500px; width: 95%; margin: 30px auto; }
         #fahrzeugManagerModal .modal-content { width: 100%; overflow-x: auto; }
         #fahrzeugManagerModal { z-index: 10000 !important; }
+        #fahrzeugManagerModal .modal-content { display: flex;  flex-direction: column;  height: 90vh; /* gesamte Modalhöhe */ }
+        #fahrzeugManagerModal .modal-header { flex-shrink: 0;  position: sticky;  top: 0;  z-index: 10;  background: var(--spoiler-body-bg); }
+        #fahrzeugManagerModal .modal-body { overflow-y: auto;  flex-grow: 1; }
         .modal-backdrop { z-index: 9999 !important; }
         .fm-close-btn { background-color: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
         .fm-close-btn:hover { background-color: #c82333; }
@@ -151,6 +160,7 @@
         #fahrzeugConfigModal .modal-content { width: 100%; overflow-x: auto; }
         #fahrzeugConfigModal { z-index: 10001 !important; }  /* höher als FahrzeugManager */
         #fahrzeugConfigModal + .modal-backdrop { z-index: 10000 !important; }
+
     `);
 
     // FERTIGER Patch: Stellplatzberechnung für alle Gebäudetypen (auch SEG, THW, Wasserrettung usw.)
@@ -958,16 +968,16 @@
         filteredBuyList.forEach(v => {
             const vt = vehicleTypeMapGlobal[v.vehicleId];
             if (!vt) return;
-            totalCost += currency === 'credits' ? vt.credits : vt.coins;
+            totalCost += currency === 'Credits' ? vt.credits : vt.coins;
         });
 
-        const available = currency === 'credits' ? currentCredits : currentCoins;
+        const available = currency === 'Credits' ? currentCredits : currentCoins;
         if (totalCost > available) {
             alert(`❌ Nicht genug ${currency}!\nBenötigt: ${totalCost.toLocaleString()} ${currency}\nVorhanden: ${available.toLocaleString()} ${currency}`);
             return;
         }
 
-        if (confirmBeforeBuy && !confirm(`Sollen wirklich ${filteredBuyList.length} Fahrzeuge (${totalCost.toLocaleString()} ${currency}) gekauft werden?`)) {
+        if (confirmBeforeBuy && !confirm(`Möchtest du wirklich ${filteredBuyList.length} Fahrzeuge für ${totalCost.toLocaleString()} ${currency} kaufen?`)) {
             return;
         }
 
