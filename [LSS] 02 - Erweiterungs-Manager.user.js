@@ -446,6 +446,7 @@
             { id: 11, name: 'Ortsverband-Mannschaftstransportwagen', cost: 50000, coins: 15 },
             { id: 12, name: 'Trupp Unbemannte Luftfahrtsysteme', cost: 50000, coins: 15 },
             { id: 13, name: 'Fachzug Führung und Kommunikation', cost: 300000, coins: 25 },
+            { id: 14, name: 'Fachgruppe Logistik-Verpflegung', cost: 50000, coins: 15 },
         ],
         '10_normal': [ // THW-Bundesschule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
@@ -546,11 +547,8 @@
             { id: 'additional_containers_2', name: '2te Zusätzlicher Lagerraum', cost: 50000, coins: 10, additionalStorage: 30 },
         ],  // Feuerwache (Kleinwache)
         '5_normal': [
-            { id: 'initial_helicopter_equipment', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
-        ],// Rettungshubschrauber-Wache
-        '13_normal': [
-            { id: 'initial_helicopter_equipment', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
-        ],//Polizeihubschrauber-Wache
+            { id: 'initial_containers', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
+        ], // Rettungshubschrauber-Station
     };
     const manualLevels = {
         '0_normal': [  // Feuerwache (Normal)
@@ -2640,16 +2638,18 @@
         filterRow.appendChild(wacheFilter.th);
         filterRow.appendChild(ausbaustufeFilter.th);
 
-        // --- Neuer globaler "Stufenauswahl löschen" Button ---
+        // --- Neuer globaler "Stufenauswahl löschen" Button + Dropdown für alle sichtbaren ---
         const clearLevelsTh = document.createElement('th');
         clearLevelsTh.style.textAlign = 'center';
         clearLevelsTh.style.padding = '4px 8px';
 
+        // --- Dein Original-Button (unverändert) ---
         const clearLevelsBtn = document.createElement('button');
         clearLevelsBtn.textContent = 'Stufenauswahl löschen';
-        clearLevelsBtn.classList.add('btn', 'btn-sm', 'btn-warning');
+        clearLevelsBtn.classList.add('btn', 'btn-sm', 'btn-danger');
         clearLevelsBtn.style.padding = '2px 6px';
         clearLevelsBtn.style.fontSize = '0.8em';
+        clearLevelsBtn.style.marginRight = '6px';
         clearLevelsBtn.onclick = () => {
             // Alle Auswahl zurücksetzen
             for (const id in selectedLevels) {
@@ -2657,6 +2657,7 @@
             }
             // Alle Buttons zurücksetzen
             tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return; // nur sichtbare
                 const levelChoiceCell = row.children[3];
                 if (levelChoiceCell) {
                     levelChoiceCell.querySelectorAll('button').forEach(btn => btn.dataset.active = 'false');
@@ -2676,9 +2677,72 @@
             updateBuildSelectedLevelsButtonState(group);
         };
 
+        // --- Neues Dropdown: "Alle sichtbaren auf Stufe setzen" ---
+        const globalLevelSelect = document.createElement('select');
+        globalLevelSelect.classList.add('btn', 'btn-sm', 'btn-secondary');
+        globalLevelSelect.style.fontSize = '0.8em';
+        globalLevelSelect.style.padding = '2px 6px';
+        globalLevelSelect.style.verticalAlign = 'middle';
+        globalLevelSelect.style.cursor = 'pointer';
+
+        // Alle möglichen Stufen bestimmen
+        const allLevelIds = new Set();
+        group.forEach(({ building }) => {
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const levelList = manualLevels[key];
+            if (levelList) levelList.forEach(l => allLevelIds.add(l.id + 1)); // Anzeige 1-basiert
+        });
+
+        const sortedLevels = [...allLevelIds].sort((a, b) => a - b);
+        globalLevelSelect.innerHTML = `<option value="">🔽 Globale Stufenauswahl</option>`;
+        sortedLevels.forEach(lvl => {
+            const opt = document.createElement('option');
+            opt.value = lvl - 1; // intern 0-basiert
+            opt.textContent = `Stufe ${lvl}`;
+            globalLevelSelect.appendChild(opt);
+        });
+
+        globalLevelSelect.addEventListener('change', () => {
+            const selectedLevelId = globalLevelSelect.value === '' ? null : Number(globalLevelSelect.value);
+            if (selectedLevelId === null) return;
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return; // nur sichtbare
+                const buildingId = row.dataset.buildingId;
+                const buildingData = group.find(g => g.building.id == buildingId);
+                if (!buildingData) return;
+
+                const levelInfo = getBuildingLevelInfo(buildingData.building);
+                const key = `${buildingData.building.building_type}_${buildingData.building.small_building ? 'small' : 'normal'}`;
+                const levelList = manualLevels[key];
+                if (!levelList) return;
+
+                // Nur setzen, wenn Stufe gültig ist
+                if (selectedLevelId < levelList.length && selectedLevelId >= levelInfo.currentLevel) {
+                    selectedLevels[buildingData.building.id] = selectedLevelId;
+
+                    const levelChoiceCell = row.children[3];
+                    levelChoiceCell.querySelectorAll('button').forEach(btn => {
+                        btn.dataset.active = btn.getAttribute('level') == selectedLevelId ? 'true' : 'false';
+                    });
+                    updateButtonColors(levelChoiceCell);
+                    updateBuildButtons(buildingData.building, selectedLevelId, row.children[4], row.children[5], levelList, levelInfo.currentLevel);
+                }
+            });
+
+            updateSelectedAmounts(buildingsData);
+            updateBuildSelectedLevelsButtonState(group);
+            globalLevelSelect.selectedIndex = 0; // Zurücksetzen auf Platzhalter
+        });
+
+        // --- Zusammen in die Tabellenzelle ---
         clearLevelsTh.appendChild(clearLevelsBtn);
+        clearLevelsTh.appendChild(globalLevelSelect);
+
+        // In Zeile einfügen
         filterRow.appendChild(clearLevelsTh);
         filterRow.appendChild(document.createElement('th'));
+
 
         // Reset Button
         const resetTh = document.createElement('th');
