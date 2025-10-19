@@ -406,6 +406,54 @@
         return extDef && extDef.givesParkingLots ? extDef.givesParkingLots : 0;
     }
 
+    function getExtensionStatusForVehicle(building, vehicleTypeId, lssmBuildingDefs) {
+        if (!building || !building.extensions || !lssmBuildingDefs) return null;
+
+        const buildingDef = lssmBuildingDefs[building.building_type];
+        if (!buildingDef || !buildingDef.extensions) return null;
+
+        const matchingExtDef = buildingDef.extensions.find(extDef =>
+                                                           extDef.unlocksVehicleTypes && extDef.unlocksVehicleTypes.includes(vehicleTypeId)
+                                                          );
+
+        if (!matchingExtDef) return null; // keine Erweiterung nötig
+
+        // reale Erweiterung anhand des Caption-Vergleichs finden
+        const realExt = building.extensions.find(e =>
+                                                 e.caption.trim().toLowerCase() === matchingExtDef.caption.trim().toLowerCase()
+                                                );
+
+        // 🔍 Debug-Ausgabe zur Kontrolle
+        console.debug("🔍 Erweiterungsprüfung:", {
+            gebäude: building.caption,
+            fahrzeugTypeId: vehicleTypeId,
+            fahrzeugName: lssmBuildingDefs[building.building_type]?.caption ?? '?',
+            erforderlicheErweiterung: matchingExtDef.caption,
+            vorhandeneErweiterungen: building.extensions.map(e => ({
+                caption: e.caption,
+                available: e.available,
+                enabled: e.enabled
+            })),
+            realExt
+        });
+
+        if (!realExt) {
+            return 'missing';
+        }
+
+        if (realExt.available === false && realExt.enabled === true) {
+            return 'in_progress';
+        }
+
+        if (realExt.available === true && realExt.enabled === false) {
+            return 'locked';
+        }
+
+        return 'ok';
+    }
+
+
+
     // Nach Typ gruppieren und Spoiler bauen
     function buildBuildingsByType(buildings, vehicleMap, vehicleTypeMap, lssmBuildingDefs) {
         const grouped = {};
@@ -811,98 +859,113 @@
         const wachen = [...new Set(buildings.map(b => b.caption).filter(Boolean))];
 
         let html = `<table class="table fm-table" id="fm-table-${tableId}">
-            <thead>
-                <tr>
-                    <th>Auswahl</th>
-                    <th>Leitstelle</th>
-                    <th>Wache</th>
-                    <th>Profil</th>
-                    <th>Fahrzeuge</th>
-                    <th>Freie Stellplätze</th>
-                    <th>Fahrzeuge auf Wache</th>
-                    <th>Fehlende Fahrzeuge</th>
-                    <th>Kaufen mit Credits</th>
-                    <th>Kaufen mit Coins</th>
-                </tr>
-                <tr class="fm-filter-row">
-                    <td><input type="checkbox" class="fm-select-all" data-table="${tableId}"></td>
-                    <td><select class="fm-filter-leitstelle" data-table="${tableId}"><option value="">Alle</option>${leitstellen.map(n => `<option value="${n}">${n}</option>`).join('')}</select></td>
-                    <td><select class="fm-filter-wache" data-table="${tableId}"><option value="">Alle</option>${wachen.map(n => `<option value="${n}">${n}</option>`).join('')}</select></td>
-                    <td><button class="fm-filter-reset btn btn-primary btn-xs" data-table="${tableId}">Filter zurücksetzen</button></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-            </thead>
-            <tbody>`;
+        <thead>
+            <tr>
+                <th>Auswahl</th>
+                <th>Leitstelle</th>
+                <th>Wache</th>
+                <th>Profil</th>
+                <th>Fahrzeuge</th>
+                <th>Freie Stellplätze</th>
+                <th>Fahrzeuge auf Wache</th>
+                <th>Fehlende Fahrzeuge</th>
+                <th>Kaufen mit Credits</th>
+                <th>Kaufen mit Coins</th>
+            </tr>
+            <tr class="fm-filter-row">
+                <td><input type="checkbox" class="fm-select-all" data-table="${tableId}"></td>
+                <td><select class="fm-filter-leitstelle" data-table="${tableId}">
+                    <option value="">Alle</option>${leitstellen.map(n => `<option value="${n}">${n}</option>`).join('')}
+                </select></td>
+                <td><select class="fm-filter-wache" data-table="${tableId}">
+                    <option value="">Alle</option>${wachen.map(n => `<option value="${n}">${n}</option>`).join('')}
+                </select></td>
+                <td><button class="fm-filter-reset btn btn-primary btn-xs" data-table="${tableId}">Filter zurücksetzen</button></td>
+                <td colspan="6"></td>
+            </tr>
+        </thead>
+        <tbody>`;
 
         const sortedBuildings = buildings.slice().sort((a, b) => a.caption.localeCompare(b.caption));
 
         sortedBuildings.forEach((b, idx) => {
             const vehiclesOnBuilding = vehicleMap[b.id] || [];
-            const typeCountMap = {};
 
+            // Fahrzeuge auf der Wache zusammenzählen
+            const typeCountMapOnBuilding = {};
             vehiclesOnBuilding.forEach(v => {
                 const typeId = v.vehicle_type;
                 const typeName = vehicleTypeMap[typeId]?.caption || `Unbekannt (Typ ${typeId})`;
-                typeCountMap[typeName] = (typeCountMap[typeName] || 0) + 1;
+                typeCountMapOnBuilding[typeName] = (typeCountMapOnBuilding[typeName] || 0) + 1;
             });
 
-            const vehicleNames = Object.entries(typeCountMap)
-            .map(([name, count]) => count > 1 ? `${count}x ${name}` : name)
+            const vehicleNames = Object.entries(typeCountMapOnBuilding)
+            .map(([name, count]) => (count > 1 ? `${count}x ${name}` : name))
             .join(',<wbr> ') || 'Keine Fahrzeuge auf Wache vorhanden';
 
-            // Key für Gebäudetyp
             const configKey = `${b.building_type}_${b.small_building ? 'small' : 'normal'}`;
-
-            // Profile für diesen Typ laden
             const profilesData = loadProfiles(configKey);
-            const profileNames = Object.keys(profilesData.profiles)
-            .filter(p => p !== 'Standard'); // Standard ausblenden
+            const profileNames = Object.keys(profilesData.profiles).filter(p => p !== 'Standard');
             const hasProfiles = profileNames.length > 0;
+            const activeProfile = hasProfiles ? getBuildingActiveProfile(b.id, configKey) : null;
 
-            // Aktives Profil bestimmen
-            const activeProfile = hasProfiles
-            ? getBuildingActiveProfile(b.id, configKey)
-            : null;
-
-            // Fehlende Fahrzeuge berechnen (nutzt automatisch das aktive Profil, wenn vorhanden)
+            // Fehlende Fahrzeuge
             const missingData = getMissingVehiclesForBuilding(b, vehicleMap, vehicleTypeMap, configKey);
-            const missingVehiclesJson = JSON.stringify(missingData.vehiclesIds || []);
 
-            // Freie Stellplätze berechnen
+            // 🔴🟠 Farbliche Darstellung + Zählung
+            const coloredMissingNames = missingData.vehiclesIds && missingData.vehiclesIds.length > 0
+            ? Object.entries(missingData.vehiclesIds.reduce((acc, id) => {
+                acc[id] = (acc[id] || 0) + 1;
+                return acc;
+            }, {})).map(([id, count]) => {
+                const typeId = parseInt(id, 10);
+                const status = getExtensionStatusForVehicle(b, typeId, lssmBuildingDefs);
+                const name = vehicleTypeMap[typeId]?.caption || `Unbekannt (Typ ${id})`;
+                const displayName = count > 1 ? `${count}x ${name}` : name;
+
+                switch (status) {
+                    case 'locked':
+                    case 'missing':
+                        return `<span style="color: red; font-weight: bold;" title="Erweiterung fehlt">${displayName}</span>`;
+                    case 'in_progress':
+                        return `<span style="color: orange; font-weight: bold;" title="Erweiterung im Bau">${displayName}</span>`;
+                    default:
+                        return displayName;
+                }
+            }).join(',<wbr>&nbsp;')
+            : missingData.names;
+
+            const missingVehiclesJson = JSON.stringify(missingData.vehiclesIds || []);
             const maxVehicles = calcMaxParkingLots(b, lssmBuildingDefs);
             const freieStellplaetze = Math.max(maxVehicles - vehiclesOnBuilding.length, 0);
 
-            // Dropdown oder statischen Text anzeigen
             const profileCell = hasProfiles
             ? `<select class="fm-building-profile" data-building-id="${b.id}" data-config-key="${configKey}"
                     style="padding:2px 4px; border:1px solid var(--spoiler-border); border-radius:4px;
                            background:var(--spoiler-body-bg); color:var(--spoiler-body-text); width:100%;">
-                ${profileNames.map(p => `<option value="${p}" ${p === activeProfile ? 'selected' : ''}>${p}</option>`).join('')}
+                    ${profileNames.map(p => `<option value="${p}" ${p === activeProfile ? 'selected' : ''}>${p}</option>`).join('')}
                </select>`
             : `<span style="color: var(--text-color-secondary, #999); font-style: italic;">– kein Profil –</span>`;
 
-            html += `
-        <tr data-building-id="${b.id}" data-config-key="${configKey}" data-missing-vehicle-ids='${missingVehiclesJson}'>
-            <td><input type="checkbox" class="fm-select" id="fm-select-${tableId}-${idx}" data-credits="${missingData.totalCredits}" data-coins="${missingData.totalCoins}"></td>
+            html += `<tr data-building-id="${b.id}" data-config-key="${configKey}" data-missing-vehicle-ids='${missingVehiclesJson}'>
+            <td><input type="checkbox" class="fm-select" id="fm-select-${tableId}-${idx}"
+                       data-credits="${missingData.totalCredits}" data-coins="${missingData.totalCoins}"></td>
             <td>${b.leitstelle_caption ?? '-'}</td>
             <td>${b.caption}</td>
             <td>${profileCell}</td>
             <td>${b.vehicle_count ?? 0}</td>
             <td><span class="badge fm-badge-green">${freieStellplaetze}</span></td>
             <td><span class="fm-vehicle-list">${vehicleNames}</span></td>
-            <td><span class="fm-vehicle-list">${missingData.names}</span></td>
+            <td><span class="fm-vehicle-list">${coloredMissingNames}</span></td>
             <td>
-                <button class="btn btn-success btn-xs fm-buy-credit" ${missingData.totalCredits > currentCredits ? 'disabled title="Nicht genug Credits"' : ''}>
+                <button class="btn btn-success btn-xs fm-buy-credit"
+                    ${missingData.totalCredits > currentCredits ? 'disabled title="Nicht genug Credits"' : ''}>
                     ${missingData.totalCredits.toLocaleString()} Credits
                 </button>
             </td>
             <td>
-                <button class="btn btn-danger btn-xs fm-buy-coin" ${missingData.totalCoins > currentCoins ? 'disabled title="Nicht genug Coins"' : ''}>
+                <button class="btn btn-danger btn-xs fm-buy-coin"
+                    ${missingData.totalCoins > currentCoins ? 'disabled title="Nicht genug Coins"' : ''}>
                     ${missingData.totalCoins.toLocaleString()} Coins
                 </button>
             </td>
@@ -920,7 +983,6 @@
                     const selectedProfile = e.target.value;
                     setBuildingActiveProfile(buildingId, configKey, selectedProfile);
 
-                    // Tabelle neu aufbauen, um neue Berechnung zu zeigen
                     const container = document.getElementById(`fm-table-${tableId}`).parentElement;
                     container.innerHTML = buildFahrzeugTable(buildings, tableId, vehicleMap, vehicleTypeMap, lssmBuildingDefs);
                 });
@@ -929,6 +991,7 @@
 
         return html;
     }
+
 
     // Ermittelt, welche Fahrzeuge einer Wache fehlen.
     function getMissingVehiclesForBuilding(building, vehicleMap, vehicleTypeMap) {
@@ -1213,7 +1276,7 @@
     }
     setInterval(updateUserResources, 1000);
     updateUserResources();
-    
+
     // Tabellen nach Schließen des Config-Modals aktualisieren
     $('#fahrzeugConfigModal').on('hidden.bs.modal', () => {
         const content = document.getElementById('fahrzeug-manager-content');
