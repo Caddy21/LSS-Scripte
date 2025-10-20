@@ -2,7 +2,7 @@
 // ==UserScript==
 // @name         [LSS] Einsatzkategorienfilter
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.8
 // @description  Filtert die Einsatzliste nach Kategorien
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -27,6 +27,7 @@
         "WF": ['factory_fire_brigade'],
         "SEG": ['seg', 'seg_medical_service'],
         "Stromausfälle": ['energy_supply', 'energy_supply_2'],
+
     }; // Beschriftung und Zusammenstellung der Gruppen -> Hier könnt Ihr euch die Button beschriften und die Gruppen zuordnen
     const defaultEventMissionIds = [
         53, 428, 581, 665, 787, 789, 793, 794, 795, 831, 861, 862, // Winter
@@ -39,7 +40,7 @@
         360, 742, 743, 744, 745, 746, 747, 748, 847, // Muttertag
         183, 184, 185, 461, 546, 547, 548, 646, 647, 648, 754, // Sommer
         672, 673, 674, 675, 676, 677, 678, 679, 680, // Herbst
-        111, 112, 113, 114, 115, 116, 117, 118, 119, // Halloween
+        111, 112, 113, 114, 115, 116, 117, 118, 119, 943, 944, 945, 946 // Halloween
         52, 54, 55, 56, 129, 130, 202, 203, 582, 583, 584, 585, 586, 587, 588, 589, 590, 783, 784, 785, 786, 901, // Weihnachten
         23, 26, 29, 35, 42, 51, 80, 86, 96, 186, 187, 214, 283, 320, 324, 327, 388, 389, 395, 398, 399, 400, 407, 408, 430, 462, 465, 470, 502, 515, 702, // Rauchmeldertag
         259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 326, 591, 695, // Silvester
@@ -902,8 +903,27 @@
         let currentMissions = new Set();
         let categoryCredits = {};
 
+        // Multiplikator bestimmen
+        let creditMultiplier = 1;
+        const eventElement = document.getElementById('event-info-block');
+        if (eventElement) {
+            const timer = eventElement.querySelector('.timer');
+            const endTime = parseInt(timer?.getAttribute('data-end-time') || 0, 10);
+            const now = Date.now();
+
+            if (now < endTime) {
+                const isPremium = typeof user_premium !== 'undefined' && user_premium === true;
+                const titleText = eventElement.querySelector('.credits-title')?.textContent || '';
+
+                if (isPremium && titleText.includes('x2,5')) {
+                    creditMultiplier = 2.5;
+                } else if (!isPremium && titleText.includes('x2')) {
+                    creditMultiplier = 2.0;
+                }
+            }
+        }
+
         missionElements.forEach(element => {
-            // Sichtbarkeit prüfen: sowohl eigene Buttons (style.display) als auch Spiel-Buttons (.hidden)
             if (element.style.display === 'none' || element.classList.contains('hidden')) return;
 
             const missionId = element.getAttribute('mission_type_id');
@@ -922,6 +942,9 @@
                     credits += 250;
                 }
 
+                // Hier Multiplikator draufrechnen:
+                credits = credits * creditMultiplier;
+
                 allCredits += credits;
 
                 const idNum = element.id.replace(/\D/g, '');
@@ -935,7 +958,6 @@
                     }
                 }
 
-                // Entfernen der 'hidden' Überprüfung
                 if (element.style.display !== 'none') {
                     totalCredits += credits;
                     if (isParticipating) {
@@ -955,20 +977,22 @@
         activeMissions = currentMissions;
 
         const standardHTML = `
-    <span title="${customTooltips['total_earnings'] || 'Verdienst der Kategorie oder Gruppe'}">💰 ${totalCredits.toLocaleString()} Credits</span>
-    /
-    <span title="${customTooltips['actual_earnings'] || 'Verdienst aus angefahrenen Einsätzen der Kategorie oder Gruppe'}">
-        <span class="glyphicon glyphicon-user" style="color: #8bc34a;" aria-hidden="true"></span> ${actualCredits.toLocaleString()} Credits
-    </span>
-    `;
+<span title="${customTooltips['total_earnings'] || 'Verdienst der Kategorie oder Gruppe'}">💰 ${totalCredits.toLocaleString()} Credits</span>
+/
+<span title="${customTooltips['actual_earnings'] || 'Verdienst aus angefahrenen Einsätzen der Kategorie oder Gruppe'}">
+    <span class="glyphicon glyphicon-user" style="color: #8bc34a;" aria-hidden="true"></span> ${actualCredits.toLocaleString()} Credits
+</span>
+${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: x${creditMultiplier})</small>` : ''}
+`;
 
         const fullHTML = `
-    <span title="Gesamtverdienst aller Einsätze">💲${allCredits.toLocaleString()} Credits</span>
-    /
-    <span title="Verdienst aus allen angefahrenen Einsätzen">
-        <span class="glyphicon glyphicon-user" style="color: #4caf50;" aria-hidden="true"></span>💲${allActualCredits.toLocaleString()} Credits
-    </span>
-    `;
+<span title="Gesamtverdienst aller Einsätze">💲${allCredits.toLocaleString()} Credits</span>
+/
+<span title="Verdienst aus allen angefahrenen Einsätzen">
+    <span class="glyphicon glyphicon-user" style="color: #4caf50;" aria-hidden="true"></span>💲${allActualCredits.toLocaleString()} Credits
+</span>
+${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: x${creditMultiplier})</small>` : ''}
+`;
 
         const standardContainer = document.getElementById('standard_earnings_display');
         const fullContainer = document.getElementById('full_earnings_display');
@@ -1325,11 +1349,14 @@
 
     // Regelmäßige Updates für Statistiken
     setInterval(() => {
-        updateMissionCount();
-        updateAverageEarnings();
-        updateCategoryButtons();
-        getMissionSummary();
-
+        try {
+            updateMissionCount();
+            updateAverageEarnings();
+            updateCategoryButtons();
+            getMissionSummary();
+        } catch (e) {
+            console.error("Fehler bei Statistik-Update:", e);
+        }
     }, 1000);
 
     // Startet die Überwachung
