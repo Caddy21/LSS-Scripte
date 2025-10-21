@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Fahrzeug-Manager
+// @name         [LSS] 29 - Fahrzeug-Manager
 // @namespace    https://leitstellenspiel.de/
 // @version      1.0
 // @description  Zeigt fehlden Fahrzeuge pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
@@ -406,6 +406,7 @@
         return extDef && extDef.givesParkingLots ? extDef.givesParkingLots : 0;
     }
 
+    // Ermittelt den Erweiterungsstatus eines Gebäudes für einen bestimmten Fahrzeugtyp
     function getExtensionStatusForVehicle(building, vehicleTypeId, lssmBuildingDefs) {
         if (!building || !building.extensions || !lssmBuildingDefs) return null;
 
@@ -445,14 +446,13 @@
             return 'in_progress';
         }
 
+        // ✅ Erweiterung vorhanden, aber deaktiviert -> trotzdem OK
         if (realExt.available === true && realExt.enabled === false) {
-            return 'locked';
+            return 'ok';
         }
 
         return 'ok';
     }
-
-
 
     // Nach Typ gruppieren und Spoiler bauen
     function buildBuildingsByType(buildings, vehicleMap, vehicleTypeMap, lssmBuildingDefs) {
@@ -685,7 +685,7 @@
         <button class="btn btn-danger btn-xs fm-profile-delete" data-table="${tableId}">Profil löschen</button>
         <button class="btn btn-success btn-xs fm-config-select-all" data-table="${tableId}">Alle anwählen</button>
         <button class="btn btn-danger btn-xs fm-config-deselect-all" data-table="${tableId}">Alle abwählen</button>
-        <button class="btn btn-primary btn-xs fm-config-toggle" data-table="${tableId}">Abgewählte Fahrzeuge anzeigen</button>
+        <button class="btn btn-warning btn-xs fm-config-toggle" data-table="${tableId}">Abgewählte Fahrzeuge anzeigen</button>
     </div>`;
 
         // ---- Fahrzeugraster ----
@@ -859,39 +859,49 @@
         const wachen = [...new Set(buildings.map(b => b.caption).filter(Boolean))];
 
         let html = `<table class="table fm-table" id="fm-table-${tableId}">
-        <thead>
-            <tr>
-                <th>Auswahl</th>
-                <th>Leitstelle</th>
-                <th>Wache</th>
-                <th>Profil</th>
-                <th>Fahrzeuge</th>
-                <th>Freie Stellplätze</th>
-                <th>Fahrzeuge auf Wache</th>
-                <th>Fehlende Fahrzeuge</th>
-                <th>Kaufen mit Credits</th>
-                <th>Kaufen mit Coins</th>
-            </tr>
-            <tr class="fm-filter-row">
-                <td><input type="checkbox" class="fm-select-all" data-table="${tableId}"></td>
-                <td><select class="fm-filter-leitstelle" data-table="${tableId}">
-                    <option value="">Alle</option>${leitstellen.map(n => `<option value="${n}">${n}</option>`).join('')}
-                </select></td>
-                <td><select class="fm-filter-wache" data-table="${tableId}">
-                    <option value="">Alle</option>${wachen.map(n => `<option value="${n}">${n}</option>`).join('')}
-                </select></td>
-                <td><button class="fm-filter-reset btn btn-primary btn-xs" data-table="${tableId}">Filter zurücksetzen</button></td>
-                <td colspan="6"></td>
-            </tr>
-        </thead>
-        <tbody>`;
+    <thead>
+        <tr>
+            <th>Auswahl</th>
+            <th>Leitstelle</th>
+            <th>Wache</th>
+            <th>Profil</th>
+            <th>Fahrzeuge</th>
+            <th>Freie Stellplätze</th>
+            <th>Fahrzeuge auf Wache</th>
+            <th>Fehlende Fahrzeuge</th>
+            <th>Kaufen mit Credits</th>
+            <th>Kaufen mit Coins</th>
+        </tr>
+        <tr class="fm-filter-row">
+            <td><input type="checkbox" class="fm-select-all" data-table="${tableId}"></td>
+            <td><select class="fm-filter-leitstelle" data-table="${tableId}">
+                <option value="">Alle</option>${leitstellen.map(n => `<option value="${n}">${n}</option>`).join('')}
+            </select></td>
+            <td><select class="fm-filter-wache" data-table="${tableId}">
+                <option value="">Alle</option>${wachen.map(n => `<option value="${n}">${n}</option>`).join('')}
+            </select></td>
+            <td>
+                <button class="fm-filter-reset btn btn-primary btn-xs" data-table="${tableId}">
+                    Filter zurücksetzen
+                </button>
+            </td>
+            <td colspan="6" style="text-align: right;">
+                <button class="btn btn-success btn-xs fm-buy-selected-credits" data-table="${tableId}">
+                    💳 Alle kaufen (Credits)
+                </button>
+                <button class="btn btn-danger btn-xs fm-buy-selected-coins" data-table="${tableId}">
+                    🪙 Alle kaufen (Coins)
+                </button>
+            </td>
+        </tr>
+    </thead>
+    <tbody>`;
 
         const sortedBuildings = buildings.slice().sort((a, b) => a.caption.localeCompare(b.caption));
 
         sortedBuildings.forEach((b, idx) => {
             const vehiclesOnBuilding = vehicleMap[b.id] || [];
 
-            // Fahrzeuge auf der Wache zusammenzählen
             const typeCountMapOnBuilding = {};
             vehiclesOnBuilding.forEach(v => {
                 const typeId = v.vehicle_type;
@@ -909,10 +919,8 @@
             const hasProfiles = profileNames.length > 0;
             const activeProfile = hasProfiles ? getBuildingActiveProfile(b.id, configKey) : null;
 
-            // Fehlende Fahrzeuge
             const missingData = getMissingVehiclesForBuilding(b, vehicleMap, vehicleTypeMap, configKey);
 
-            // 🔴🟠 Farbliche Darstellung + Zählung
             const coloredMissingNames = missingData.vehiclesIds && missingData.vehiclesIds.length > 0
             ? Object.entries(missingData.vehiclesIds.reduce((acc, id) => {
                 acc[id] = (acc[id] || 0) + 1;
@@ -948,28 +956,28 @@
             : `<span style="color: var(--text-color-secondary, #999); font-style: italic;">– kein Profil –</span>`;
 
             html += `<tr data-building-id="${b.id}" data-config-key="${configKey}" data-missing-vehicle-ids='${missingVehiclesJson}'>
-            <td><input type="checkbox" class="fm-select" id="fm-select-${tableId}-${idx}"
-                       data-credits="${missingData.totalCredits}" data-coins="${missingData.totalCoins}"></td>
-            <td>${b.leitstelle_caption ?? '-'}</td>
-            <td>${b.caption}</td>
-            <td>${profileCell}</td>
-            <td>${b.vehicle_count ?? 0}</td>
-            <td><span class="badge fm-badge-green">${freieStellplaetze}</span></td>
-            <td><span class="fm-vehicle-list">${vehicleNames}</span></td>
-            <td><span class="fm-vehicle-list">${coloredMissingNames}</span></td>
-            <td>
-                <button class="btn btn-success btn-xs fm-buy-credit"
-                    ${missingData.totalCredits > currentCredits ? 'disabled title="Nicht genug Credits"' : ''}>
-                    ${missingData.totalCredits.toLocaleString()} Credits
-                </button>
-            </td>
-            <td>
-                <button class="btn btn-danger btn-xs fm-buy-coin"
-                    ${missingData.totalCoins > currentCoins ? 'disabled title="Nicht genug Coins"' : ''}>
-                    ${missingData.totalCoins.toLocaleString()} Coins
-                </button>
-            </td>
-        </tr>`;
+        <td><input type="checkbox" class="fm-select" id="fm-select-${tableId}-${idx}"
+                   data-credits="${missingData.totalCredits}" data-coins="${missingData.totalCoins}"></td>
+        <td>${b.leitstelle_caption ?? '-'}</td>
+        <td>${b.caption}</td>
+        <td>${profileCell}</td>
+        <td>${b.vehicle_count ?? 0}</td>
+        <td><span class="badge fm-badge-green">${freieStellplaetze}</span></td>
+        <td><span class="fm-vehicle-list">${vehicleNames}</span></td>
+        <td><span class="fm-vehicle-list">${coloredMissingNames}</span></td>
+        <td>
+            <button class="btn btn-success btn-xs fm-buy-credit"
+                ${missingData.totalCredits > currentCredits ? 'disabled title="Nicht genug Credits"' : ''}>
+                ${missingData.totalCredits.toLocaleString()} Credits
+            </button>
+        </td>
+        <td>
+            <button class="btn btn-danger btn-xs fm-buy-coin"
+                ${missingData.totalCoins > currentCoins ? 'disabled title="Nicht genug Coins"' : ''}>
+                ${missingData.totalCoins.toLocaleString()} Coins
+            </button>
+        </td>
+    </tr>`;
         });
 
         html += '</tbody></table>';
@@ -991,7 +999,6 @@
 
         return html;
     }
-
 
     // Ermittelt, welche Fahrzeuge einer Wache fehlen.
     function getMissingVehiclesForBuilding(building, vehicleMap, vehicleTypeMap) {
