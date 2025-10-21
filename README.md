@@ -48,7 +48,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Erweiterungs-Manager (veröffentlicht)
     - Alle LST umschalten (veröffentlicht)
     - Fahrzeuge im S6 auflisten (veröffentlicht)
-    - SNR-Einsätze filtern (veröffentlicht) - EOL
     - Fahrzeuge löschen (veröffentlicht)
     - Sprechwunsch Sortierer (veröffentlicht)
     - Design Switcher
@@ -69,11 +68,18 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - FMS Manager (veröffentlicht)
     - KTW-Melder
     - Einsatz- und Verdienststatistik
-    - AAO schneller anlegen
+    - AAO-Manager
     - Personal-Soll-Checker
     - Fahrzeuge nachladen
     - AAO Auswahl löschen
-    - Einsätze ein- und ausklappen
+    - Einsätze ein- und ausklappen 
     - Einsätze teilen
-    
+    - Ausrückeverzögerer (veröffentlicht)
+    - VGSL Einsatzanforderung (veröffentlicht)
+    - Einsatzgruppierer (veröffentlicht)
+    - Zuweisungsbutton
+    - Einsatznummerierung (veröffentlicht)
+    - Besatzungshelfen
+    - Personalübersicht
+
 </details>
