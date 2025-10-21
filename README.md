@@ -70,8 +70,8 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Einsatz- und Verdienststatistik
     - AAO-Manager
     - Personal-Soll-Checker
-    - Fahrzeuge nachladen
-    - AAO Auswahl löschen
+    - Lukrative Einsätze
+    - Fahrzeug-Manager
     - Einsätze ein- und ausklappen 
     - Einsätze teilen
     - Ausrückeverzögerer (veröffentlicht)
