@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 29 - Fahrzeug-Manager
+// @name         [LSS] Fahrzeug-Manager
 // @namespace    https://leitstellenspiel.de/
 // @version      1.0
 // @description  Zeigt fehlden Fahrzeuge pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
