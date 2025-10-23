@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.4.1
+// @version      1.4.2
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -719,7 +719,7 @@
         '6_small',   // Polizeiwache (Kleinwache)
         '2_normal',  // Rettungswache (Normal)
         '2_small',   // Rettungswache (Kleinwache)
-        '15_small',  // Wasserrettung
+        '15_normal',  // Wasserrettung
         '25_normal', // Bergrettungswache
         '26_normal', // Seenotrettungswache)
     ]);
