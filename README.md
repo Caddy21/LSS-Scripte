@@ -68,11 +68,11 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - FMS Manager (veröffentlicht)
     - KTW-Melder
     - Einsatz- und Verdienststatistik
-    - AAO-Manager
-    - Personal-Soll-Checker
+    - AAO-Manager 
+    - Personal-Soll-Checker (veröffentlicht
     - Lukrative Einsätze
     - Fahrzeug-Manager
-    - Einsätze ein- und ausklappen 
+    - Einsätze ein- und ausklappen (veröffentlicht)
     - Einsätze teilen
     - Ausrückeverzögerer (veröffentlicht)
     - VGSL Einsatzanforderung (veröffentlicht)
@@ -81,5 +81,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Einsatznummerierung (veröffentlicht)
     - Besatzungshelfen
     - Personalübersicht
+    - FMS-Wechsler
 
 </details>
