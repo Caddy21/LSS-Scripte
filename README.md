@@ -83,5 +83,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Personalübersicht
     - FMS-Wechsler
     - Bewerbungsfilter
+    - Lehrgänge ausblenden
 
 </details>
