@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [LSS] Zuweisungsbutton
+// @name         [LSS] 35 - Zuweisungsbutton
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Fügt einen Zuweisungs-Button neben den Bearbeiten-Button in Fahrzeugtabellen ein.
+// @version      1.1
+// @description  Fügt einen Zuweisungs-Button neben den Bearbeiten-Button in Fahrzeugtabellen (auch im Tab & Lightbox) ein
 // @match        https://www.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
@@ -38,8 +38,15 @@
         });
     }
 
-    // Beobachter für neue Iframes
-    const observer = new MutationObserver(mutations => {
+    // Direkt beim Laden ausführen (auch wenn kein IFrame da ist)
+    addButtons(document);
+
+    // Beobachter für Änderungen auf der Hauptseite
+    const mainObserver = new MutationObserver(() => addButtons(document));
+    mainObserver.observe(document.body, { childList: true, subtree: true });
+
+    // Beobachter für neue Iframes (Lightbox)
+    const iframeObserver = new MutationObserver(mutations => {
         mutations.forEach(mutation => {
             mutation.addedNodes.forEach(node => {
                 if (node.nodeType === 1 && node.tagName === "IFRAME") {
@@ -49,8 +56,6 @@
                                 const doc = node.contentDocument || node.contentWindow.document;
                                 if (doc) {
                                     addButtons(doc);
-
-                                    // Auch innerhalb des iFrames Veränderungen beobachten
                                     const innerObserver = new MutationObserver(() => addButtons(doc));
                                     innerObserver.observe(doc.body, { childList: true, subtree: true });
                                 }
@@ -64,7 +69,6 @@
         });
     });
 
-    // Hauptseite beobachten → neue Lightbox-Iframes abfangen
-    observer.observe(document.body, { childList: true, subtree: true });
+    iframeObserver.observe(document.body, { childList: true, subtree: true });
 
 })();
