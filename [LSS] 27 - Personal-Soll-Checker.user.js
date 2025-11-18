@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] Personal-Soll-Checker
+// @name         [LSS] 27 - Personal-Soll-Checker
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.0
+// @version      1.1
 // @description  Zeigt Personalstatus neben Gebäudenamen in der Gebäudeliste an
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -36,38 +36,25 @@
             const link = wrapper.querySelector("a.map_position_mover");
             if (!link) return;
 
-            // Alten Indikator entfernen, falls vorhanden
+            // Alten Indikator entfernen
             let oldIndicator = wrapper.querySelector(".personnel-missing-indicator");
             if (oldIndicator) oldIndicator.remove();
 
+            // Neuen Indikator einbauen
             if (target > 0 && current < target) {
                 const span = document.createElement("span");
                 span.className = "personnel-missing-indicator";
-                span.textContent = ` Personal (Aktuell ${current} / Soll ${target})`;
+                span.innerHTML = `<br>Personal (Aktuell ${current} / Soll ${target})`;
                 span.style.marginLeft = "4px";
                 span.style.fontWeight = "bold";
+                span.style.color = "darkorange";
 
                 link.after(span);
             }
         });
     }
 
-    // Initial ausführen
+    // Einmalig beim Laden ausführen
     await highlightUnderstaffedBuildings();
 
-    // Wiederholung z. B. alle 60 Sekunden
-    setInterval(highlightUnderstaffedBuildings, 60000);
-
-    // MutationObserver für Gebäudeliste (wenn vorhanden)
-    const buildingListContainer = document.querySelector("#building_list");
-
-    if (buildingListContainer) {
-        const observer = new MutationObserver(() => {
-            highlightUnderstaffedBuildings();
-        });
-
-        observer.observe(buildingListContainer, { childList: true, subtree: true });
-    } else {
-        console.warn("[LSS Personal-Soll-Checker] Gebäudeliste nicht gefunden - MutationObserver nicht gestartet.");
-    }
 })();
