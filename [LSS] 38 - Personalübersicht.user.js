@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Personalübersicht
+// @name         [LSS] 38 - Personalübersicht
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Zeigt Wachen mit Personaldefiziten und unterbesetzte Fahrzeuge an
@@ -11,7 +11,6 @@
 
 (function () {
     'use strict';
-    console.info('[LSS Personalzuweiser] Script gestartet');
 
     // ============================ DARK/LIGHT MODE DETECTION ============================
     function isDarkMode() {
@@ -47,10 +46,6 @@
     // ============================ MENÜ BUTTON ============================
     const MENU_SELECTORS = [
         '#menu_profile + ul.dropdown-menu',
-        '#menu_profile + ul',
-        'ul.dropdown-menu',
-        '.dropdown-menu',
-        '#menu_profile',
     ];
 
     function createMenuButtonElement() {
@@ -62,7 +57,6 @@
         a.innerHTML = '<span class="glyphicon glyphicon-user"></span>&nbsp;&nbsp; Personalübersicht';
         a.addEventListener('click', async (e) => {
             e.preventDefault();
-            console.info('[LSS Personalzuweiser] Button geklickt');
             openModalAndLoad();
         });
         li.appendChild(a);
@@ -82,7 +76,6 @@
                     const btnLi = createMenuButtonElement();
                     if (divider) menu.insertBefore(btnLi, divider);
                     else menu.appendChild(btnLi);
-                    console.info('[LSS Personalzuweiser] Button ins Dropdown eingefügt');
                     return true;
                 } catch (err) {
                     console.warn('[LSS Personalzuweiser] Fehler beim Einfügen in Menü', err);
@@ -95,7 +88,6 @@
     (async () => {
         const inserted = tryInsertButtonNow();
         if (inserted) return;
-        console.info('[LSS Personalzuweiser] Menü noch nicht vorhanden — starte Observer');
         const observer = new MutationObserver((_, obs) => {
             if (tryInsertButtonNow()) obs.disconnect();
         });
@@ -124,47 +116,109 @@
             background: colors.bg,
             color: colors.text,
             zIndex: 20000,
-            padding: '12px',
+            padding: '16px',
             border: `1px solid ${colors.border}`,
             boxShadow: colors.shadow,
-            borderRadius: '8px',
+            borderRadius: '10px',
+            fontSize: '1.5rem', // ⬆️ leicht vergrößert (vorher 0.9em)
+            lineHeight: '1.4',
         });
 
         modal.innerHTML = `
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <h3 style="margin:0;">Personalzuweiser</h3>
-    <button id="pz-close" class="btn btn-danger">✖</button>
-  </div>
-  <div id="pz-description" style="
-      margin-bottom:8px;
-      font-size:0.9em;
-      color:${colors.text};
-      border-bottom:1px solid ${colors.tableBorder};
-      padding-bottom:4px;
-  ">
-    Hier siehst du alle Wachen mit Personaldefiziten sowie die Fahrzeuge und deren aktuelle Personalbesetzung.
-  </div>
-  <div id="pz-status" style="margin-bottom:8px;font-size:0.9em;color:${colors.text};">Bereit</div>
-  <table id="pz-table" style="width:100%;border-collapse:collapse;border:1px solid ${colors.tableBorder};text-align:center;">
-    <thead>
-      <tr style="background:${isDarkMode() ? '#333' : '#f2f2f2'};">
-        <th rowspan="2" style="border:1px solid ${colors.tableBorder};padding:6px;text-align:center;">Wache</th>
-        <th colspan="4" style="border:1px solid ${colors.tableBorder};padding:6px;text-align:center;">Personal</th>
-        <th rowspan="2" style="border:1px solid ${colors.tableBorder};padding:6px;text-align:center;">Fahrzeuge auf Wache</th>
-      </tr>
-      <tr style="background:${isDarkMode() ? '#333' : '#f2f2f2'};">
-        <th style="border:1px solid ${colors.tableBorder};padding:6px;text-align:center;">Aktuell</th>
-        <th style="border:1px solid ${colors.tableBorder};padding:6px;text-align:center;">Benötigt</th>
-        <th style="border:1px solid ${colors.tableBorder};padding:6px;text-align:center;">Differenz</th>
-        <th style="border:1px solid ${colors.tableBorder};padding:6px;text-align:center;">Max Wache</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-`;
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="margin:0;font-size:2.0rem;">Personalübersicht</h3>
+        <div style="display:flex;gap:8px;">
+          <button id="pz-reload" class="btn btn-primary" style="padding:6px 10px;font-size:0.95em;">🔄 Aktualisieren</button>
+          <button id="pz-close" class="btn btn-danger" style="padding:6px 10px;font-size:0.95em;">✖ Schließen</button>
+        </div>
+      </div>
+
+      <div id="pz-description" style="
+          margin-bottom:10px;
+          font-size:0.95em;
+          border-bottom:1px solid ${colors.tableBorder};
+          padding-bottom:6px;
+      ">
+        Zeigt Wachen mit Personaldefiziten und unterbesetzte Fahrzeuge an.<br>
+        Du kannst nach <strong>Leitstelle</strong> und/oder <strong>Wache</strong> filtern.
+      </div>
+
+      <!-- 🔹 Filterbereich -->
+      <div id="pz-filters" style="
+          display:flex;
+          flex-wrap:wrap;
+          align-items:center;
+          gap:16px;
+          margin-bottom:14px;
+      ">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label for="filter-leitstelle" style="white-space:nowrap;font-weight:500;">Leitstelle(n):</label>
+          <select id="filter-leitstelle" style="
+              min-width:230px;
+              padding:6px 8px;
+              border:1px solid ${colors.tableBorder};
+              border-radius:5px;
+              background:${isDarkMode() ? '#222' : '#fff'};
+              color:${colors.text};
+              font-size:0.95em;
+          ">
+            <option value="">Alle Leitstellen</option>
+          </select>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label for="filter-wache" style="white-space:nowrap;font-weight:500;">Wache(n):</label>
+          <select id="filter-wache" style="
+              min-width:270px;
+              padding:6px 8px;
+              border:1px solid ${colors.tableBorder};
+              border-radius:5px;
+              background:${isDarkMode() ? '#222' : '#fff'};
+              color:${colors.text};
+              font-size:0.95em;
+          ">
+            <option value="">Alle Wachen</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="pz-status" style="margin-bottom:10px;font-size:0.95em;">Bereit</div>
+
+      <table id="pz-table" style="
+          width:100%;
+          border-collapse:collapse;
+          border:1px solid ${colors.tableBorder};
+          text-align:center;
+          font-size:0.95em; /* ⬆️ etwas größer */
+      ">
+        <thead>
+          <tr style="background:${isDarkMode() ? '#333' : '#f2f2f2'};">
+            <th rowspan="2" style="border:1px solid ${colors.tableBorder};padding:8px;text-align:center;">Leitstelle</th>
+            <th rowspan="2" style="border:1px solid ${colors.tableBorder};padding:8px;text-align:center;">Wache</th>
+            <th colspan="4" style="border:1px solid ${colors.tableBorder};padding:8px;text-align:center;">Personal</th>
+            <th rowspan="2" style="border:1px solid ${colors.tableBorder};padding:8px;text-align:center;">Fahrzeuge auf Wache</th>
+          </tr>
+          <tr style="background:${isDarkMode() ? '#333' : '#f2f2f2'};">
+            <th style="border:1px solid ${colors.tableBorder};padding:6px;">Aktuell</th>
+            <th style="border:1px solid ${colors.tableBorder};padding:6px;">Benötigt</th>
+            <th style="border:1px solid ${colors.tableBorder};padding:6px;">Differenz</th>
+            <th style="border:1px solid ${colors.tableBorder};padding:6px;">Max Wache</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    `;
 
         document.body.appendChild(modal);
+
+        // 🔘 Button-Funktionen
         document.getElementById('pz-close').addEventListener('click', () => modal.remove());
+        document.getElementById('pz-reload').addEventListener('click', () => {
+            const status = document.getElementById('pz-status');
+            status.textContent = 'Aktualisiere...';
+            openModalAndLoad();
+        });
+
         return modal;
     }
 
@@ -199,122 +253,211 @@
         const modal = createModal();
         const status = document.getElementById('pz-status');
         const tbody = document.querySelector('#pz-table tbody');
+        const selectLeitstelle = document.getElementById('filter-leitstelle');
+        const selectWache = document.getElementById('filter-wache');
         status.textContent = 'Lade Daten...';
         tbody.innerHTML = '';
 
         try {
+            // 🔹 Daten laden
             const { buildings, vehicles, vehicleTypesArray } = await fetchData();
-            const vtById = new Map(vehicleTypesArray.map((vt) => [Number(vt.id), vt]));
+            const vtById = new Map(vehicleTypesArray.map(vt => [Number(vt.id), vt]));
+
+            // 🔹 Leitstellen-Mapping erstellen
+            const leitstellenMap = new Map();
+            for (const b of buildings) {
+                if (b.building_type === 7) leitstellenMap.set(b.id, b.caption);
+            }
+
+            // 🔹 Alle relevanten Wachen (mit unterbesetzten Fahrzeugen) ermitteln
+            const relevanteWachen = [];
+            const fahrzeugDatenProWache = new Map();
 
             for (const b of buildings) {
-                const aktuell = b.personal_count ?? 0;
-                const maxWache = b.personal_count_target ?? 0;
-                const fahrzeuge = vehicles.filter((v) => v.building_id === b.id);
+                if (b.building_type === 7) continue; // keine Leitstelle selbst
+
+                const fahrzeuge = vehicles.filter(v => v.building_id === b.id);
                 if (!fahrzeuge.length) continue;
 
-                let benoetigt = 0;
-
-                for (const v of fahrzeuge) {
-                    const vt = vtById.get(Number(v.vehicle_type));
-                    const max = v.max_personnel_override ?? vt?.staff?.max ?? 0;
-                    benoetigt += max;
-                }
-
-                const diff = aktuell - benoetigt;
-                if (diff >= 0) continue; // Nur Wachen mit Defizit anzeigen
-
-                const tr = document.createElement('tr');
-
-                // Wache
-                const wacheTd = document.createElement('td');
-                Object.assign(wacheTd.style, { border: `1px solid ${colors.tableBorder}`, padding: '6px', textAlign: 'center' });
-                wacheTd.textContent = b.caption;
-                tr.appendChild(wacheTd);
-
-                // Personal-Spalten
-                const createPersonalTd = (text, color) => {
-                    const td = document.createElement('td');
-                    Object.assign(td.style, { border: `1px solid ${colors.tableBorder}`, padding: '6px', textAlign: 'center', fontWeight: 'bold', color });
-                    td.textContent = text;
-                    return td;
-                };
-                tr.appendChild(createPersonalTd(aktuell, 'orange'));
-                tr.appendChild(createPersonalTd(benoetigt, 'green'));
-                tr.appendChild(createPersonalTd(diff, colors.diffNeg));
-                tr.appendChild(createPersonalTd(maxWache, 'aqua'));
-
-                // Fahrzeuge
-                const fahrzeugTd = document.createElement('td');
-                Object.assign(fahrzeugTd.style, {
-                    border: `1px solid ${colors.tableBorder}`,
-                    padding: '6px',
-                    verticalAlign: 'middle',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center'
-                });
-
-                const maxPerRow = 8;
-
-                // Array mit Fahrzeugen inkl. aktueller Besetzung
                 const fahrzeugArray = fahrzeuge.map(f => {
                     const vt = vtById.get(Number(f.vehicle_type));
                     const name = vt?.caption ?? f.caption?.split(' - ')[0] ?? 'Unbekannt';
-                    const max = vt?.staff?.max ?? 1;
+                    const max = f.max_personnel_override ?? vt?.staff?.max ?? 1;
                     const aktuellAufFz = f.assigned_personnel_count ?? 0;
-                    return { name, aktuellAufFz, max };
-                }).filter(f => f.aktuellAufFz < f.max); // nur Fahrzeuge mit Defizit
+                    const id = f.id;
+                    return { id, name, aktuellAufFz, max };
+                });
 
-                for (let i = 0; i < fahrzeugArray.length; i += maxPerRow) {
-                    const rowDiv = document.createElement('div');
-                    Object.assign(rowDiv.style, {
-                        display: 'flex',
-                        gap: '4px',
-                        justifyContent: 'center',
-                        flexWrap: 'nowrap',
-                        marginBottom: '2px'
-                    });
-
-                    fahrzeugArray.slice(i, i + maxPerRow).forEach(f => {
-                        const span = document.createElement('span');
-                        Object.assign(span.style, {
-                            display: 'inline-flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            padding: '4px 6px',
-                            border: `1px solid ${colors.tableBorder}`,
-                            borderRadius: '4px',
-                            background: isDarkMode() ? '#222' : '#f9f9f9',
-                            color: colors.text,
-                            whiteSpace: 'nowrap',
-                            fontSize: '0.85em',
-                        });
-
-                        // Fahrzeugname
-                        span.innerHTML = `${f.name}&nbsp;`;
-
-                        // Aktuelle Personen / Max farbig
-                        const numberSpan = document.createElement('span');
-                        numberSpan.textContent = `(${f.aktuellAufFz}/${f.max})`;
-                        numberSpan.style.fontWeight = 'bold';
-                        numberSpan.style.color = f.aktuellAufFz === 0 ? '#dc3545' : '#fd7e14';
-
-                        span.appendChild(numberSpan);
-                        rowDiv.appendChild(span);
-                    });
-
-                    if (rowDiv.childElementCount > 0) fahrzeugTd.appendChild(rowDiv);
+                const unterbesetzt = fahrzeugArray.some(f => f.aktuellAufFz < f.max);
+                if (unterbesetzt) {
+                    relevanteWachen.push(b);
+                    fahrzeugDatenProWache.set(b.id, fahrzeugArray);
                 }
-
-                tr.appendChild(fahrzeugTd);
-                tbody.appendChild(tr);
             }
 
+            // 🔹 Nur Leitstellen und Wachen in die Filter aufnehmen, die auch angezeigt werden
+            const relevanteLeitstellen = [...new Set(relevanteWachen.map(b => b.leitstelle_building_id).filter(Boolean))];
+
+            // 🔹 Leitstellen alphabetisch sortieren
+            selectLeitstelle.innerHTML = '<option value="">Alle Leitstellen</option>';
+
+            [...relevanteLeitstellen]
+                .map(id => ({ id, name: leitstellenMap.get(id) || `(unbekannt #${id})` }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }))
+                .forEach(ls => {
+                const opt = document.createElement('option');
+                opt.value = ls.id;
+                opt.textContent = ls.name;
+                selectLeitstelle.appendChild(opt);
+            });
+
+            selectWache.innerHTML = '<option value="">Alle Wachen</option>';
+            relevanteWachen
+                .sort((a, b) => a.caption.localeCompare(b.caption, 'de', { sensitivity: 'base' }))
+                .forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id;
+                opt.textContent = b.caption;
+                selectWache.appendChild(opt);
+            });
+
+            // 🔹 Tabelle rendern (nach Filter)
+            function renderTable() {
+                tbody.innerHTML = '';
+                const filterLST = selectLeitstelle.value;
+                const filterWache = selectWache.value;
+
+                relevanteWachen.forEach(b => {
+                    if (filterWache && String(b.id) !== filterWache) return;
+                    if (filterLST && String(b.leitstelle_building_id) !== filterLST) return;
+
+                    const fahrzeugArray = fahrzeugDatenProWache.get(b.id) || [];
+                    const aktuell = b.personal_count ?? 0;
+                    const maxWache = b.personal_count_target ?? 0;
+                    const benoetigt = fahrzeugArray.reduce((sum, f) => sum + f.max, 0);
+                    const diff = aktuell - benoetigt;
+
+                    const tr = document.createElement('tr');
+
+                    // 🟣 Leitstelle
+                    const leitstelleName = b.leitstelle_building_id
+                    ? leitstellenMap.get(b.leitstelle_building_id) || '(unbekannt)'
+                    : '-';
+                    const leitstelleTd = document.createElement('td');
+                    Object.assign(leitstelleTd.style, {
+                        border: `1px solid ${colors.tableBorder}`,
+                        padding: '6px',
+                        textAlign: 'center'
+                    });
+                    leitstelleTd.textContent = leitstelleName;
+                    tr.appendChild(leitstelleTd);
+
+                    // 🟣 Wache
+                    const wacheTd = document.createElement('td');
+                    Object.assign(wacheTd.style, {
+                        border: `1px solid ${colors.tableBorder}`,
+                        padding: '6px',
+                        textAlign: 'center'
+                    });
+                    wacheTd.textContent = b.caption;
+                    tr.appendChild(wacheTd);
+
+                    // 🟣 Personalzahlen
+                    const createPersonalTd = (text, color) => {
+                        const td = document.createElement('td');
+                        Object.assign(td.style, {
+                            border: `1px solid ${colors.tableBorder}`,
+                            padding: '6px',
+                            textAlign: 'center',
+                            fontWeight: 'bold',
+                            color
+                        });
+                        td.textContent = text;
+                        return td;
+                    };
+                    tr.appendChild(createPersonalTd(aktuell, 'orange'));
+                    tr.appendChild(createPersonalTd(benoetigt, 'green'));
+                    tr.appendChild(createPersonalTd(diff, diff < 0 ? colors.diffNeg : colors.diffPos));
+                    tr.appendChild(createPersonalTd(maxWache, 'aqua'));
+
+                    // 🟣 Fahrzeuge
+                    const fahrzeugTd = document.createElement('td');
+                    Object.assign(fahrzeugTd.style, {
+                        border: `1px solid ${colors.tableBorder}`,
+                        padding: '6px',
+                        verticalAlign: 'middle',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center'
+                    });
+
+                    const maxPerRow = 8;
+                    const unterbesetzteFahrzeuge = fahrzeugArray.filter(f => f.aktuellAufFz < f.max);
+                    for (let i = 0; i < unterbesetzteFahrzeuge.length; i += maxPerRow) {
+                        const rowDiv = document.createElement('div');
+                        Object.assign(rowDiv.style, {
+                            display: 'flex',
+                            gap: '4px',
+                            justifyContent: 'center',
+                            flexWrap: 'nowrap',
+                            marginBottom: '2px'
+                        });
+
+                        unterbesetzteFahrzeuge.slice(i, i + maxPerRow).forEach(f => {
+                            const link = document.createElement('a');
+                            link.href = `https://www.leitstellenspiel.de/vehicles/${f.id}/zuweisung`;
+                            link.target = '_blank';
+                            link.style.textDecoration = 'none';
+
+                            const span = document.createElement('span');
+                            Object.assign(span.style, {
+                                display: 'inline-flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                padding: '4px 6px',
+                                border: `1px solid ${colors.tableBorder}`,
+                                borderRadius: '4px',
+                                background: isDarkMode() ? '#222' : '#f9f9f9',
+                                color: colors.text,
+                                whiteSpace: 'nowrap',
+                                fontSize: '0.85em',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s'
+                            });
+
+                            span.addEventListener('mouseover', () => (span.style.background = isDarkMode() ? '#333' : '#e6e6e6'));
+                            span.addEventListener('mouseout', () => (span.style.background = isDarkMode() ? '#222' : '#f9f9f9'));
+
+                            span.innerHTML = `${f.name}&nbsp;`;
+                            const numberSpan = document.createElement('span');
+                            numberSpan.textContent = `(${f.aktuellAufFz}/${f.max})`;
+                            numberSpan.style.fontWeight = 'bold';
+                            numberSpan.style.color = f.aktuellAufFz === 0 ? '#dc3545' : '#fd7e14';
+                            span.appendChild(numberSpan);
+
+                            link.appendChild(span);
+                            rowDiv.appendChild(link);
+                        });
+
+                        if (rowDiv.childElementCount > 0) fahrzeugTd.appendChild(rowDiv);
+                    }
+
+                    tr.appendChild(fahrzeugTd);
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // 🔹 Filter-Events
+            selectLeitstelle.addEventListener('change', renderTable);
+            selectWache.addEventListener('change', renderTable);
+
+            // 🔹 Initiale Anzeige
+            renderTable();
             status.textContent = 'Fertig';
         } catch (err) {
             status.textContent = 'Fehler beim Laden';
             console.error(err);
-            tbody.innerHTML = `<tr><td colspan="6" style="color:${colors.diffNeg};border:1px solid ${colors.tableBorder};padding:6px;">Fehler beim Laden der Daten</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="color:${colors.diffNeg};border:1px solid ${colors.tableBorder};padding:6px;">Fehler beim Laden der Daten</td></tr>`;
         }
     }
 
