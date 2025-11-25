@@ -255,6 +255,7 @@
         const tbody = document.querySelector('#pz-table tbody');
         const selectLeitstelle = document.getElementById('filter-leitstelle');
         const selectWache = document.getElementById('filter-wache');
+
         status.textContent = 'Lade Daten...';
         tbody.innerHTML = '';
 
@@ -263,47 +264,43 @@
             const { buildings, vehicles, vehicleTypesArray } = await fetchData();
             const vtById = new Map(vehicleTypesArray.map(vt => [Number(vt.id), vt]));
 
-            // 🔹 Leitstellen-Mapping erstellen
+            // 🔹 Leitstellen-Mapping
             const leitstellenMap = new Map();
-            for (const b of buildings) {
+            buildings.forEach(b => {
                 if (b.building_type === 7) leitstellenMap.set(b.id, b.caption);
-            }
+            });
 
-            // 🔹 Alle relevanten Wachen (mit unterbesetzten Fahrzeugen) ermitteln
+            // 🔹 Relevante Wachen ermitteln
             const relevanteWachen = [];
             const fahrzeugDatenProWache = new Map();
 
-            for (const b of buildings) {
-                if (b.building_type === 7) continue; // keine Leitstelle selbst
+            buildings.forEach(b => {
+                if (b.building_type === 7) return;
 
                 const fahrzeuge = vehicles.filter(v => v.building_id === b.id);
-                if (!fahrzeuge.length) continue;
+                if (!fahrzeuge.length) return;
 
                 const fahrzeugArray = fahrzeuge.map(f => {
                     const vt = vtById.get(Number(f.vehicle_type));
                     const name = vt?.caption ?? f.caption?.split(' - ')[0] ?? 'Unbekannt';
                     const max = f.max_personnel_override ?? vt?.staff?.max ?? 1;
                     const aktuellAufFz = f.assigned_personnel_count ?? 0;
-                    const id = f.id;
-                    return { id, name, aktuellAufFz, max };
+                    return { id: f.id, name, aktuellAufFz, max };
                 });
 
-                const unterbesetzt = fahrzeugArray.some(f => f.aktuellAufFz < f.max);
-                if (unterbesetzt) {
+                if (fahrzeugArray.some(f => f.aktuellAufFz < f.max)) {
                     relevanteWachen.push(b);
                     fahrzeugDatenProWache.set(b.id, fahrzeugArray);
                 }
-            }
+            });
 
-            // 🔹 Nur Leitstellen und Wachen in die Filter aufnehmen, die auch angezeigt werden
+            // 🔹 Filter füllen
             const relevanteLeitstellen = [...new Set(relevanteWachen.map(b => b.leitstelle_building_id).filter(Boolean))];
 
-            // 🔹 Leitstellen alphabetisch sortieren
             selectLeitstelle.innerHTML = '<option value="">Alle Leitstellen</option>';
-
-            [...relevanteLeitstellen]
+            relevanteLeitstellen
                 .map(id => ({ id, name: leitstellenMap.get(id) || `(unbekannt #${id})` }))
-                .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'de'))
                 .forEach(ls => {
                 const opt = document.createElement('option');
                 opt.value = ls.id;
@@ -313,7 +310,7 @@
 
             selectWache.innerHTML = '<option value="">Alle Wachen</option>';
             relevanteWachen
-                .sort((a, b) => a.caption.localeCompare(b.caption, 'de', { sensitivity: 'base' }))
+                .sort((a, b) => a.caption.localeCompare(b.caption, 'de'))
                 .forEach(b => {
                 const opt = document.createElement('option');
                 opt.value = b.id;
@@ -321,9 +318,10 @@
                 selectWache.appendChild(opt);
             });
 
-            // 🔹 Tabelle rendern (nach Filter)
+            // 🔹 Tabelle rendern
             function renderTable() {
                 tbody.innerHTML = '';
+
                 const filterLST = selectLeitstelle.value;
                 const filterWache = selectWache.value;
 
@@ -340,125 +338,123 @@
                     const tr = document.createElement('tr');
 
                     // 🟣 Leitstelle
-                    const leitstelleName = b.leitstelle_building_id
-                    ? leitstellenMap.get(b.leitstelle_building_id) || '(unbekannt)'
-                    : '-';
-                    const leitstelleTd = document.createElement('td');
-                    Object.assign(leitstelleTd.style, {
+                    const tdLeit = document.createElement('td');
+                    Object.assign(tdLeit.style, {
                         border: `1px solid ${colors.tableBorder}`,
                         padding: '6px',
                         textAlign: 'center'
                     });
-                    leitstelleTd.textContent = leitstelleName;
-                    tr.appendChild(leitstelleTd);
+                    tdLeit.textContent = b.leitstelle_building_id
+                        ? leitstellenMap.get(b.leitstelle_building_id) || '(unbekannt)'
+                    : '-';
+                    tr.appendChild(tdLeit);
 
                     // 🟣 Wache
-                    const wacheTd = document.createElement('td');
-                    Object.assign(wacheTd.style, {
+                    const tdWache = document.createElement('td');
+                    Object.assign(tdWache.style, {
                         border: `1px solid ${colors.tableBorder}`,
                         padding: '6px',
                         textAlign: 'center'
                     });
-                    wacheTd.textContent = b.caption;
-                    tr.appendChild(wacheTd);
+                    tdWache.textContent = b.caption;
+                    tr.appendChild(tdWache);
 
                     // 🟣 Personalzahlen
-                    const createPersonalTd = (text, color) => {
+                    const personal = [
+                        { value: aktuell, color: 'orange' },
+                        { value: benoetigt, color: 'green' },
+                        { value: diff, color: diff < 0 ? colors.diffNeg : colors.diffPos },
+                        { value: maxWache, color: 'aqua' }
+                    ];
+
+                    personal.forEach(p => {
                         const td = document.createElement('td');
                         Object.assign(td.style, {
                             border: `1px solid ${colors.tableBorder}`,
                             padding: '6px',
                             textAlign: 'center',
                             fontWeight: 'bold',
-                            color
+                            color: p.color
                         });
-                        td.textContent = text;
-                        return td;
-                    };
-                    tr.appendChild(createPersonalTd(aktuell, 'orange'));
-                    tr.appendChild(createPersonalTd(benoetigt, 'green'));
-                    tr.appendChild(createPersonalTd(diff, diff < 0 ? colors.diffNeg : colors.diffPos));
-                    tr.appendChild(createPersonalTd(maxWache, 'aqua'));
+                        td.textContent = p.value;
+                        tr.appendChild(td);
+                    });
 
-                    // 🟣 Fahrzeuge
+                    // 🟣 Fahrzeug-Badges
                     const fahrzeugTd = document.createElement('td');
                     Object.assign(fahrzeugTd.style, {
                         border: `1px solid ${colors.tableBorder}`,
                         padding: '6px',
-                        verticalAlign: 'middle',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center'
+                        verticalAlign: 'middle'
                     });
 
-                    const maxPerRow = 8;
-                    const unterbesetzteFahrzeuge = fahrzeugArray.filter(f => f.aktuellAufFz < f.max);
-                    for (let i = 0; i < unterbesetzteFahrzeuge.length; i += maxPerRow) {
-                        const rowDiv = document.createElement('div');
-                        Object.assign(rowDiv.style, {
-                            display: 'flex',
-                            gap: '4px',
+                    const grid = document.createElement('div');
+                    Object.assign(grid.style, {
+                        display: 'inline-flex',
+                        flexWrap: 'wrap',
+                        gap: '4px',
+                        justifyContent: 'center',
+                    });
+
+                    fahrzeugArray
+                        .filter(f => f.aktuellAufFz < f.max)
+                        .forEach(f => {
+                        const link = document.createElement('a');
+                        link.href = `https://www.leitstellenspiel.de/vehicles/${f.id}/zuweisung`;
+                        link.target = '_blank';
+                        link.style.textDecoration = 'none';
+
+                        const span = document.createElement('span');
+                        Object.assign(span.style, {
+                            display: 'inline-flex',
                             justifyContent: 'center',
-                            flexWrap: 'nowrap',
-                            marginBottom: '2px'
+                            alignItems: 'center',
+                            padding: '4px 6px',
+                            border: `1px solid ${colors.tableBorder}`,
+                            borderRadius: '4px',
+                            background: isDarkMode() ? '#222' : '#f9f9f9',
+                            color: colors.text,
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.85em',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s'
                         });
 
-                        unterbesetzteFahrzeuge.slice(i, i + maxPerRow).forEach(f => {
-                            const link = document.createElement('a');
-                            link.href = `https://www.leitstellenspiel.de/vehicles/${f.id}/zuweisung`;
-                            link.target = '_blank';
-                            link.style.textDecoration = 'none';
-
-                            const span = document.createElement('span');
-                            Object.assign(span.style, {
-                                display: 'inline-flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                padding: '4px 6px',
-                                border: `1px solid ${colors.tableBorder}`,
-                                borderRadius: '4px',
-                                background: isDarkMode() ? '#222' : '#f9f9f9',
-                                color: colors.text,
-                                whiteSpace: 'nowrap',
-                                fontSize: '0.85em',
-                                cursor: 'pointer',
-                                transition: 'background 0.2s'
-                            });
-
-                            span.addEventListener('mouseover', () => (span.style.background = isDarkMode() ? '#333' : '#e6e6e6'));
-                            span.addEventListener('mouseout', () => (span.style.background = isDarkMode() ? '#222' : '#f9f9f9'));
-
-                            span.innerHTML = `${f.name}&nbsp;`;
-                            const numberSpan = document.createElement('span');
-                            numberSpan.textContent = `(${f.aktuellAufFz}/${f.max})`;
-                            numberSpan.style.fontWeight = 'bold';
-                            numberSpan.style.color = f.aktuellAufFz === 0 ? '#dc3545' : '#fd7e14';
-                            span.appendChild(numberSpan);
-
-                            link.appendChild(span);
-                            rowDiv.appendChild(link);
+                        span.addEventListener('mouseover', () => {
+                            span.style.background = isDarkMode() ? '#333' : '#e6e6e6';
+                        });
+                        span.addEventListener('mouseout', () => {
+                            span.style.background = isDarkMode() ? '#222' : '#f9f9f9';
                         });
 
-                        if (rowDiv.childElementCount > 0) fahrzeugTd.appendChild(rowDiv);
-                    }
+                        span.innerHTML = `${f.name}&nbsp;`;
 
+                        const numberSpan = document.createElement('span');
+                        numberSpan.textContent = `(${f.aktuellAufFz}/${f.max})`;
+                        numberSpan.style.fontWeight = 'bold';
+                        numberSpan.style.color = f.aktuellAufFz === 0 ? '#dc3545' : '#fd7e14';
+
+                        span.appendChild(numberSpan);
+                        link.appendChild(span);
+                        grid.appendChild(link);
+                    });
+
+                    fahrzeugTd.appendChild(grid);
                     tr.appendChild(fahrzeugTd);
+
                     tbody.appendChild(tr);
                 });
             }
 
-            // 🔹 Filter-Events
+            // Beim Laden + bei Filteränderung neu rendern
+            renderTable();
             selectLeitstelle.addEventListener('change', renderTable);
             selectWache.addEventListener('change', renderTable);
 
-            // 🔹 Initiale Anzeige
-            renderTable();
-            status.textContent = 'Fertig';
+            status.textContent = 'Fertig geladen.';
         } catch (err) {
-            status.textContent = 'Fehler beim Laden';
             console.error(err);
-            tbody.innerHTML = `<tr><td colspan="7" style="color:${colors.diffNeg};border:1px solid ${colors.tableBorder};padding:6px;">Fehler beim Laden der Daten</td></tr>`;
+            status.textContent = 'Fehler beim Laden der Daten.';
         }
     }
-
 })();
