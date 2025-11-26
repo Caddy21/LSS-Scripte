@@ -84,5 +84,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - FMS-Wechsler
     - Bewerbungsfilter
     - Lehrgänge ausblenden
+    - Wachenfilter
 
 </details>
