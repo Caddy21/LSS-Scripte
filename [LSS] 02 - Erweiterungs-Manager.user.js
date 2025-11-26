@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.4.2
+// @version      1.4.3
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -379,6 +379,7 @@
             { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
             { id: 26, name: '11te Ab-Stellplatz', cost: 150000, coins: 20 },
             { id: 27, name: '12te Ab-Stellplatz', cost: 150000, coins: 20 },
+            { id: 28, name: '13te Ab-Stellplatz', cost: 150000, coins: 20 },
         ],
         '1_normal': [ // Feuerwehrschule
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
