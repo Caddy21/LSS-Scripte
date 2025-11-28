@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] AAO-Manager
+// @name         [LSS] 26 - AAO-Manager
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Effizientes Verwalten deiner Alarm- und Ausrückeordnung (AAO): Fahrzeuge nachladen, AAO zurücksetzen, neu anlegen oder bearbeiten – alles mit einem Klick, in der optimalen Reihenfolge.
@@ -16,7 +16,8 @@
     const config = {
         showClearAaoBtn: true,
         showCreateAaoBtn: true,
-        showLoadMissingBtn: true
+        showLoadMissingBtn: false,
+        showOpenAAOBtn: true,
     };
 
     // ID des eigenen Button-Containers
@@ -54,7 +55,7 @@
         }
 
         // Button: AAO Auswahl löschen (ID bitte bei Bedarf aktualisieren!)
-        const aaoClearBtn = document.querySelector('#aao_67865212');
+        const aaoClearBtn = document.querySelector('#aao_36563457');
         if (config.showClearAaoBtn && aaoClearBtn) {
             const btn = createButton('btn-clear-aao', 'AAO Auswahl löschen', 'btn-danger', () => aaoClearBtn.click());
             container.appendChild(btn);
@@ -64,6 +65,14 @@
         if (config.showCreateAaoBtn) {
             const btn = createButton('btn-create-aao', 'AAO anlegen', 'btn-success', () => {
                 window.open('https://www.leitstellenspiel.de/aaos/new', '_blank');
+            });
+            container.appendChild(btn);
+        }
+
+        // Button: AAO Übersicht öffnen
+        if (config.showOpenAAOBtn) {
+            const btn = createButton('btn-open-aao', 'AAO öffnen', 'btn-info', () => {
+                window.open('https://www.leitstellenspiel.de/aaos', '_blank');
             });
             container.appendChild(btn);
         }
@@ -86,7 +95,7 @@
 
             // Taste C: AAO Auswahl löschen
             if (config.showClearAaoBtn && e.key.toLowerCase() === 'c') {
-                const aaoBtn = document.querySelector('#aao_67865212');
+                const aaoBtn = document.querySelector('#aao_36563457');
                 if (aaoBtn) aaoBtn.click();
             }
         }, true); // Capture-Phase aktiviert – wichtig für Firefox
