@@ -85,5 +85,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Bewerbungsfilter
     - Lehrgänge ausblenden
     - Wachenfilter
+    - Gebäudefilter
 
 </details>
