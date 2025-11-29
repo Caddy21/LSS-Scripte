@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Gebäudefilter
+// @name         [LSS] 43 – Gebäudefilter
 // @namespace    www.Leitstellenspiel.de
 // @version      1.0
 // @description  Filter Wachen nach ihrem Typen in der Gebäudeliste und nach Normal- und Kleinwachen
@@ -12,31 +12,28 @@
     'use strict';
 
     const BUILDINGS_API = "/api/buildings";
-
     const FILTERS = {
-        // Feuerwehr
         leitstelle:     { name: "LST",           types: [7] },
         schule:         { name: "Schulen",       types: [1, 3, 8, 10, 27] },
         fw_normal:      { name: "FW",            types: [0], small: false },
         fw_klein:       { name: "FFw",           types: [0], small: true },
         rd_normal:      { name: "RD",            types: [2], small: false },
-        //rd_klein:       { name: "RD (Klein)",    types: [2], small: true },
+        rd_klein:       { name: "RD (Klein)",    types: [2], small: true },
         pol_normal:     { name: "POL",           types: [6], small: false },
-        //pol_klein:      { name: "POL (Klein)",   types: [6], small: true },
+        pol_klein:      { name: "POL (Klein)",   types: [6], small: true },
         thw:            { name: "THW",           types: [9] },
         seg:            { name: "SEG",           types: [12] },
         bpol:           { name: "B-POL",         types: [11] },
-        //rth:            { name: "RTH",           types: [5] },
+        rth:            { name: "RTH",           types: [5] },
         wasser:         { name: "WR",            types: [15] },
         seenot:         { name: "SNR",           types: [26, 28] },
         berg:           { name: "BR",            types: [25] },
-        ph:             { name: "RTH/PH",        types: [5, 13] },
-        //komplex:        { name: "Komplexe",       types: [22, 23] },
+        ph:             { name: "RTH/PH",        types: [13] },
+        komplex:        { name: "Komplexe",       types: [22, 23] },
     };
 
     let apiBuildings = {};
 
-    // Warten bis alles geladen ist
     const initInterval = setInterval(() => {
         if (document.querySelector("#btn-group-building-select") &&
             document.querySelector("#buildings")) {
@@ -46,7 +43,6 @@
         }
     }, 300);
 
-    // Gebäudeliste beobachten
     function observeBuildingsReload() {
         const target = document.querySelector("#buildings");
         if (!target) return;
@@ -54,9 +50,8 @@
         const observer = new MutationObserver(() => {
             const container = document.querySelector("#btn-group-building-select");
 
-            // Buttons fehlen? → neu einfügen
             if (container && !container.querySelector(".lss-filter-patched")) {
-                start(true); // reload
+                start(true);
             }
         });
 
@@ -66,20 +61,16 @@
         });
     }
 
-    // Hauptfunktion für alles
     async function start(isReload = false) {
         if (!isReload) await loadApi();
 
         const oldBar = document.querySelector("#btn-group-building-select");
         if (!oldBar) return;
 
-        // Marker einfügen, damit wir wissen, dass Buttons existieren
         oldBar.innerHTML = '<span class="lss-filter-patched" style="display:none"></span>';
 
-        // Filter-Buttons erzeugen
         const buttons = createButtonPanel(oldBar);
 
-        // Alle anzeigen
         const allBtn = document.createElement("a");
         allBtn.className = "btn btn-xs btn-default";
         allBtn.style.margin = "2px";
@@ -90,11 +81,9 @@
             updateView(null, buttons);
         });
         oldBar.appendChild(allBtn);
-
         updateView(null, buttons);
     }
 
-    // API-Daten laden
     async function loadApi() {
         const r = await fetch(BUILDINGS_API);
         const data = await r.json();
@@ -107,7 +96,7 @@
             };
         });
     }
-    // Buttons erzeugen
+
     function createButtonPanel(container) {
         const buttons = {};
 
@@ -131,8 +120,10 @@
 
         return buttons;
     }
-     // Filtern & Farben setzen
+
+    // WICHTIG: activeFilterId === null => "Alle anzeigen" (alle Buttons grün)
     function updateView(activeFilterId, buttons) {
+        const showingAll = activeFilterId === null;
 
         // Zähler auf Buttons aktualisieren
         Object.keys(buttons).forEach(id => {
@@ -140,23 +131,32 @@
             buttons[id].textContent = `${f.name} (${countBuildingsForFilter(id)})`;
         });
 
-        // Button-Farben setzen
-        Object.keys(buttons).forEach(id => {
-            const btn = buttons[id];
-            if (id === activeFilterId) {
+        // Button-Farben setzen — besonderer Fall: "Alle anzeigen"
+        if (showingAll) {
+            // alle grün
+            Object.values(buttons).forEach(btn => {
                 btn.classList.remove("btn-danger");
                 btn.classList.add("btn-success");
-            } else {
-                btn.classList.remove("btn-success");
-                btn.classList.add("btn-danger");
-            }
-        });
+            });
+        } else {
+            // normal: ausgewählter grün, andere rot
+            Object.keys(buttons).forEach(id => {
+                const btn = buttons[id];
+                if (id === activeFilterId) {
+                    btn.classList.remove("btn-danger");
+                    btn.classList.add("btn-success");
+                } else {
+                    btn.classList.remove("btn-success");
+                    btn.classList.add("btn-danger");
+                }
+            });
+        }
 
-        // Gebäudeliste
+        // Gebäudeliste anzeigen / ausblenden
         const buildings = document.querySelectorAll("#buildings_outer .building_list_li");
 
         buildings.forEach(el => {
-            if (!activeFilterId) {
+            if (showingAll) {
                 el.style.display = "";
                 return;
             }
@@ -186,7 +186,6 @@
         });
     }
 
-    // Wachenzähler
     function countBuildingsForFilter(filterId) {
         const f = FILTERS[filterId];
         let count = 0;
@@ -194,15 +193,12 @@
         for (const id in apiBuildings) {
             const b = apiBuildings[id];
 
-            // passt der Typ?
             if (!f.types.includes(b.type)) continue;
 
-            // Klein vs Normal?
             if (f.small !== undefined && b.small !== f.small) continue;
 
             count++;
         }
         return count;
     }
-
 })();
