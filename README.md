@@ -86,5 +86,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Lehrgänge ausblenden
     - Wachenfilter
     - Gebäudefilter
+    - Besatzungsanzeiger
 
 </details>
