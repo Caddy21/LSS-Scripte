@@ -87,5 +87,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Wachenfilter
     - Gebäudefilter
     - Besatzungsanzeiger
+    - Coinzähler
 
 </details>
