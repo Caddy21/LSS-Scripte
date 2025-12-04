@@ -2,7 +2,7 @@
 // @name         [LSS] 45 – Coinzähler
 // @namespace    http://tampermonkey.net/
 // @version      1.0
-// @description  Coins Dashboard für Leitstellenspiel: zeigt Gesamt-, Jahres- und Monatsstatistiken in übersichtlichen Tabs an
+// @description  Coins Dashboard für Leitstellenspiel: zeigt Gesamt-, Jahres- und Monatsstatistiken inkl. detaillierter Aufschlüsselung nach Ereignissen
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/coins/list*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -14,12 +14,25 @@
     'use strict';
 
     // Konfiguration
-     
     const DB_NAME = "lss_coins_dashboard";
     const STORE_NAME = "pages";
     const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 Stunden
+    const darkMode = isDarkMode();
+    const colors = {
+        tabActive: "#4caf50",
+        tabInactive: darkMode ? "#333" : "#eee",
+        tabActiveText: "#fff",
+        tabInactiveText: darkMode ? "#ddd" : "#000",
+        reloadBg: darkMode ? "#1976d2" : "#2196f3",
+        reloadText: "#fff",
+        tableHeader: darkMode ? "#555" : "#eee",
+        tableBorder: darkMode ? "#666" : "#ccc",
+        containerBg: darkMode ? "#222" : "#fff",
+        textColor: darkMode ? "#ddd" : "#000"
+    };
+    const h1 = document.querySelector("h1"); if (h1 && h1.textContent.trim() === "Coins") { h1.style.display = "none"; }
 
-    // Dunkle Seite der Kekse
+    // Darkmode Auto-Erkennung
     function isDarkMode() {
         const bodyBg = window.getComputedStyle(document.body).backgroundColor;
         const rgb = bodyBg.match(/\d+/g);
@@ -29,22 +42,7 @@
         return brightness < 128;
     }
 
-    const darkMode = isDarkMode();
-
-    const colors = {
-        tabActive: darkMode ? "#4caf50" : "#4caf50",
-        tabInactive: darkMode ? "#333" : "#eee",
-        tabActiveText: darkMode ? "#fff" : "#fff",
-        tabInactiveText: darkMode ? "#ddd" : "#000",
-        reloadBg: darkMode ? "#1976d2" : "#2196f3",
-        reloadText: "#fff",
-        tableHeader: darkMode ? "#555" : "#eee",
-        tableBorder: darkMode ? "#666" : "#ccc",
-        containerBg: darkMode ? "#222" : "#fff",
-        textColor: darkMode ? "#ddd" : "#000"
-    };
-
-    // Speicherfunktion
+    // IndexedDB Speicher
     function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, 1);
@@ -78,7 +76,7 @@
         });
     }
 
-    // Daten beziehen
+    // Daten vom Server laden
     async function loadPageFromServer(page) {
         return new Promise(resolve => {
             GM_xmlhttpRequest({
@@ -103,16 +101,13 @@
             try {
                 const html = await loadPage(db, page);
                 if (html) return html;
-            } catch(e) {
-                console.warn(`Seite ${page} Laden fehlgeschlagen, Versuch ${i+1}`);
-            }
+            } catch(e) {}
             await new Promise(r => setTimeout(r, 500));
         }
-        console.error(`Seite ${page} konnte nicht geladen werden.`);
         return null;
     }
 
-    // Daten verarbeiten
+    // HTML auswerten
     function extractValues(html) {
         if (!html) return { entries: [] };
         const parser = new DOMParser();
@@ -132,30 +127,52 @@
     }
 
     function detectLastPageNumber() {
-        const pageLinks = [...document.querySelectorAll("ul.pagination a")].map(a => {
-            const n = parseInt(a.textContent.trim());
-            return isNaN(n) ? null : n;
-        }).filter(n => n !== null);
-        return pageLinks.length ? Math.max(...pageLinks) : 1;
+        const nums = [...document.querySelectorAll("ul.pagination a")]
+            .map(a => parseInt(a.textContent.trim()))
+            .filter(n => !isNaN(n));
+        return nums.length ? Math.max(...nums) : 1;
     }
 
+    // Statistiken berechnen
     function calculateStats(entries) {
+
         const yearly = {};
         const monthly = {};
+        const byDescription = {}; // NEU
+
         entries.forEach(entry => {
             if (!entry.date) return;
+
             const y = entry.date.getFullYear();
             const m = entry.date.getMonth() + 1;
+            const val = entry.value;
+            const desc = entry.description || "Unbekannt";
+
+            // Jahresdaten
             if (!yearly[y]) yearly[y] = { income:0, expense:0, saldo:0 };
+            if (val > 0) yearly[y].income += val;
+            else yearly[y].expense += val;
+            yearly[y].saldo += val;
+
+            // Monatsdaten
             if (!monthly[y]) monthly[y] = {};
             if (!monthly[y][m]) monthly[y][m] = { income:0, expense:0, saldo:0 };
-            const val = entry.value;
-            if (val > 0) { yearly[y].income += val; monthly[y][m].income += val; }
-            else { yearly[y].expense += val; monthly[y][m].expense += val; }
-            yearly[y].saldo += val;
+            if (val > 0) monthly[y][m].income += val;
+            else monthly[y][m].expense += val;
             monthly[y][m].saldo += val;
+
+            // Beschreibung Daten
+            if (!byDescription[y]) byDescription[y] = {};
+            if (!byDescription[y][m]) byDescription[y][m] = {};
+            if (!byDescription[y][m][desc])
+                byDescription[y][m][desc] = { income:0, expense:0, saldo:0 };
+
+            if (val > 0) byDescription[y][m][desc].income += val;
+            else byDescription[y][m][desc].expense += val;
+            byDescription[y][m][desc].saldo += val;
         });
-        return { yearly, monthly };
+
+        return { yearly, monthly, byDescription };
     }
 
     function calculateTotal(yearly) {
@@ -168,7 +185,7 @@
         return { income, expense, saldo };
     }
 
-    // Alles schön machen
+    // Tabellen Renderer
     function createTable(headers, dataRows) {
         const table = document.createElement("table");
         table.style.borderCollapse = "collapse";
@@ -205,26 +222,23 @@
         return table;
     }
 
-    // Dashboard starten
+    // Dashboard
     async function startDashboard() {
         const db = await openDB();
 
-        // Container
         const container = document.createElement("div");
         container.style.padding = "10px";
         container.style.margin = "10px 0";
         container.style.maxHeight = "600px";
         container.style.overflow = "auto";
-        container.style.fontFamily = "Arial, sans-serif";
-        container.style.fontSize = "14px";
         container.style.background = colors.containerBg;
         container.style.color = colors.textColor;
+        container.style.fontFamily = "Arial, sans-serif";
 
-        // Titel + Button
         const titleWrap = document.createElement("div");
         titleWrap.style.display = "flex";
-        titleWrap.style.alignItems = "center";
         titleWrap.style.justifyContent = "space-between";
+        titleWrap.style.alignItems = "center";
         container.appendChild(titleWrap);
 
         const title = document.createElement("h2");
@@ -234,18 +248,17 @@
 
         const reloadBtn = document.createElement("button");
         reloadBtn.textContent = "🔄 Neu laden";
-        reloadBtn.style.marginLeft = "10px";
         reloadBtn.style.padding = "4px 8px";
+        reloadBtn.style.background = colors.reloadBg;
+        reloadBtn.style.color = colors.reloadText;
         reloadBtn.style.border = "none";
         reloadBtn.style.borderRadius = "4px";
         reloadBtn.style.cursor = "pointer";
-        reloadBtn.style.background = colors.reloadBg;
-        reloadBtn.style.color = colors.reloadText;
         titleWrap.appendChild(reloadBtn);
 
         document.querySelector("h1")?.after(container);
 
-        // Ladebalken
+        // Progressbar
         const progressWrap = document.createElement("div");
         progressWrap.style.width = "100%";
         progressWrap.style.height = "12px";
@@ -259,163 +272,192 @@
         progressBar.style.background = "#4caf50";
         progressBar.style.borderRadius = "6px";
         progressBar.style.transition = "width 0.2s linear";
+
         progressWrap.appendChild(progressBar);
         container.appendChild(progressWrap);
 
         const statusText = document.createElement("div");
-        statusText.style.margin = "4px 0 8px 0";
+        statusText.style.margin = "4px 0";
         container.appendChild(statusText);
 
-        // Standardmäßig ausgeblendet
-        progressBar.style.display = "none";
         progressWrap.style.display = "none";
+        progressBar.style.display = "none";
         statusText.style.display = "none";
 
-        // Letzte Seite erkennen
         const lastPage = detectLastPageNumber();
 
-        // Alle Daten rendern
-        function renderDashboard(allEntries) {
-            const stats = calculateStats(allEntries);
-            const totalStats = calculateTotal(stats.yearly);
+        // Dashboard Renderer
+        function renderDashboard(entries) {
+            const stats = calculateStats(entries);
+            const totals = calculateTotal(stats.yearly);
 
             const oldTabs = container.querySelector(".tabs");
             if (oldTabs) oldTabs.remove();
 
             const tabs = document.createElement("div");
             tabs.className = "tabs";
-            tabs.style.margin = "8px 0";
             container.appendChild(tabs);
 
-            const mainTabButtons = document.createElement("div");
-            mainTabButtons.style.marginBottom = "8px";
-            tabs.appendChild(mainTabButtons);
+            const tabButtons = document.createElement("div");
+            tabButtons.style.marginBottom = "8px";
+            tabs.appendChild(tabButtons);
 
-            const mainContent = document.createElement("div");
-            tabs.appendChild(mainContent);
+            const tabContent = document.createElement("div");
+            tabs.appendChild(tabContent);
 
-            const mainTabsContent = {};
+            const mainTabs = {
+                "Gesamt": createTable(["Einnahmen", "Ausgaben", "Saldo"], [[totals.income, totals.expense, totals.saldo]]),
+                "Jahr": document.createElement("div")
+            };
 
-            // --- Gesamt Tab ---
-            mainTabsContent["Gesamt"] = createTable(
-                ["Einnahmen", "Ausgaben", "Saldo"],
-                [[totalStats.income, totalStats.expense, totalStats.saldo]]
-            );
+            // Jahr-Tab Inhalte
+            const yearWrapper = mainTabs["Jahr"];
+            const yearButtons = document.createElement("div");
+            yearButtons.style.marginBottom = "6px";
+            yearWrapper.appendChild(yearButtons);
 
-            // --- Jahr Tab ---
-            const yearContentWrapper = document.createElement("div");
-            yearContentWrapper.style.marginTop = "8px";
-            mainTabsContent["Jahr"] = yearContentWrapper;
-
-            const yearTabButtons = document.createElement("div");
-            yearTabButtons.style.marginBottom = "6px";
-            yearContentWrapper.appendChild(yearTabButtons);
-
-            const yearContentArea = document.createElement("div");
-            yearContentWrapper.appendChild(yearContentArea);
+            const yearContent = document.createElement("div");
+            yearWrapper.appendChild(yearContent);
 
             const years = Object.keys(stats.yearly).sort();
 
             years.forEach(y => {
-                const yearBtn = document.createElement("button");
-                yearBtn.textContent = y;
-                yearBtn.style.marginRight = "4px";
-                yearBtn.style.padding = "4px 8px";
-                yearBtn.style.border = "none";
-                yearBtn.style.borderRadius = "4px";
-                yearBtn.style.cursor = "pointer";
-                yearBtn.style.background = colors.tabInactive;
-                yearBtn.style.color = colors.tabInactiveText;
+                const yBtn = document.createElement("button");
+                yBtn.textContent = y;
+                yBtn.style.marginRight = "4px";
+                yBtn.style.padding = "4px 8px";
+                yBtn.style.border = "none";
+                yBtn.style.borderRadius = "4px";
+                yBtn.style.background = colors.tabInactive;
+                yBtn.style.color = colors.tabInactiveText;
+                yBtn.style.cursor = "pointer";
 
-                yearBtn.addEventListener("click", () => {
-                    Array.from(yearTabButtons.children).forEach(b => {
+                yBtn.addEventListener("click", () => {
+
+                    [...yearButtons.children].forEach(b => {
                         b.style.background = colors.tabInactive;
                         b.style.color = colors.tabInactiveText;
                     });
-                    yearBtn.style.background = colors.tabActive;
-                    yearBtn.style.color = colors.tabActiveText;
 
-                    // Untertabs: Gesamt + Monate
-                    yearContentArea.innerHTML = "";
-                    const months = stats.monthly[y];
-                    const monthTabButtons = document.createElement("div");
-                    monthTabButtons.style.marginBottom = "4px";
-                    yearContentArea.appendChild(monthTabButtons);
+                    yBtn.style.background = colors.tabActive;
+                    yBtn.style.color = colors.tabActiveText;
 
-                    const monthContentArea = document.createElement("div");
-                    yearContentArea.appendChild(monthContentArea);
+                    // Monatsübersicht
+                    yearContent.innerHTML = "";
 
-                    // Gesamt für das Jahr
-                    const totalMonthBtn = document.createElement("button");
-                    totalMonthBtn.textContent = "Gesamt";
-                    totalMonthBtn.style.marginRight = "3px";
-                    totalMonthBtn.style.padding = "2px 6px";
-                    totalMonthBtn.style.border = "none";
-                    totalMonthBtn.style.borderRadius = "4px";
-                    totalMonthBtn.style.cursor = "pointer";
-                    totalMonthBtn.style.background = colors.tabInactive;
-                    totalMonthBtn.style.color = colors.tabInactiveText;
-                    totalMonthBtn.addEventListener("click", () => {
-                        Array.from(monthTabButtons.children).forEach(b => {
+                    const monthButtons = document.createElement("div");
+                    monthButtons.style.marginBottom = "4px";
+                    yearContent.appendChild(monthButtons);
+
+                    const monthContent = document.createElement("div");
+                    yearContent.appendChild(monthContent);
+
+                    // Gesamt vom Jahr
+                    const totalBtn = document.createElement("button");
+                    totalBtn.textContent = "Gesamt";
+                    totalBtn.style.marginRight = "3px";
+                    totalBtn.style.padding = "2px 6px";
+                    totalBtn.style.border = "none";
+                    totalBtn.style.borderRadius = "4px";
+                    totalBtn.style.background = colors.tabInactive;
+                    totalBtn.style.color = colors.tabInactiveText;
+                    totalBtn.style.cursor = "pointer";
+
+                    totalBtn.addEventListener("click", () => {
+                        [...monthButtons.children].forEach(b => {
                             b.style.background = colors.tabInactive;
                             b.style.color = colors.tabInactiveText;
                         });
-                        totalMonthBtn.style.background = colors.tabActive;
-                        totalMonthBtn.style.color = colors.tabActiveText;
-                        monthContentArea.innerHTML = "";
-                        monthContentArea.appendChild(createTable(
-                            ["Jahr","Einnahmen","Ausgaben","Saldo"],
-                            [[y, stats.yearly[y].income, stats.yearly[y].expense, stats.yearly[y].saldo]]
-                        ));
+
+                        totalBtn.style.background = colors.tabActive;
+                        totalBtn.style.color = colors.tabActiveText;
+
+                        monthContent.innerHTML = "";
+                        monthContent.appendChild(
+                            createTable(
+                                ["Jahr", "Einnahmen", "Ausgaben", "Saldo"],
+                                [[y, stats.yearly[y].income, stats.yearly[y].expense, stats.yearly[y].saldo]]
+                            )
+                        );
                     });
-                    monthTabButtons.appendChild(totalMonthBtn);
 
-                    // Monats-Tabs Jan–Dez
+                    monthButtons.appendChild(totalBtn);
+
+                    // Monate
                     const monthNames = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-                    for(let m=1; m<=12; m++) {
-                        if(!months[m]) continue;
-                        const monthBtn = document.createElement("button");
-                        monthBtn.textContent = monthNames[m-1];
-                        monthBtn.style.marginRight = "3px";
-                        monthBtn.style.padding = "2px 6px";
-                        monthBtn.style.border = "none";
-                        monthBtn.style.borderRadius = "4px";
-                        monthBtn.style.cursor = "pointer";
-                        monthBtn.style.background = colors.tabInactive;
-                        monthBtn.style.color = colors.tabInactiveText;
 
-                        monthBtn.addEventListener("click", () => {
-                            Array.from(monthTabButtons.children).forEach(b => {
+                    for (let m = 1; m <= 12; m++) {
+                        if (!stats.monthly[y][m]) continue;
+
+                        const mBtn = document.createElement("button");
+                        mBtn.textContent = monthNames[m-1];
+                        mBtn.style.marginRight = "3px";
+                        mBtn.style.padding = "2px 6px";
+                        mBtn.style.border = "none";
+                        mBtn.style.borderRadius = "4px";
+                        mBtn.style.background = colors.tabInactive;
+                        mBtn.style.color = colors.tabInactiveText;
+                        mBtn.style.cursor = "pointer";
+
+                        mBtn.addEventListener("click", () => {
+
+                            [...monthButtons.children].forEach(b => {
                                 b.style.background = colors.tabInactive;
                                 b.style.color = colors.tabInactiveText;
                             });
-                            monthBtn.style.background = colors.tabActive;
-                            monthBtn.style.color = colors.tabActiveText;
 
-                            monthContentArea.innerHTML = "";
-                            monthContentArea.appendChild(createTable(
-                                ["Monat","Einnahmen","Ausgaben","Saldo"],
-                                [[y+"-"+String(m).padStart(2,"0"), months[m].income, months[m].expense, months[m].saldo]]
-                            ));
+                            mBtn.style.background = colors.tabActive;
+                            mBtn.style.color = colors.tabActiveText;
+
+                            monthContent.innerHTML = "";
+
+                            // Monatstabelle
+                            monthContent.appendChild(
+                                createTable(
+                                    ["Monat", "Einnahmen", "Ausgaben", "Saldo"],
+                                    [[`${y}-${String(m).padStart(2,"0")}`, stats.monthly[y][m].income, stats.monthly[y][m].expense, stats.monthly[y][m].saldo]]
+                                )
+                            );
+
+                            // Ereignis-Aufschlüsselung
+                            const descStats = stats.byDescription[y][m];
+                            const rows = Object.entries(descStats).map(([desc, vals]) => [
+                                desc,
+                                vals.income,
+                                vals.expense,
+                                vals.saldo
+                            ]);
+
+                            monthContent.appendChild(
+                                createTable(["Beschreibung", "Einnahmen", "Ausgaben", "Saldo"], rows)
+                            );
                         });
-                        monthTabButtons.appendChild(monthBtn);
+
+                        monthButtons.appendChild(mBtn);
                     }
 
-                    // ersten Untertab automatisch öffnen: Gesamt
-                    monthTabButtons.firstChild?.click();
+                    // Standard: "Gesamt"
+                    monthButtons.firstChild?.click();
                 });
 
-                yearTabButtons.appendChild(yearBtn);
+                yearButtons.appendChild(yBtn);
             });
 
-            // Haupttab Switching
-            function switchMainTab(name) {
-                mainContent.innerHTML = "";
-                mainContent.appendChild(mainTabsContent[name]);
-                Array.from(mainTabButtons.children).forEach(btn => {
-                    btn.style.background = btn.textContent === name ? colors.tabActive : colors.tabInactive;
-                    btn.style.color = btn.textContent === name ? colors.tabActiveText : colors.tabInactiveText;
+            // Haupttab Logik
+            function switchTab(name) {
+                tabContent.innerHTML = "";
+                tabContent.appendChild(mainTabs[name]);
+
+                [...tabButtons.children].forEach(b => {
+                    b.style.background = colors.tabInactive;
+                    b.style.color = colors.tabInactiveText;
                 });
+
+                const btn = [...tabButtons.children].find(b => b.textContent === name);
+                if (btn) {
+                    btn.style.background = colors.tabActive;
+                    btn.style.color = colors.tabActiveText;
+                }
             }
 
             ["Gesamt","Jahr"].forEach(name => {
@@ -425,49 +467,59 @@
                 btn.style.padding = "4px 8px";
                 btn.style.border = "none";
                 btn.style.borderRadius = "4px";
-                btn.style.cursor = "pointer";
                 btn.style.background = colors.tabInactive;
                 btn.style.color = colors.tabInactiveText;
-                btn.addEventListener("click", () => switchMainTab(name));
-                mainTabButtons.appendChild(btn);
+                btn.style.cursor = "pointer";
+
+                btn.addEventListener("click", () => switchTab(name));
+
+                tabButtons.appendChild(btn);
             });
 
-            switchMainTab("Gesamt");
+            switchTab("Gesamt");
         }
 
-        // Daten komplett laden
+        // Komplettes Laden
         async function loadAllPages() {
-            let allEntries = [];
-            progressBar.style.display = "block";
+            let entries = [];
+
             progressWrap.style.display = "block";
+            progressBar.style.display = "block";
             statusText.style.display = "block";
 
             for (let p = 1; p <= lastPage; p++) {
                 statusText.textContent = `Lade Seite ${p} von ${lastPage} ...`;
                 progressBar.style.width = ((p / lastPage) * 100).toFixed(1) + "%";
+
                 const html = await loadPageWithRetry(db, p);
                 if (!html) continue;
-                const { entries } = extractValues(html);
-                allEntries.push(...entries);
+
+                const { entries: e } = extractValues(html);
+                entries.push(...e);
             }
 
-            progressBar.style.display = "none";
             progressWrap.style.display = "none";
+            progressBar.style.display = "none";
             statusText.style.display = "none";
 
-            renderDashboard(allEntries);
+            renderDashboard(entries);
         }
 
-        // Gecachte Daten sofort anzeigen
+        // Gecachte Anzeige sofort
         (async () => {
-            let allEntries = [];
+            let cachedEntries = [];
             for (let p = 1; p <= lastPage; p++) {
                 const cached = await getCachedPage(db, p);
                 if (!cached) continue;
-                const { entries } = extractValues(cached.html);
-                allEntries.push(...entries);
+                const { entries: e } = extractValues(cached.html);
+                cachedEntries.push(...e);
             }
-            if (allEntries.length) renderDashboard(allEntries);
+            if (cachedEntries.length) {
+                renderDashboard(cachedEntries);
+            } else {
+                // Keine gecachten Daten → Hinweis anzeigen, Dashboard bleibt leer bis Reload
+                renderDashboard([]); // zeigt Hinweis: "Keine Coin-Daten gefunden..."
+            }
         })();
 
         reloadBtn.addEventListener("click", async () => {
