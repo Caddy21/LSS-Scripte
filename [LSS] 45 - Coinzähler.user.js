@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 45 – Coinzähler
+// @name         [LSS] Coinzähler
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Coins Dashboard für Leitstellenspiel: zeigt Gesamt-, Jahres- und Monatsstatistiken inkl. detaillierter Aufschlüsselung nach Ereignissen
@@ -13,10 +13,10 @@
 (function() {
     'use strict';
 
-    // Konfiguration
     const DB_NAME = "lss_coins_dashboard";
     const STORE_NAME = "pages";
-    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 Stunden
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+
     const darkMode = isDarkMode();
     const colors = {
         tabActive: "#4caf50",
@@ -30,9 +30,10 @@
         containerBg: darkMode ? "#222" : "#fff",
         textColor: darkMode ? "#ddd" : "#000"
     };
-    const h1 = document.querySelector("h1"); if (h1 && h1.textContent.trim() === "Coins") { h1.style.display = "none"; }
 
-    // Darkmode Auto-Erkennung
+    const h1 = document.querySelector("h1");
+    if (h1 && h1.textContent.trim() === "Coins") h1.style.display = "none";
+
     function isDarkMode() {
         const bodyBg = window.getComputedStyle(document.body).backgroundColor;
         const rgb = bodyBg.match(/\d+/g);
@@ -42,15 +43,14 @@
         return brightness < 128;
     }
 
-    // IndexedDB Speicher
+    // IndexedDB
     function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, 1);
             req.onupgradeneeded = () => {
                 const db = req.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                if (!db.objectStoreNames.contains(STORE_NAME))
                     db.createObjectStore(STORE_NAME, { keyPath: "page" });
-                }
             };
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
@@ -76,7 +76,6 @@
         });
     }
 
-    // Daten vom Server laden
     async function loadPageFromServer(page) {
         return new Promise(resolve => {
             GM_xmlhttpRequest({
@@ -107,7 +106,6 @@
         return null;
     }
 
-    // HTML auswerten
     function extractValues(html) {
         if (!html) return { entries: [] };
         const parser = new DOMParser();
@@ -133,35 +131,29 @@
         return nums.length ? Math.max(...nums) : 1;
     }
 
-    // Statistiken berechnen
     function calculateStats(entries) {
-
         const yearly = {};
         const monthly = {};
-        const byDescription = {}; // NEU
+        const byDescription = {};
 
         entries.forEach(entry => {
             if (!entry.date) return;
-
             const y = entry.date.getFullYear();
             const m = entry.date.getMonth() + 1;
             const val = entry.value;
             const desc = entry.description || "Unbekannt";
 
-            // Jahresdaten
             if (!yearly[y]) yearly[y] = { income:0, expense:0, saldo:0 };
             if (val > 0) yearly[y].income += val;
             else yearly[y].expense += val;
             yearly[y].saldo += val;
 
-            // Monatsdaten
             if (!monthly[y]) monthly[y] = {};
             if (!monthly[y][m]) monthly[y][m] = { income:0, expense:0, saldo:0 };
             if (val > 0) monthly[y][m].income += val;
             else monthly[y][m].expense += val;
             monthly[y][m].saldo += val;
 
-            // Beschreibung Daten
             if (!byDescription[y]) byDescription[y] = {};
             if (!byDescription[y][m]) byDescription[y][m] = {};
             if (!byDescription[y][m][desc])
@@ -185,7 +177,6 @@
         return { income, expense, saldo };
     }
 
-    // Tabellen Renderer
     function createTable(headers, dataRows) {
         const table = document.createElement("table");
         table.style.borderCollapse = "collapse";
@@ -222,7 +213,30 @@
         return table;
     }
 
-    // Dashboard
+    // Normalisierung für Gesamt/Jahr
+    function normalizeDesc(desc) {
+        if (!desc) return "Unbekannt";
+        desc = desc.trim();
+        if (desc.startsWith("Erfüllte Aufgabe")) return "Erfüllte Aufgabe";
+        if (desc.startsWith("Erledige")) return "Erledigte Aufgaben";
+        if (desc.includes("Event-Aufgaben")) return "Event-Aufgaben";
+        if (/^Gib\s+\d+/.test(desc) || desc.includes("Coins aus")) return "Gib Coins aus";
+        if (/^Kaufe\s+\d+/.test(desc) || desc.startsWith("Kaufe ")) return "Kaufe Coins";
+        if (desc.includes("InApp") || desc.includes("Premium")) return "InApp / Premium";
+        if (desc.startsWith("Einsatz fertiggestellt (Verband)")) return "Einsatz (Verband)";
+        if (desc.startsWith("Einsatz fertiggestellt")) return "Einsatz fertiggestellt";
+        if (desc.startsWith("Level Upgrade")) return "Level Upgrade";
+        if (desc.startsWith("Täglicher Login-Bonus")) return "Täglicher Login-Bonus";
+        if (desc.startsWith("Belohnung für das Beenden des Tutorials")) return "Tutorial Belohnung";
+        if (desc.startsWith("Event Calendar")) return "Event Calendar";
+        if (desc.startsWith("Großeinsatz")) return "Großeinsatz starten";
+        if (desc.startsWith("Personal eingestellt")) return "Personal eingestellt";
+        if (desc.includes("Wache erweitert") || desc.includes("Wachenerweiterung") || desc.includes("erweitert (von Kleinwache)")) return "Wache erweitert";
+        desc = desc.replace(/^[A-Za-zÄÖÜäöüß\s\-]+ - /, "");
+        desc = desc.replace(/"\s*[^"]*"\s*/g, " ").replace(/\d+/g, "").replace(/\s+/g, " ").trim();
+        return desc || "Unbekannt";
+    }
+
     async function startDashboard() {
         const db = await openDB();
 
@@ -258,7 +272,6 @@
 
         document.querySelector("h1")?.after(container);
 
-        // Progressbar
         const progressWrap = document.createElement("div");
         progressWrap.style.width = "100%";
         progressWrap.style.height = "12px";
@@ -286,7 +299,6 @@
 
         const lastPage = detectLastPageNumber();
 
-        // Dashboard Renderer
         function renderDashboard(entries) {
             const stats = calculateStats(entries);
             const totals = calculateTotal(stats.yearly);
@@ -305,12 +317,42 @@
             const tabContent = document.createElement("div");
             tabs.appendChild(tabContent);
 
+            // --- Gesamt-Tab ---
+            const descTotal = {};
+            entries.forEach(entry => {
+                if (!entry.description) return;
+                const norm = normalizeDesc(entry.description);
+                if (!descTotal[norm]) descTotal[norm] = { income: 0, expense: 0, saldo: 0 };
+                const val = entry.value;
+                if (val > 0) descTotal[norm].income += val;
+                else descTotal[norm].expense += val;
+                descTotal[norm].saldo += val;
+            });
+
+            const totalRows = Object.entries(descTotal)
+                .map(([desc, vals]) => [desc, vals.income, vals.expense, vals.saldo])
+                .sort((a, b) => b[3] - a[3]);
+
+            const totalDiv = document.createElement("div");
+            totalDiv.appendChild(
+                createTable(
+                    ["Einnahmen", "Ausgaben", "Saldo"],
+                    [[totals.income, totals.expense, totals.saldo]]
+                )
+            );
+            totalDiv.appendChild(
+                createTable(
+                    ["Beschreibung", "Einnahmen", "Ausgaben", "Saldo"],
+                    totalRows
+                )
+            );
+
             const mainTabs = {
-                "Gesamt": createTable(["Einnahmen", "Ausgaben", "Saldo"], [[totals.income, totals.expense, totals.saldo]]),
+                "Gesamt": totalDiv,
                 "Jahr": document.createElement("div")
             };
 
-            // Jahr-Tab Inhalte
+            // --- Jahr-Tab (wie vorher) ---
             const yearWrapper = mainTabs["Jahr"];
             const yearButtons = document.createElement("div");
             yearButtons.style.marginBottom = "6px";
@@ -333,16 +375,13 @@
                 yBtn.style.cursor = "pointer";
 
                 yBtn.addEventListener("click", () => {
-
                     [...yearButtons.children].forEach(b => {
                         b.style.background = colors.tabInactive;
                         b.style.color = colors.tabInactiveText;
                     });
-
                     yBtn.style.background = colors.tabActive;
                     yBtn.style.color = colors.tabActiveText;
 
-                    // Monatsübersicht
                     yearContent.innerHTML = "";
 
                     const monthButtons = document.createElement("div");
@@ -352,7 +391,7 @@
                     const monthContent = document.createElement("div");
                     yearContent.appendChild(monthContent);
 
-                    // Gesamt vom Jahr
+                    // Gesamt fürs Jahr
                     const totalBtn = document.createElement("button");
                     totalBtn.textContent = "Gesamt";
                     totalBtn.style.marginRight = "3px";
@@ -368,27 +407,45 @@
                             b.style.background = colors.tabInactive;
                             b.style.color = colors.tabInactiveText;
                         });
-
                         totalBtn.style.background = colors.tabActive;
                         totalBtn.style.color = colors.tabActiveText;
 
                         monthContent.innerHTML = "";
                         monthContent.appendChild(
                             createTable(
-                                ["Jahr", "Einnahmen", "Ausgaben", "Saldo"],
+                                ["Jahr","Einnahmen","Ausgaben","Saldo"],
                                 [[y, stats.yearly[y].income, stats.yearly[y].expense, stats.yearly[y].saldo]]
                             )
+                        );
+
+                        // Jahresbeschreibung normalisiert
+                        const descYear = {};
+                        if (stats.byDescription[y]) {
+                            for (const m in stats.byDescription[y]) {
+                                for (const desc in stats.byDescription[y][m]) {
+                                    const norm = normalizeDesc(desc);
+                                    if (!descYear[norm]) descYear[norm] = { income:0, expense:0, saldo:0 };
+                                    const vals = stats.byDescription[y][m][desc];
+                                    descYear[norm].income += vals.income;
+                                    descYear[norm].expense += vals.expense;
+                                    descYear[norm].saldo += vals.saldo;
+                                }
+                            }
+                        }
+                        const rows = Object.entries(descYear)
+                            .map(([desc, vals]) => [desc, vals.income, vals.expense, vals.saldo])
+                            .sort((a,b)=>b[3]-a[3]);
+
+                        monthContent.appendChild(
+                            createTable(["Beschreibung","Einnahmen","Ausgaben","Saldo"], rows)
                         );
                     });
 
                     monthButtons.appendChild(totalBtn);
 
-                    // Monate
                     const monthNames = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-
-                    for (let m = 1; m <= 12; m++) {
+                    for (let m=1; m<=12; m++) {
                         if (!stats.monthly[y][m]) continue;
-
                         const mBtn = document.createElement("button");
                         mBtn.textContent = monthNames[m-1];
                         mBtn.style.marginRight = "3px";
@@ -400,64 +457,46 @@
                         mBtn.style.cursor = "pointer";
 
                         mBtn.addEventListener("click", () => {
-
                             [...monthButtons.children].forEach(b => {
                                 b.style.background = colors.tabInactive;
                                 b.style.color = colors.tabInactiveText;
                             });
-
                             mBtn.style.background = colors.tabActive;
                             mBtn.style.color = colors.tabActiveText;
 
                             monthContent.innerHTML = "";
-
-                            // Monatstabelle
                             monthContent.appendChild(
                                 createTable(
-                                    ["Monat", "Einnahmen", "Ausgaben", "Saldo"],
+                                    ["Monat","Einnahmen","Ausgaben","Saldo"],
                                     [[`${y}-${String(m).padStart(2,"0")}`, stats.monthly[y][m].income, stats.monthly[y][m].expense, stats.monthly[y][m].saldo]]
                                 )
                             );
 
-                            // Ereignis-Aufschlüsselung
                             const descStats = stats.byDescription[y][m];
-                            const rows = Object.entries(descStats).map(([desc, vals]) => [
-                                desc,
-                                vals.income,
-                                vals.expense,
-                                vals.saldo
-                            ]);
-
+                            const rows = Object.entries(descStats).map(([desc, vals]) => [desc, vals.income, vals.expense, vals.saldo]);
                             monthContent.appendChild(
-                                createTable(["Beschreibung", "Einnahmen", "Ausgaben", "Saldo"], rows)
+                                createTable(["Beschreibung","Einnahmen","Ausgaben","Saldo"], rows)
                             );
                         });
 
                         monthButtons.appendChild(mBtn);
                     }
 
-                    // Standard: "Gesamt"
                     monthButtons.firstChild?.click();
                 });
 
                 yearButtons.appendChild(yBtn);
             });
 
-            // Haupttab Logik
             function switchTab(name) {
                 tabContent.innerHTML = "";
                 tabContent.appendChild(mainTabs[name]);
-
                 [...tabButtons.children].forEach(b => {
                     b.style.background = colors.tabInactive;
                     b.style.color = colors.tabInactiveText;
                 });
-
-                const btn = [...tabButtons.children].find(b => b.textContent === name);
-                if (btn) {
-                    btn.style.background = colors.tabActive;
-                    btn.style.color = colors.tabActiveText;
-                }
+                const btn = [...tabButtons.children].find(b=>b.textContent===name);
+                if(btn) { btn.style.background=colors.tabActive; btn.style.color=colors.tabActiveText; }
             }
 
             ["Gesamt","Jahr"].forEach(name => {
@@ -471,63 +510,52 @@
                 btn.style.color = colors.tabInactiveText;
                 btn.style.cursor = "pointer";
 
-                btn.addEventListener("click", () => switchTab(name));
-
+                btn.addEventListener("click", ()=>switchTab(name));
                 tabButtons.appendChild(btn);
             });
 
             switchTab("Gesamt");
         }
 
-        // Komplettes Laden
         async function loadAllPages() {
-            let entries = [];
+            let entries=[];
+            progressWrap.style.display="block";
+            progressBar.style.display="block";
+            statusText.style.display="block";
 
-            progressWrap.style.display = "block";
-            progressBar.style.display = "block";
-            statusText.style.display = "block";
-
-            for (let p = 1; p <= lastPage; p++) {
-                statusText.textContent = `Lade Seite ${p} von ${lastPage} ...`;
-                progressBar.style.width = ((p / lastPage) * 100).toFixed(1) + "%";
-
-                const html = await loadPageWithRetry(db, p);
-                if (!html) continue;
-
-                const { entries: e } = extractValues(html);
+            for(let p=1;p<=lastPage;p++){
+                statusText.textContent=`Lade Seite ${p} von ${lastPage} ...`;
+                progressBar.style.width=((p/lastPage)*100).toFixed(1)+"%";
+                const html=await loadPageWithRetry(db,p);
+                if(!html) continue;
+                const {entries:e}=extractValues(html);
                 entries.push(...e);
             }
 
-            progressWrap.style.display = "none";
-            progressBar.style.display = "none";
-            statusText.style.display = "none";
+            progressWrap.style.display="none";
+            progressBar.style.display="none";
+            statusText.style.display="none";
 
             renderDashboard(entries);
         }
 
-        // Gecachte Anzeige sofort
-        (async () => {
-            let cachedEntries = [];
-            for (let p = 1; p <= lastPage; p++) {
-                const cached = await getCachedPage(db, p);
-                if (!cached) continue;
-                const { entries: e } = extractValues(cached.html);
+        (async()=>{
+            let cachedEntries=[];
+            for(let p=1;p<=lastPage;p++){
+                const cached=await getCachedPage(db,p);
+                if(!cached) continue;
+                const {entries:e}=extractValues(cached.html);
                 cachedEntries.push(...e);
             }
-            if (cachedEntries.length) {
-                renderDashboard(cachedEntries);
-            } else {
-                // Keine gecachten Daten → Hinweis anzeigen, Dashboard bleibt leer bis Reload
-                renderDashboard([]); // zeigt Hinweis: "Keine Coin-Daten gefunden..."
-            }
+            renderDashboard(cachedEntries.length?cachedEntries:[]);
         })();
 
-        reloadBtn.addEventListener("click", async () => {
-            reloadBtn.disabled = true;
-            reloadBtn.textContent = "⏳ Lädt...";
+        reloadBtn.addEventListener("click", async()=>{
+            reloadBtn.disabled=true;
+            reloadBtn.textContent="⏳ Lädt...";
             await loadAllPages();
-            reloadBtn.disabled = false;
-            reloadBtn.textContent = "🔄 Neu laden";
+            reloadBtn.disabled=false;
+            reloadBtn.textContent="🔄 Neu laden";
         });
     }
 
