@@ -114,3 +114,4 @@
         console.error('Navbar konnte nicht gefunden werden.');
     }
 })();
+
