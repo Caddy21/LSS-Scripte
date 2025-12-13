@@ -67,7 +67,7 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Nachrichtenanzeiger
     - FMS Manager
     - KTW-Melder
-    - Einsatz- und Verdienststatistik
+    - Einsatz- und Verdienststatistik (coming soon)
     - AAO-Manager 
     - Personal-Soll-Checker
     - Lukrative Einsätze
