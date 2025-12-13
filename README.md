@@ -89,5 +89,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Besatzungsanzeiger
     - Coinzähler
     - Personalverschieber
+    - Funkmeister
 
 </details>
