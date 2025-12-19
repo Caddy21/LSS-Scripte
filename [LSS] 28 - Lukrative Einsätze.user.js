@@ -14,8 +14,8 @@
 
     console.info("LSS Missions Filter Button startet...");
 
-    let minCredits = 5000;
-    const values = [3000,4000,5000,6000,7000,8000,9000,10000];
+    let minCredits = 0;
+    const values = [0,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000];
     let observerStarted = false;
 
     function filterMissions() {
