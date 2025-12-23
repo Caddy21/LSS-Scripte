@@ -90,5 +90,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Coinzähler
     - Personalverschieber
     - Funkmeister
+    - Scriptmenü
 
 </details>
