@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         [LSS] 38 - Personalübersicht (Beta)
-// @namespace    http://tampermonkey.net/
+// @namespace    http://tampermonkey.net/ 
 // @version      1.0
 // @description  Zeigt Wachen mit Personaldefiziten und unterbesetzte Fahrzeuge an
 // @author       Caddy21
