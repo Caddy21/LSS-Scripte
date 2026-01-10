@@ -91,5 +91,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Personalverschieber
     - Funkmeister
     - Scriptmenü
+    - Credis Tracker
 
 </details>
