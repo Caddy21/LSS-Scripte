@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] - Credits Tracker
 // @namespace    https://leitstellenspiel.de/
-// @version      1.8
+// @version      1.0
 // @description  Zeigt den echten Verdienst für Sicherheitswachen (eigene + Verband) direkt in der Einsatzliste an und löscht abgeschlossene Einsätze automatisch aus dem LocalStorage.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
