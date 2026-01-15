@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         * LSS Bau-Manager – Prototyp (Beta-Version)
+// @name         [LSS] Bau-Manager – Prototyp (Beta-Version)
 // @namespace    lss.massbuild
 // @version      0.9.5
-// @description  Bauen bauen bauen (Whitelist-Kosten + Seenot/Bergrettungs-Dynamik, Leitstellen-Rule)
-// @author       Caddy21 (angepasst)
+// @description  Bauen bauen bauen
+// @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @match        https://polizei.leitstellenspiel.de/*
 // @grant        none
