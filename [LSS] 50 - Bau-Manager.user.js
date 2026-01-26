@@ -1,19 +1,48 @@
 // ==UserScript==
-// @name         [LSS] Bau-Manager – Prototyp (Beta-Version)
-// @namespace    lss.massbuild
+// @name         * [LSS] 50 - Bau-Manager – Prototyp
+// @namespace    http://tampermonkey.net/
 // @version      0.9.5
 // @description  Bauen bauen bauen
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @match        https://polizei.leitstellenspiel.de/*
+// @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    const DEBUG = false;
+    const DEBUG = true;
     const log = (...args) => DEBUG && console.info('[LSS-MB]', ...args);
+    const LSS_BUILDING_ORDER = [
+        7,  // Leitstelle
+        0,  // Feuerwache
+        18, // Feuerwache (Kleinwache)
+        1,  // Feuerwehrschule
+        2,  // Rettungswache
+        20, // Rettungswache (Kleinwache)
+        3,  // Rettungsschule
+        4,  // Krankenhaus
+        5,  // Rettungshubschrauber-Station
+        12, // SEG
+        6,  // Polizeiwache
+        19, // Polizeiwache (Kleinwache)
+        11, // Bereitschaftspolizei
+        17, // Polizei-Sondereinheiten
+        24, // Reiterstaffel
+        13, // Polizeihubschrauberstation
+        8,  // Polizeischule
+        9,  // THW
+        10, // THW Bundesschule
+        14, // Bereitstellungsraum
+        15, // Wasserrettung
+        21, // Rettungshundestaffel
+        25, // Bergrettungswache
+        26, // Seenotrettungswache
+        27, // Schule für Seefahrt und Seenotrettung
+        28  // Hubschrauberstation (Seenotrettung)
+    ];
     const ALLIANCE_SCHOOL_TYPES = new Set([1, 3, 8, 10, 27]);
     const DYNAMIC_COST_TYPES = new Set([
         // Feuerwehr
@@ -214,6 +243,33 @@
             async open() {
                 log('UI öffnen angefordert');
 
+                (function injectFocusFix() {
+                    if (document.getElementById('lss_mb_focus_fix')) return;
+
+                    const style = document.createElement('style');
+                    style.id = 'lss_mb_focus_fix';
+                    style.textContent = `
+        #lss_mb_build_ui input:focus,
+        #lss_mb_build_ui select:focus,
+        #lss_mb_build_ui button:focus {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Optional: dezenter eigener Fokus */
+        #lss_mb_build_ui input:focus-visible,
+        #lss_mb_build_ui select:focus-visible {
+            border-color: #888;
+        }
+
+        body.dark #lss_mb_build_ui input:focus-visible,
+        body.dark #lss_mb_build_ui select:focus-visible {
+            border-color: #666;
+        }
+    `;
+                    document.head.appendChild(style);
+                })();
+
                 let container = document.getElementById('lss_mb_build_ui');
                 if (!container) {
                     container = document.createElement('div');
@@ -223,7 +279,8 @@
                         top: '10px',
                         left: '10px',
                         width: '99%',
-                        overflowY: 'auto',
+                        maxHeight: '90vh',
+                        overflow: 'hidden',
                         padding: '15px',
                         zIndex: 9999,
                         borderRadius: '8px',
@@ -257,7 +314,7 @@
                     titleWrapper.appendChild(header);
 
                     const description = document.createElement('small');
-                    description.textContent = 'Plane und errichte mehrere Gebäude mit wenigen Schritten in wenigen Minuten.';
+                    description.textContent = 'Plane und errichte mehrere Gebäude/Wachen in kurzer Zeit und mit wenigen Klicks.';
                     Object.assign(description.style, {
                         fontSize: '16px',
                         color: '#666',
@@ -335,7 +392,6 @@
 
                     const resources = document.createElement('div');
                     resources.id = 'lss_mb_resources';
-                    resources.style.marginBottom = '10px';
                     resources.textContent = 'Lade Ressourcen…';
                     container.appendChild(resources);
 
@@ -367,8 +423,6 @@
                         const saved = localStorage.getItem('lss_mb_minimized');
                         if (saved === '1') {
                             setTimeout(() => {
-                                // setMinimized ist im Erstellungs-Block definiert; falls der Container schon existiert,
-                                // definieren wir eine local helper-Funktion hier kurz neu, die das gleiche Verhalten hat.
                                 const resDiv = document.getElementById('lss_mb_resources');
                                 const rowsWrapper = document.getElementById('lss_mb_rows_wrapper');
                                 const buttonsWrapper = document.getElementById('lss_mb_buttons_wrapper');
@@ -472,11 +526,17 @@
                 // Kostenvorschau-Container IMMER anfügen (Platzhalterwerte)
                 html += `
                     <hr style="margin:6px 0;">
-                    <div id="lss_mb_cost_preview">
-                        💸 <strong>Kostenvorschau</strong> 💸<br>
-                        💰 Credits: 0 |🪙 Coins: 0
-                        ${LSS_MB.state.alliance.canBuildAllianceHospital ? '<br>🏛️ Verbandscredits: 0' : ''}
-                    </div>
+                    <div id="lss_mb_cost_preview" style="
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: inherit;
+    padding: 6px 0;
+">
+    💸 <strong>Kostenvorschau</strong> 💸<br>
+    💰 Credits: 0 |🪙 Coins: 0
+    ${LSS_MB.state.alliance.canBuildAllianceHospital ? '<br>🏛️ Verbandscredits: 0' : ''}
+</div>
                 `;
 
                 resDiv.innerHTML = html;
@@ -508,7 +568,11 @@
                     Object.assign(rowsWrapper.style, {
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '12px'
+                        gap: '12px',
+                        overflowY: 'auto',
+                        flex: '1 1 auto',
+                        maxHeight: '55vh',
+                        paddingRight: '6px'
                     });
                     container.appendChild(rowsWrapper);
                     log('Rows wrapper erstellt');
@@ -516,6 +580,18 @@
 
                 let buildings = LSS_MB.state.buildingsData;
                 if (!Array.isArray(buildings)) buildings = Object.values(buildings);
+                // 🔀 Sortierung exakt wie im Leitstellenspiel
+                buildings = buildings.slice().sort((a, b) => {
+                    const ia = LSS_BUILDING_ORDER.indexOf(Number(a.building_type));
+                    const ib = LSS_BUILDING_ORDER.indexOf(Number(b.building_type));
+
+                    // Unbekannte Typen immer nach unten
+                    if (ia === -1 && ib === -1) return 0;
+                    if (ia === -1) return 1;
+                    if (ib === -1) return -1;
+
+                    return ia - ib;
+                });
                 if (!buildings.length) {
                     log('Keine buildings-Daten verfügbar');
                     return;
@@ -523,6 +599,7 @@
 
                 const flexDiv = document.createElement('div');
                 flexDiv.dataset.rowId = rowId;
+                rowState.el = flexDiv;
                 Object.assign(flexDiv.style, {
                     display: 'flex',
                     flexWrap: 'wrap',
@@ -536,7 +613,7 @@
                 const textColor = mode === 'dark' ? '#eee' : '#000';
                 const borderColor = mode === 'dark' ? '#555' : '#ccc';
 
-                function addField(el, width = '180px') {
+                function addField(el, width = '110px') {
                     el.style.boxSizing = 'border-box';
                     el.style.flex = `0 0 ${width}`;
                     el.style.height = '30px';
@@ -723,17 +800,27 @@
                 const lstSelect = addField(document.createElement('select'));
                 lstSelect.innerHTML = `<option disabled selected>Leitstelle wählen</option>`;
                 lstSelect.addEventListener('change', () => rowState.data.leitstelle = lstSelect.value);
+
                 fetch('/api/buildings')
                     .then(r => r.json())
                     .then(data => {
-                    data.filter(b => b.building_type === 7).forEach(b => {
+                    data
+                        .filter(b => b.building_type === 7)
+                        .sort((a, b) =>
+                              a.caption.localeCompare(b.caption, 'de', { sensitivity: 'base' })
+                             )
+                        .forEach(b => {
                         const opt = document.createElement('option');
                         opt.value = b.id;
                         opt.textContent = b.caption;
                         lstSelect.appendChild(opt);
                     });
-                    log('Leitstellen geladen und ins Select eingefügt');
-                }).catch(e => { log('Fehler beim Laden von Leitstellen', e); });
+
+                    log('Leitstellen alphabetisch sortiert geladen');
+                })
+                    .catch(e => {
+                    log('Fehler beim Laden von Leitstellen', e);
+                });
 
                 const vehicleSelect = addField(document.createElement('select'));
                 vehicleSelect.style.display = 'none';
@@ -807,39 +894,46 @@
                         return;
                     }
 
+                    // ===== MARKER SETZEN =====
                     if (!rowState.marker) {
                         markerBtn.textContent = 'Marker löschen';
                         markerBtn.className = BUTTON_CLASSES.danger;
 
                         const c = LSS_MB.state.map.getCenter();
-                        LSS_MB.mapApi.addMarker(c.lat, c.lng);
 
+                        // Marker erzeugen
+                        LSS_MB.mapApi.addMarker(c.lat, c.lng);
                         const marker = LSS_MB.state.markers.at(-1);
+
                         if (!marker) {
                             alert('Marker konnte nicht gesetzt werden');
                             return;
                         }
 
+                        // 🔗 Feste Kopplung
                         rowState.marker = marker;
-                        marker.__rowId = rowId;
+                        marker._lssMbRow = rowState;
 
-                        // 🏷️ Label setzen
+                        // 🏷️ Label
                         updateMarkerLabel(rowState);
 
+                        // 📍 Initiale Position
                         const p = marker.getLatLng();
                         rowState.data.lat = p.lat;
                         rowState.data.lng = p.lng;
 
+                        // ↔ Drag synchronisiert NUR diese Row
                         marker.on('dragend', () => {
                             const p = marker.getLatLng();
                             rowState.data.lat = p.lat;
                             rowState.data.lng = p.lng;
                         });
 
-                        log('Marker gesetzt für Reihe', rowId);
+                        log('Marker gesetzt für Reihe', rowLabel(rowState));
                         return;
                     }
 
+                    // ===== MARKER LÖSCHEN =====
                     LSS_MB.state.map.removeLayer(rowState.marker);
                     LSS_MB.state.markers =
                         LSS_MB.state.markers.filter(m => m !== rowState.marker);
@@ -849,26 +943,79 @@
                     markerBtn.textContent = 'Marker setzen';
                     markerBtn.className = BUTTON_CLASSES.primary;
 
-                    log('Marker gelöscht für Reihe', rowId);
+                    log('Marker gelöscht für Reihe', rowState.id);
                 });
 
-                const deleteBtn = addField(document.createElement('button'),'120px');
+                const deleteBtn = addField(document.createElement('button'),'100px');
                 deleteBtn.className = BUTTON_CLASSES.danger;
                 deleteBtn.textContent = '🗑 Entfernen';
                 deleteBtn.addEventListener('click', () => {
-                    if (rowState.marker) try { LSS_MB.state.map.removeLayer(rowState.marker); } catch (e) { log('Fehler beim Entfernen Marker beim Löschen der Reihe', e); }
-                    LSS_MB.state.markers = LSS_MB.state.markers.filter(m => m.__rowId !== rowId);
-                    LSS_MB.state.buildRows = LSS_MB.state.buildRows.filter(r => r.id !== rowId);
+                    if (rowState.marker) {
+                        try { LSS_MB.state.map.removeLayer(rowState.marker); } catch {}
+                    }
+
+                    LSS_MB.state.markers =
+                        LSS_MB.state.markers.filter(m => m !== rowState.marker);
+
+                    LSS_MB.state.buildRows =
+                        LSS_MB.state.buildRows.filter(r => r.id !== rowId);
+
                     flexDiv.remove();
-                    log('Reihe entfernt:', rowId);
+
+                    renumberBuildRows();
                     updateCostPreview();
+                    updateBuildAllButtonState();
+
+                    log('Reihe entfernt:', rowId);
                 });
+
+                // ===== Status-Anzeige =====
+                const statusLabel = addField(document.createElement('div'), '110px');
+                statusLabel.textContent = '';
+                statusLabel.style.display = 'none';
+                statusLabel.style.backgroundColor = mode === 'dark' ? '#333' : '#f7f7f7';
+                statusLabel.style.color = textColor;
+                statusLabel.style.textAlign = 'center';
+                statusLabel.style.lineHeight = '26px';
+                statusLabel.style.fontWeight = 'bold';
+
+                // Referenz im Row-State speichern
+                rowState.statusEl = statusLabel;
                 injectGlobalButtons();
             }
         }
     };
 
-    // ----- Alliance-Info sauber laden -----
+    // Funktion um die Reihen zu merken
+    function renumberBuildRows() {
+        const rowsWrapper = document.getElementById('lss_mb_rows_wrapper');
+        if (!rowsWrapper) return;
+
+        const rowDivs = [...rowsWrapper.querySelectorAll('[data-row-id]')];
+
+        rowDivs.forEach((rowDiv, index) => {
+            const visualIndex = index + 1;
+            const rowId = Number(rowDiv.dataset.rowId);
+
+            const rowState = LSS_MB.state.buildRows.find(r => r.id === rowId);
+            if (!rowState) return;
+
+            rowState.visualIndex = visualIndex;
+
+            // ✅ Label DIREKT aus rowDiv holen (nicht per ID!)
+            const label = rowDiv.querySelector('[id^="lss_mb_number_"]');
+            if (label) label.textContent = `#${visualIndex}`;
+
+            updateMarkerLabel(rowState);
+        });
+    }
+
+    // Funktion um die Echte ID in eine visuelle ID zu wandeln
+    function rowLabel(row) {
+        return row.visualIndex ?? row.id;
+    }
+
+    // Verbandskasse laden
     async function initAllianceInfo() {
         log('[LSS-MB][ALLIANCE] Lade Alliance-Info …');
 
@@ -923,11 +1070,20 @@
             wrapper.id = 'lss_mb_buttons_wrapper';
             Object.assign(wrapper.style, {
                 gap: '10px',
-                marginTop: '12px',
+                marginTop: '4px',
                 display: 'flex',
                 flexWrap: 'wrap'
             });
-            document.getElementById('lss_mb_build_ui').appendChild(wrapper);
+
+            // Direkt nach rows_wrapper einfügen
+            const rowsWrapper = document.getElementById('lss_mb_rows_wrapper');
+            if (rowsWrapper && rowsWrapper.parentNode) {
+                rowsWrapper.parentNode.insertBefore(wrapper, rowsWrapper.nextSibling);
+            } else {
+                // Fallback
+                document.getElementById('lss_mb_build_ui').appendChild(wrapper);
+            }
+
             log('Buttons wrapper erstellt');
         }
 
@@ -971,6 +1127,20 @@
             wrapper.appendChild(buildBtn);
             log('BuildAll Button hinzugefügt');
         }
+        updateBuildAllButtonState();
+    }
+
+    // Funktion um den Baubutton zu deaktivieren.
+    function updateBuildAllButtonState() {
+        const buildBtn = document.getElementById('lss_mb_build_all_btn');
+        if (!buildBtn) return;
+
+        const hasRows = Array.isArray(LSS_MB.state.buildRows)
+        && LSS_MB.state.buildRows.length > 0;
+
+        buildBtn.disabled = !hasRows;
+        buildBtn.style.opacity = hasRows ? '1' : '0.5';
+        buildBtn.style.cursor = hasRows ? 'pointer' : 'not-allowed';
     }
 
     // Fehlerhaftes Feld anzeigen
@@ -985,7 +1155,9 @@
 
         const parts = [];
 
-        parts.push(`Reihe ${rowState.id}`);
+        // 🔹 sichtbare Reihen-Nummer verwenden
+        const rowNr = rowState.visualIndex ?? rowState.id;
+        parts.push(`Reihe ${rowNr}`);
 
         if (rowState.data.building?.caption)
             parts.push(rowState.data.building.caption);
@@ -1003,7 +1175,19 @@
 
     // Funktion um die Wachen zu bauen
     async function buildAll() {
-        for (const row of LSS_MB.state.buildRows) {
+        const rows = LSS_MB.state.buildRows;
+        const errorMessages = [];
+
+        log('buildAll gestartet, Reihenanzahl=', rows.length);
+
+        for (const row of rows) {
+            if (row.statusEl) {
+                row.statusEl.style.display = 'block'; // sichtbar machen
+                row.statusEl.textContent = '⏳ Wartet';
+            }
+        }
+
+        for (const row of rows) {
             const d = row.data;
             if (
                 d.building &&
@@ -1014,20 +1198,20 @@
                     d.building.building_type,
                     d.buildingType
                 );
-                alert(`❌ Interner Fehler in Reihe ${row.id} (Gebäudetyp inkonsistent)`);
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
+                alert(`❌ Interner Fehler in Reihe ${rowLabel(row)} (Gebäudetyp inkonsistent)`);
                 return;
             }
         }
-        const rows = LSS_MB.state.buildRows;
-        const errorMessages = [];
-
-        log('buildAll gestartet, Reihenanzahl=', rows.length);
 
         for (let row of rows) {
             try {
+                row.statusEl && (row.statusEl.textContent = '🔍 Prüfe…');
                 await validateRow(row);
+                row.statusEl && (row.statusEl.textContent = '⏳ Bereit');
             } catch (e) {
-                errorMessages.push(`Reihe ${row.id}: ${e.message}`);
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
+                errorMessages.push(`Reihe ${rowLabel(row)}: ${e.message}`);
             }
         }
 
@@ -1040,6 +1224,9 @@
         for (let row of rows) {
             const d = row.data;
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+
+            row.statusEl && (row.statusEl.textContent = '🔨 Baue…');
+
             const fd = new FormData();
             fd.append('authenticity_token', csrf);
             fd.append('building[building_type]', d.buildingType);
@@ -1048,6 +1235,7 @@
             fd.append('building[longitude]', d.lng);
             fd.append('building[address]', '');
             fd.append('building[leitstelle_building_id]', d.leitstelle || '');
+
             if (d.startVehicle) {
                 const key = d.buildingType === '18'
                 ? 'building[start_vehicle_feuerwache_kleinwache]'
@@ -1059,52 +1247,60 @@
 
             // ===== Krankenhaus =====
             if (typeId === 4) {
+                fd.append('commit', 'Bauen 200.000 Credits');
                 if (d.hospitalMode === 'alliance') {
-                    // Verbandskrankenhaus
-                    fd.append('commit', 'Bauen 200.000 Credits');
                     fd.append('alliance', '1');
-                    console.info('[LSS-MB][BUILD]', 'Reihe', row.id, '→ Verbandskrankenhaus');
+                    console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Verbandskrankenhaus');
                 } else {
-                    // Eigenes Krankenhaus
-                    fd.append('commit', 'Bauen 200.000 Credits');
-                    console.info('[LSS-MB][BUILD]', 'Reihe', row.id, '→ Eigenes Krankenhaus');
+                    console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Eigenes Krankenhaus');
                 }
             }
 
+            // ===== Verbandszellen =====
             if (typeId === 16) {
                 fd.append('commit', 'Bauen 200.000 Credits');
                 fd.append('alliance', '1');
                 console.info('[LSS-MB][BUILD]', 'Reihe', row.id, '→ Verbandszellen');
             }
 
+            // ===== Schulen =====
             if (ALLIANCE_SCHOOL_TYPES.has(typeId)) {
+                fd.append('commit', 'Bauen 200.000 Credits');
                 if (d.schoolMode === 'alliance') {
-                    fd.append('commit', 'Bauen 200.000 Credits');
                     fd.append('alliance', '1');
                     console.info('[LSS-MB][BUILD]', 'Reihe', row.id, '→ Verbandsschule');
-                } else {
-                    fd.append('commit', 'Bauen 200.000 Credits');
                 }
             }
 
-            // Debug: FormData ausgeben
-            console.log(`[LSS-MB][POST] Reihe ${row.id} FormData:`);
+            // Debug
+            console.log(`[LSS-MB][POST] Reihe ${rowLabel(row)} FormData:`);
             for (let [k, v] of fd.entries()) {
                 console.log('   ', k, '=', v);
             }
 
-            log('Sende POST für Reihe', row.id, d);
             try {
-                const resp = await fetch('/buildings', { method: 'POST', body: fd, credentials: 'same-origin' });
-                log('POST abgeschlossen f��r Reihe', row.id, 'Status:', resp.status);
+                const resp = await fetch('/buildings', {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin'
+                });
+
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+
+                row.statusEl && (row.statusEl.textContent = '✅ Fertig');
+                log('POST abgeschlossen für Reihe', row.id, 'Status:', resp.status);
             } catch (e) {
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
                 log('Fehler beim POST für Reihe', row.id, e);
             }
+
             await new Promise(r => setTimeout(r, 700));
         }
 
-        log('buildAll fertig, reload');
-        alert(`✅ Fertig: ${rows.length} Gebäude gebaut`);
+        log('buildAll fertig');
+        alert(`✅ Fertig: ${rows.length} Gebäude gebaut. Seite wird neugeladen.`);
         location.reload();
     }
 
@@ -1112,7 +1308,7 @@
     async function validateRow(rowState) {
         const d = rowState.data;
 
-        const rowEl = document.querySelector(`[data-row-id="${rowState.id}"]`);
+        const rowEl = rowState.el;
         const selects = rowEl?.querySelectorAll('select');
         const typeSelect = selects ? selects[0] : null;
         const addressInput = rowEl?.querySelector('input[placeholder="Adresse der Wache"]');
@@ -1174,7 +1370,7 @@
         }
 
         if (errors.length) {
-            log('validateRow Fehler für Reihe', rowState.id, errors);
+            log('validateRow Fehler für Reihe', rowLabel(rowState), errors);
             throw new Error(errors.join(', '));
         }
     }
@@ -1186,7 +1382,7 @@
 
     // Berechnungsformel für Kleinwachen
     function calcLogSmallStationCost(count) {
-        if (count <= 23) return 50_000;
+        if (count <= 24) return 50_000;
 
         return Math.round(
             25_000 + 50_000 * log2(count - 22)
@@ -1196,10 +1392,10 @@
     // 🚒 Feuerwehr (Typ 0)
     function calcFireStationCost(existingCount) {
         // existingCount = Anzahl NACH dem Bau
-        if (existingCount <= 23) return 100000;
+        if (existingCount <= 24) return 100_000;
 
         return Math.round(
-            50000 + 100000 * log2(existingCount - 22)
+            50_000 + 100_000 * log2(existingCount - 22)
         );
     }
 
@@ -1214,10 +1410,10 @@
     // 🚓 Polizeiwache (Typ 6)
     function calcPoliceStationCost(existingCount) {
         // existingCount = Anzahl NACH dem Bau
-        if (existingCount <= 23) return 100000;
+        if (existingCount <= 24) return 100_000;
 
         return Math.round(
-            50000 + 100000 * log2(existingCount - 22)
+            50_000 + 100_000 * log2(existingCount - 22)
         );
     }
 
@@ -1248,7 +1444,7 @@
         return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    // ===== Echte Baukosten vom Server holen =====
+    // Baukosten vom Server holen
     async function fetchRealBuildingCost(typeId) {
         if (BUILD_COST_CACHE[typeId]) return BUILD_COST_CACHE[typeId];
 
@@ -1377,301 +1573,354 @@
 
     // Berechnet und aktualisiert die Kostenvorschau für alle aktuell geplanten Gebäude.
     async function updateCostPreview() {
-        const rows = LSS_MB.state.buildRows;
+    const rows = LSS_MB.state.buildRows;
 
-        const simulatedCounts = { ...LSS_MB.state.userBuildings };
-        simulatedCounts[0] = simulatedCounts[0] || 0;   // Großwache
-        simulatedCounts[18] = simulatedCounts[18] || 0; // Kleinwache
-        simulatedCounts[6] = simulatedCounts[6] || 0;   // Polizeiwache
-        simulatedCounts[19] = simulatedCounts[19] || 0; // Polizeikleinwache
-        simulatedCounts[25] = simulatedCounts[25] || 0; // Bergrettung
-        simulatedCounts[26] = simulatedCounts[26] || 0; // Seenotrettung
-        simulatedCounts[9] = simulatedCounts[9] || 0; // THW
+    const simulatedCounts = { ...LSS_MB.state.userBuildings };
+    simulatedCounts[0] = simulatedCounts[0] || 0;   // Großwache
+    simulatedCounts[18] = simulatedCounts[18] || 0; // Kleinwache
+    simulatedCounts[6] = simulatedCounts[6] || 0;   // Polizeiwache
+    simulatedCounts[19] = simulatedCounts[19] || 0; // Polizeikleinwache
+    simulatedCounts[25] = simulatedCounts[25] || 0; // Bergrettung
+    simulatedCounts[26] = simulatedCounts[26] || 0; // Seenotrettung
+    simulatedCounts[9] = simulatedCounts[9] || 0; // THW
 
-        const existingServerCounts = { ...simulatedCounts };
-        let preview = document.getElementById('lss_mb_cost_preview');
+    const existingServerCounts = { ...simulatedCounts };
+    let preview = document.getElementById('lss_mb_cost_preview');
 
-        if (!preview) {
-            const resDiv = document.getElementById('lss_mb_resources');
-            if (resDiv) {
-                const div = document.createElement('div');
-                div.id = 'lss_mb_cost_preview';
-                div.innerHTML = `💸 <strong>Kostenvorschau</strong><br>💰 Credits: 0<br>🪙 Coins: 0
-                    ${LSS_MB.state.alliance.canBuildAllianceHospital ? '<br>🏛️ Verbandscredits: 0' : ''}`;
-                resDiv.appendChild(div);
-                preview = div;
-            } else {
-                // Wenn auch resources nicht existiert (sehr ungewöhnlich), beende still.
-                return;
-            }
+    if (!preview) {
+        const resDiv = document.getElementById('lss_mb_resources');
+        if (resDiv) {
+            const div = document.createElement('div');
+            div.id = 'lss_mb_cost_preview';
+            div.innerHTML = `💸 <strong>Kostenvorschau</strong><br>💰 Credits: 0<br>🪙 Coins: 0
+                ${LSS_MB.state.alliance.canBuildAllianceHospital ? '<br>🏛️ Verbandscredits: 0' : ''}`;
+            resDiv.appendChild(div);
+            preview = div;
+        } else {
+            return;
         }
+    }
 
-        let ownCredits = 0;
-        let ownCoins = 0;
-        let allianceCredits = 0;
+    let ownCredits = 0;
+    let ownCoins = 0;
+    let allianceCredits = 0;
 
-        // Serverpreise nur einmal abrufen
-        const serverPrices = {};
+    // Serverpreise nur einmal abrufen
+    const serverPrices = {};
 
-        // kombinierten Fire-Zähler (Groß + Klein) — wichtig
-        let simulatedFireTotal = (simulatedCounts[0] || 0) + (simulatedCounts[18] || 0);
-        const existingServerFireTotal = (existingServerCounts[0] || 0) + (existingServerCounts[18] || 0);
+    // kombinierten Fire-Zähler (Groß + Klein) — wichtig
+    let simulatedFireTotal = (simulatedCounts[0] || 0) + (simulatedCounts[18] || 0);
+    const existingServerFireTotal = (existingServerCounts[0] || 0) + (existingServerCounts[18] || 0);
 
-        let simulatedPoliceTotal = (simulatedCounts[6] || 0) + (simulatedCounts[19] || 0);
-        const existingServerPoliceTotal = (existingServerCounts[6] || 0) + (existingServerCounts[19] || 0);
+    let simulatedPoliceTotal = (simulatedCounts[6] || 0) + (simulatedCounts[19] || 0);
+    const existingServerPoliceTotal = (existingServerCounts[6] || 0) + (existingServerCounts[19] || 0);
 
-        // Hilfsformatierer
-        const fmt = v => Number(v || 0).toLocaleString('de-DE');
+    // Hilfsformatierer
+    const fmt = v => Number(v || 0).toLocaleString('de-DE');
 
-        for (const row of LSS_MB.state.buildRows) {
-            const d = row.data;
-            if (!d.building) {
-                // Falls Reihe gelöscht wurde oder noch leer ist, Labels zurücksetzen
-                try {
-                    const num = document.getElementById(`lss_mb_number_${row.id}`);
-                    const cl = document.getElementById(`lss_mb_credits_${row.id}`);
-                    const col = document.getElementById(`lss_mb_coins_${row.id}`);
-                    if (num) num.textContent = '#';
-                    if (cl) cl.textContent = '💰 -';
-                    if (col) col.textContent = '🪙 -';
-                } catch (e) {}
-                continue;
-            }
-
-            const typeId = Number(d.building.building_type);
-
-            let credits = null;
-            let coins = null;
-            let label = '';
-            let buildingNumber = 0;
-
-            // 🚒 Großwache (Typ 0)
-            if (typeId === 0) {
-                simulatedFireTotal++;
-                buildingNumber = simulatedFireTotal;
-
-                if (!serverPrices[0]) {
-                    serverPrices[0] = await getCostsForBuilding(d.building);
-                }
-
-                coins = serverPrices[0].coins || 0;
-
-                if (buildingNumber === existingServerFireTotal + 1) {
-                    credits = serverPrices[0].credits;
-                } else {
-                    if (typeof serverPrices.__scale0 === 'undefined') {
-                        const anchorCount = existingServerFireTotal + 1;
-                        const anchorCalc = calcFireStationCost(anchorCount);
-                        serverPrices.__scale0 = (anchorCalc > 0)
-                            ? ((serverPrices[0].credits || 0) / anchorCalc)
-                        : 1;
-                        if (!isFinite(serverPrices.__scale0) || serverPrices.__scale0 <= 0) serverPrices.__scale0 = 1;
-                        log('[LSS-MB][PREVIEW] Großwache Skalierung festgelegt (float):', serverPrices.__scale0, '(anchorCalc=', anchorCalc, ', server=', serverPrices[0].credits, ')');
-                    }
-                    credits = Math.round(calcFireStationCost(buildingNumber) * (serverPrices.__scale0 || 1));
-                }
-
-                // Monotonie
-                if (typeof serverPrices.__last0 === 'number' && credits < serverPrices.__last0) credits = serverPrices.__last0;
-                serverPrices.__last0 = credits;
-
-                // ➕ Startfahrzeug-Kosten
-                if (d.startVehicle && START_VEHICLE_COSTS[d.startVehicle]) {
-                    credits += START_VEHICLE_COSTS[d.startVehicle];
-                }
-
-                label = `Feuerwache #${buildingNumber}`;
-            }
-
-            // 🚒 Kleinwache (Typ 18)
-            else if (typeId === 18) {
-                simulatedFireTotal++;
-                buildingNumber = simulatedFireTotal;
-
-                if (!serverPrices[18]) {
-                    serverPrices[18] = await getCostsForBuilding(d.building);
-                }
-
-                coins = serverPrices[18].coins || 0;
-
-                if (buildingNumber === existingServerFireTotal + 1) {
-                    credits = serverPrices[18].credits;
-                } else {
-                    if (typeof serverPrices.__scale18 === 'undefined') {
-                        const anchorCount = existingServerFireTotal + 1;
-                        const anchorCalc = calcSmallFireStationCost(anchorCount);
-                        serverPrices.__scale18 = (anchorCalc > 0)
-                            ? ((serverPrices[18].credits || 0) / anchorCalc)
-                        : 1;
-                        if (!isFinite(serverPrices.__scale18) || serverPrices.__scale18 <= 0) serverPrices.__scale18 = 1;
-                        log('[LSS-MB][PREVIEW] Kleinwache Skalierung festgelegt (float):', serverPrices.__scale18, '(anchorCalc=', anchorCalc, ', server=', serverPrices[18].credits, ')');
-                    }
-
-                    credits = Math.round(calcSmallFireStationCost(buildingNumber) * (serverPrices.__scale18 || 1));
-
-                    // Cap für Feuerwehr-Kleinwache anwenden
-                    credits = Math.min(credits, FIRE_STATION_SMALL_CREDIT_CAP);
-                }
-
-                if (typeof serverPrices.__last18 === 'number' && credits < serverPrices.__last18) credits = serverPrices.__last18;
-                serverPrices.__last18 = credits;
-
-                // ➕ Startfahrzeug-Kosten
-                if (d.startVehicle && START_VEHICLE_COSTS[d.startVehicle]) {
-                    credits += START_VEHICLE_COSTS[d.startVehicle];
-                }
-
-                label = `Kleinwache #${buildingNumber}`;
-            }
-
-            // 🚓 Polizeiwache (Typ 6)
-            else if (typeId === 6) {
-                simulatedPoliceTotal++;
-                buildingNumber = simulatedPoliceTotal;
-
-                if (!serverPrices[6]) serverPrices[6] = await getCostsForBuilding(d.building);
-                coins = serverPrices[6].coins || 0;
-
-                if (buildingNumber === existingServerPoliceTotal + 1) {
-                    credits = serverPrices[6].credits;
-                } else {
-                    if (typeof serverPrices.__scale6 === 'undefined') {
-                        const anchorCount = existingServerPoliceTotal + 1;
-                        const anchorCalc = calcPoliceStationCost(anchorCount);
-                        serverPrices.__scale6 =
-                            anchorCalc > 0 ? serverPrices[6].credits / anchorCalc : 1;
-                    }
-                    credits = Math.round(
-                        calcPoliceStationCost(buildingNumber) * serverPrices.__scale6
-                    );
-                }
-
-                label = `Polizeiwache #${buildingNumber}`;
-            }
-
-            // 🚓 Polizeikleinwache (Typ 19)
-            else if (typeId === 19) {
-                simulatedPoliceTotal++;
-                buildingNumber = simulatedPoliceTotal;
-
-                if (!serverPrices[19]) serverPrices[19] = await getCostsForBuilding(d.building);
-                coins = serverPrices[19].coins || 0;
-
-                if (buildingNumber === existingServerPoliceTotal + 1) {
-                    credits = serverPrices[19].credits;
-                } else {
-                    if (typeof serverPrices.__scale19 === 'undefined') {
-                        const anchorCount = existingServerPoliceTotal + 1;
-                        const anchorCalc = calcSmallPoliceStationCost(anchorCount);
-                        serverPrices.__scale19 =
-                            anchorCalc > 0 ? serverPrices[19].credits / anchorCalc : 1;
-                    }
-                    credits = Math.round(
-                        calcSmallPoliceStationCost(buildingNumber) * serverPrices.__scale19
-                    );
-                }
-
-                label = `Polizeiwache (Klein) #${buildingNumber}`;
-            }
-
-            // 🏔️ Bergrettung & 🚤 Seenotrettung
-            else if (typeId === 25 || typeId === 26) {
-                simulatedCounts[typeId]++;
-                buildingNumber = simulatedCounts[typeId];
-
-                // Coins kommen vom Server (sind konstant)
-                if (!serverPrices[typeId]) {
-                    serverPrices[typeId] = await getCostsForBuilding(d.building);
-                }
-
-                coins = serverPrices[typeId].coins || 0;
-
-                // Credits IMMER selbst berechnen
-                credits = calcRescueSpecialCost(buildingNumber);
-
-                label = `${d.building.caption} #${buildingNumber}`;
-            }
-
-            // 🛠️ THW (Typ 9)
-            else if (typeId === 9) {
-                simulatedCounts[9]++;
-                buildingNumber = simulatedCounts[9];
-
-                // Coins kommen vom Server (konstant)
-                if (!serverPrices[9]) {
-                    serverPrices[9] = await getCostsForBuilding(d.building);
-                }
-
-                coins = serverPrices[9].coins || 35;
-
-                // Credits IMMER selbst berechnen
-                credits = calcTHWCost(buildingNumber);
-
-                label = `THW-Ortsverband #${buildingNumber}`;
-            }
-
-            // 🔁 andere Gebäude (generische Typen) — Zähler verwenden und Nummer setzen
-            else {
-                // Stelle sicher, dass wir einen Zähler für diesen Typ haben
-                simulatedCounts[typeId] = simulatedCounts[typeId] || 0;
-                simulatedCounts[typeId]++;
-                buildingNumber = simulatedCounts[typeId];
-
-                const base = await getCostsForBuilding(d.building);
-                credits = (base && typeof base.credits !== 'undefined') ? Number(base.credits) : 0;
-                coins = (base && typeof base.coins !== 'undefined') ? Number(base.coins) : 0;
-                label = `${d.building.caption} #${buildingNumber}`;
-            }
-
-            // Verbandslogik
-            const isAlliance =
-                  (typeId === 4 && d.hospitalMode === 'alliance') ||
-                  (ALLIANCE_SCHOOL_TYPES.has(typeId) && d.schoolMode === 'alliance') ||
-                  (typeId === 16);
-
-            if (isAlliance) {
-                allianceCredits += credits || 0;
-            } else {
-                ownCredits += credits || 0;
-                ownCoins += coins || 0;
-            }
-
-            // DOM-Update der kleinen Nr.-Anzeige (pro Reihe)
+    for (const row of LSS_MB.state.buildRows) {
+        const d = row.data;
+        if (!d.building) {
             try {
-                const numEl = document.getElementById(`lss_mb_number_${row.id}`);
-                if (numEl) {
-                    numEl.textContent = buildingNumber ? `#${buildingNumber}` : '#';
-                }
-            } catch (e) {
-                // ignore
-            }
-
-            // Aktualisiere die per-Reihe Labels (wichtig!)
-            try {
+                const num = document.getElementById(`lss_mb_number_${row.id}`);
                 const cl = document.getElementById(`lss_mb_credits_${row.id}`);
                 const col = document.getElementById(`lss_mb_coins_${row.id}`);
-                if (cl) cl.textContent = (credits === null || typeof credits === 'undefined') ? '💰 -' : `💰 ${fmt(credits)}`;
-                if (col) col.textContent = (coins === null || typeof coins === 'undefined') ? '🪙 -' : `🪙 ${fmt(coins)}`;
-            } catch (e) {
-                // ignore
+                if (num) num.textContent = '#';
+                if (cl) cl.textContent = '💰 -';
+                if (col) col.textContent = '🪙 -';
+            } catch (e) {}
+            continue;
+        }
+
+        const typeId = Number(d.building.building_type);
+
+        let credits = null;
+        let coins = null;
+        let label = '';
+        let buildingNumber = 0;
+
+        // 🚒 Großwache (Typ 0)
+        if (typeId === 0) {
+            simulatedFireTotal++;
+            buildingNumber = simulatedFireTotal;
+
+            if (!serverPrices[0]) {
+                serverPrices[0] = await getCostsForBuilding(d.building);
             }
 
-            console.info(`[LSS-MB][PREVIEW] ${label} → ${((credits === null || typeof credits === 'undefined') ? '-' : fmt(credits))} Credits | ${((coins === null || typeof coins === 'undefined') ? '-' : fmt(coins))} Coins`);
+            coins = serverPrices[0].coins || 0;
+
+            if (buildingNumber === existingServerFireTotal + 1) {
+                credits = serverPrices[0].credits;
+            } else {
+                if (typeof serverPrices.__scale0 === 'undefined') {
+                    const anchorCount = existingServerFireTotal + 1;
+                    const anchorCalc = calcFireStationCost(anchorCount);
+                    serverPrices.__scale0 = (anchorCalc > 0)
+                        ? ((serverPrices[0].credits || 0) / anchorCalc)
+                        : 1;
+                    if (!isFinite(serverPrices.__scale0) || serverPrices.__scale0 <= 0) serverPrices.__scale0 = 1;
+                }
+                credits = Math.round(calcFireStationCost(buildingNumber) * (serverPrices.__scale0 || 1));
+            }
+
+            if (typeof serverPrices.__last0 === 'number' && credits < serverPrices.__last0) credits = serverPrices.__last0;
+            serverPrices.__last0 = credits;
+
+            if (d.startVehicle && START_VEHICLE_COSTS[d.startVehicle]) {
+                credits += START_VEHICLE_COSTS[d.startVehicle];
+            }
+
+            label = `Feuerwache #${buildingNumber}`;
         }
 
-        const fmtTotal = v => Number(v || 0).toLocaleString('de-DE');
+        // 🚒 Kleinwache (Typ 18)
+        else if (typeId === 18) {
+            simulatedFireTotal++;
+            buildingNumber = simulatedFireTotal;
 
-        let html = `
-    💸 <strong>Kostenvorschau</strong> 💸<br>
-    💰Credits: ${fmtTotal(ownCredits)} | 🪙Coins: ${fmtTotal(ownCoins)}
-    `;
+            if (!serverPrices[18]) {
+                serverPrices[18] = await getCostsForBuilding(d.building);
+            }
 
-        if (LSS_MB.state.alliance.canBuildAllianceHospital) {
-            html += `<br>🏛️ Verbandscredits: ${fmtTotal(allianceCredits)}`;
+            coins = serverPrices[18].coins || 0;
+
+            if (buildingNumber === existingServerFireTotal + 1) {
+                credits = serverPrices[18].credits;
+            } else {
+                if (typeof serverPrices.__scale18 === 'undefined') {
+                    const anchorCount = existingServerFireTotal + 1;
+                    const anchorCalc = calcSmallFireStationCost(anchorCount);
+                    serverPrices.__scale18 = (anchorCalc > 0)
+                        ? ((serverPrices[18].credits || 0) / anchorCalc)
+                        : 1;
+                    if (!isFinite(serverPrices.__scale18) || serverPrices.__scale18 <= 0) serverPrices.__scale18 = 1;
+                }
+
+                credits = Math.round(calcSmallFireStationCost(buildingNumber) * (serverPrices.__scale18 || 1));
+                credits = Math.min(credits, FIRE_STATION_SMALL_CREDIT_CAP);
+            }
+
+            if (typeof serverPrices.__last18 === 'number' && credits < serverPrices.__last18) credits = serverPrices.__last18;
+            serverPrices.__last18 = credits;
+
+            if (d.startVehicle && START_VEHICLE_COSTS[d.startVehicle]) {
+                credits += START_VEHICLE_COSTS[d.startVehicle];
+            }
+
+            label = `Kleinwache #${buildingNumber}`;
         }
 
-        preview.innerHTML = html;
+        // 🚓 Polizeiwache (Typ 6)
+        else if (typeId === 6) {
+            simulatedPoliceTotal++;
+            buildingNumber = simulatedPoliceTotal;
+
+            if (!serverPrices[6]) serverPrices[6] = await getCostsForBuilding(d.building);
+            coins = serverPrices[6].coins || 0;
+
+            if (buildingNumber === existingServerPoliceTotal + 1) {
+                credits = serverPrices[6].credits;
+            } else {
+                if (typeof serverPrices.__scale6 === 'undefined') {
+                    const anchorCount = existingServerPoliceTotal + 1;
+                    const anchorCalc = calcPoliceStationCost(anchorCount);
+                    serverPrices.__scale6 =
+                        anchorCalc > 0 ? serverPrices[6].credits / anchorCalc : 1;
+                }
+                credits = Math.round(
+                    calcPoliceStationCost(buildingNumber) * serverPrices.__scale6
+                );
+            }
+
+            label = `Polizeiwache #${buildingNumber}`;
+        }
+
+        // 🚓 Polizeikleinwache (Typ 19)
+        else if (typeId === 19) {
+            simulatedPoliceTotal++;
+            buildingNumber = simulatedPoliceTotal;
+
+            if (!serverPrices[19]) serverPrices[19] = await getCostsForBuilding(d.building);
+            coins = serverPrices[19].coins || 0;
+
+            if (buildingNumber === existingServerPoliceTotal + 1) {
+                credits = serverPrices[19].credits;
+            } else {
+                if (typeof serverPrices.__scale19 === 'undefined') {
+                    const anchorCount = existingServerPoliceTotal + 1;
+                    const anchorCalc = calcSmallPoliceStationCost(anchorCount);
+                    serverPrices.__scale19 =
+                        anchorCalc > 0 ? serverPrices[19].credits / anchorCalc : 1;
+                }
+                credits = Math.round(
+                    calcSmallPoliceStationCost(buildingNumber) * serverPrices.__scale19
+                );
+            }
+
+            label = `Polizeiwache (Klein) #${buildingNumber}`;
+        }
+
+        // 🏔️ Bergrettung & 🚤 Seenotrettung
+        else if (typeId === 25 || typeId === 26) {
+            simulatedCounts[typeId]++;
+            buildingNumber = simulatedCounts[typeId];
+
+            if (!serverPrices[typeId]) {
+                serverPrices[typeId] = await getCostsForBuilding(d.building);
+            }
+
+            coins = serverPrices[typeId].coins || 0;
+            credits = calcRescueSpecialCost(buildingNumber);
+
+            label = `${d.building.caption} #${buildingNumber}`;
+        }
+
+        // 🛠️ THW (Typ 9)
+        else if (typeId === 9) {
+            simulatedCounts[9]++;
+            buildingNumber = simulatedCounts[9];
+
+            if (!serverPrices[9]) {
+                serverPrices[9] = await getCostsForBuilding(d.building);
+            }
+
+            coins = serverPrices[9].coins || 35;
+            credits = calcTHWCost(buildingNumber);
+
+            label = `THW-Ortsverband #${buildingNumber}`;
+        }
+
+        // 🔁 andere Gebäude (generische Typen)
+        else {
+            simulatedCounts[typeId] = simulatedCounts[typeId] || 0;
+            simulatedCounts[typeId]++;
+            buildingNumber = simulatedCounts[typeId];
+
+            const base = await getCostsForBuilding(d.building);
+            credits = (base && typeof base.credits !== 'undefined') ? Number(base.credits) : 0;
+            coins = (base && typeof base.coins !== 'undefined') ? Number(base.coins) : 0;
+            label = `${d.building.caption} #${buildingNumber}`;
+        }
+
+        // Verbandslogik (ob die Kosten als Verbandskosten gelten)
+        const isAlliance =
+              (typeId === 4 && d.hospitalMode === 'alliance') ||
+              (ALLIANCE_SCHOOL_TYPES.has(typeId) && d.schoolMode === 'alliance') ||
+              (typeId === 16);
+
+        if (isAlliance) {
+            allianceCredits += credits || 0;
+        } else {
+            ownCredits += credits || 0;
+            ownCoins += coins || 0;
+        }
+
+        // DOM-Update der kleinen Nr.-Anzeige (pro Reihe)
+        try {
+            const numEl = document.getElementById(`lss_mb_number_${row.id}`);
+            if (numEl) {
+                numEl.textContent = buildingNumber ? `#${buildingNumber}` : '#';
+            }
+        } catch (e) {}
+
+        // Aktualisiere die per-Reihe Labels
+        try {
+            const cl = document.getElementById(`lss_mb_credits_${row.id}`);
+            const col = document.getElementById(`lss_mb_coins_${row.id}`);
+            if (cl) cl.textContent = (credits === null || typeof credits === 'undefined') ? '💰 -' : `💰 ${fmt(credits)}`;
+            if (col) col.textContent = (coins === null || typeof coins === 'undefined') ? '🪙 -' : `🪙 ${fmt(coins)}`;
+        } catch (e) {}
+
+        console.info(`[LSS-MB][PREVIEW] ${label} → ${((credits === null || typeof credits === 'undefined') ? '-' : fmt(credits))} Credits | ${((coins === null || typeof coins === 'undefined') ? '-' : fmt(coins))} Coins`);
     }
+
+    const fmtTotal = v => Number(v || 0).toLocaleString('de-DE');
+
+    let html = `
+💸 <strong>Kostenvorschau</strong> 💸<br>
+💰Credits: ${fmtTotal(ownCredits)} | 🪙Coins: ${fmtTotal(ownCoins)}
+`;
+
+    if (LSS_MB.state.alliance.canBuildAllianceHospital) {
+        html += `<br>🏛️ Verbandscredits: ${fmtTotal(allianceCredits)}`;
+    }
+
+    // === Warnungen + Button-Handling (inkl. Verbandskasse) ===
+    try {
+        const availableCredits = Number(LSS_MB.state.userInfo?.credits_user_current) || 0;
+        const availableCoins = Number(LSS_MB.state.userInfo?.coins_user_current) || 0;
+        const availableAllianceCredits = Number(LSS_MB.state.alliance?.credits) || 0;
+
+        const exceedsCredits = ownCredits > availableCredits;
+        const exceedsCoins = ownCoins > availableCoins;
+        const allianceInsufficient = allianceCredits > availableAllianceCredits;
+
+        // Eigene-Ressourcen-Warnung (nur wenn beides nicht reicht)
+        if (exceedsCredits && exceedsCoins) {
+            html += `<br><div id="lss_mb_insufficient_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff5f5;color:#a40000;border:1px solid #FF000;">
+<strong>Hinweiß:</strong> Die benötigten <strong>${fmtTotal(ownCredits)} Credits</strong> oder die benötigten <strong>${fmtTotal(ownCoins)} Coins</strong> überschreiten beide deine verfügbaren Ressourcen. Bitte passe deine Auswahl entsprechend an.
+</div>`;
+        } else {
+            const prev = document.getElementById('lss_mb_insufficient_warning');
+            if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+        }
+
+        // Verbandskassen-Warnung
+        if (allianceInsufficient) {
+            html += `<br><div id="lss_mb_alliance_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff7e6;color:#7a4b00;border:1px solid #f0d9b5;">
+<strong>Hinweiß (Verband):</strong> Die benötigten <strong>${fmtTotal(allianceCredits)} Verbandscredits</strong> reichen nicht aus, um die als Verband geplanten Gebäude zu kaufen.
+</div>`;
+        } else {
+            const prevA = document.getElementById('lss_mb_alliance_warning');
+            if (prevA && prevA.parentNode) prevA.parentNode.removeChild(prevA);
+        }
+
+        // Buttons aktualisieren
+        const buildBtn = document.getElementById('lss_mb_build_all_btn');
+        const addBtn = document.getElementById('lss_mb_add_row_btn');
+        const hasRows = Array.isArray(LSS_MB.state.buildRows) && LSS_MB.state.buildRows.length > 0;
+
+        const shouldDisableForOwn = (exceedsCredits && exceedsCoins);
+        const shouldDisableForAlliance = allianceInsufficient;
+        const shouldDisable = !hasRows || shouldDisableForOwn || shouldDisableForAlliance;
+
+        if (buildBtn) {
+            buildBtn.disabled = shouldDisable;
+            buildBtn.style.opacity = shouldDisable ? '0.5' : '1';
+            buildBtn.style.cursor = shouldDisable ? 'not-allowed' : 'pointer';
+
+            if (!hasRows) {
+                buildBtn.title = 'Deaktiviert: Keine Reihen vorhanden.';
+            } else if (shouldDisableForOwn) {
+                buildBtn.title = `Deaktiviert: Deine eigenen Credits (${fmtTotal(availableCredits)}) und Coins (${fmtTotal(availableCoins)}) reichen beide nicht für die gewählten Gebäude.`;
+            } else if (shouldDisableForAlliance) {
+                buildBtn.title = `Deaktiviert: Verbandscredits (${fmtTotal(availableAllianceCredits)}) reichen nicht für die geplanten Verbandsgebäude.`;
+            } else {
+                buildBtn.title = 'Wachen/Gebäude bauen';
+            }
+        }
+
+        if (addBtn) {
+            const shouldDisableAdd = shouldDisableForOwn || shouldDisableForAlliance;
+            addBtn.disabled = shouldDisableAdd;
+            addBtn.style.opacity = shouldDisableAdd ? '0.5' : '1';
+            addBtn.style.cursor = shouldDisableAdd ? 'not-allowed' : 'pointer';
+
+            if (shouldDisableForOwn) {
+                addBtn.title = `Deaktiviert: Deine eigenen Credits (${fmtTotal(availableCredits)}) und Coins (${fmtTotal(availableCoins)}) reichen beide nicht für die gewählten Gebäude.`;
+            } else if (shouldDisableForAlliance) {
+                addBtn.title = `Deaktiviert: Verbandscredits (${fmtTotal(availableAllianceCredits)}) reichen nicht für die geplanten Verbandsgebäude.`;
+            } else {
+                addBtn.title = 'Weitere Wache/Gebäude hinzufügen';
+            }
+        }
+    } catch (e) {
+        log('Warnungsprüfung / Button-Update konnte nicht durchgeführt werden', e);
+    }
+
+    preview.innerHTML = html;
+}
 
     LSS_MB.init();
 
