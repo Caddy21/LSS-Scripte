@@ -93,5 +93,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Scriptmenü
     - Credis Tracker
     - LST-Dropdown
-    - Countdown
+    - Countdownanzeige
 </details>
