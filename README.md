@@ -92,5 +92,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Funkmeister
     - Scriptmenü
     - Credis Tracker
-
+    - LST-Dropdown
+    - Countdown
 </details>
