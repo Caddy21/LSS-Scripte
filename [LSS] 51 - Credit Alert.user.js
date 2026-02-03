@@ -1,22 +1,22 @@
 // ==UserScript==
-// @name         [LSS] - Credit Alert
+// @name         [LSS] Credit Alert
 // @namespace    https://leitstellenspiel.de/
 // @version      1.0
-// @description  Meldet, wenn 1.500.000 Credits verdient worden sind und zeigt die Anzahl der Tag seit Registrierung an.
+// @description  Meldet bei jedem Meilenstein an Credits und zeigt Tage seit Registrierung
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @match        https://polizei.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
-// @grant        GM_xmlhttpRequest
-// @grant        GM_notification
+// @grant        none
 // ==/UserScript==
 
 (function () {
     'use strict';
 
     const API_URL = 'https://www.leitstellenspiel.de/api/userinfo';
-    const CHECK_INTERVAL = 5 * 60 * 1000; // alle 10 Minuten
-    const MILLION = 1_500_000; // <- Verdienst anpassen
-    const START_DATE = new Date('2022-01-18T00:00:00');
+    const CHECK_INTERVAL = 12 * 60 * 60 * 1000; // alle 12 Stunden
+    const MILESTONE = 100_000_000; // z.B. jede 100. Million, für jede Milliarde: 1_000_000_000
+    const START_DATE = new Date('2022-01-18T00:00:00'); // Registrierungsdatum
 
     const STORAGE_KEY = 'lss_last_notified_credits';
 
@@ -26,39 +26,34 @@
     }
 
     function checkCredits() {
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: API_URL,
-            onload: function (response) {
-                try {
-                    const data = JSON.parse(response.responseText);
-                    const currentCredits = data.credits_user_total;
+        fetch(API_URL)
+            .then(response => response.json())
+            .then(data => {
+                const currentCredits = data.credits_user_total;
 
-                    let lastCredits = localStorage.getItem(STORAGE_KEY);
-                    if (!lastCredits) {
-                        localStorage.setItem(STORAGE_KEY, currentCredits);
-                        return;
-                    }
-
-                    lastCredits = parseInt(lastCredits, 10);
-
-                    if (currentCredits >= lastCredits + MILLION) {
-                        const days = daysSinceStart();
-                        const gained = currentCredits - lastCredits;
-
-                        GM_notification({
-                            title: '💰 Leitstellenspiel',
-                            text: `+${gained.toLocaleString()} Credits erreicht!\nTage seit 18.01.2022: ${days}`, // Hier Reg-Datum eintragen
-                            timeout: 10000
-                        });
-
-                        localStorage.setItem(STORAGE_KEY, currentCredits);
-                    }
-                } catch (e) {
-                    console.error('Leitstellenspiel Script Fehler:', e);
+                let lastCredits = localStorage.getItem(STORAGE_KEY);
+                if (!lastCredits) {
+                    localStorage.setItem(STORAGE_KEY, currentCredits);
+                    return;
                 }
-            }
-        });
+
+                lastCredits = parseInt(lastCredits, 10);
+
+                // Prüfen, ob ein neuer Meilenstein erreicht wurde
+                if (Math.floor(currentCredits / MILESTONE) > Math.floor(lastCredits / MILESTONE)) {
+                    const days = daysSinceStart();
+                    const gained = currentCredits - lastCredits;
+
+                    alert(
+                        `💰 Leitstellenspiel\n\n` +
+                        `+${gained.toLocaleString()} Credits erreicht!\n` +
+                        `Tage seit ${START_DATE.toLocaleDateString()}: ${days}`
+                    );
+
+                    localStorage.setItem(STORAGE_KEY, currentCredits);
+                }
+            })
+            .catch(e => console.error('LSS Script Fehler:', e));
     }
 
     // Start
