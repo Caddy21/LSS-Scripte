@@ -94,4 +94,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Credis Tracker
     - LST-Dropdown
     - Countdownanzeige
+    - Wachenfahrzeug Toggler
 </details>
