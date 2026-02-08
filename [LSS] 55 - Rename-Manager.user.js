@@ -544,8 +544,61 @@
         }
     }
 
+    // Hotkeys für Vorschau / Umbenennen / Abbrechen + Kombi mit ALT
+    function registerHotkeys() {
+        document.addEventListener('keydown', async e => {
+            // Nicht auslösen, wenn man gerade in ein Input- oder Textarea-Feld tippt
+            const tag = document.activeElement?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+            // Alt + V = Vorschau
+            if (e.altKey && !e.shiftKey && !e.ctrlKey && e.code === 'KeyV') {
+                e.preventDefault();
+                log('Hotkey Alt+V -> Vorschau');
+                applyPreviewInTableWithInputs();
+            }
+
+            // Alt + U = Umbenennen
+            if (e.altKey && !e.shiftKey && !e.ctrlKey && e.code === 'KeyU') {
+                e.preventDefault();
+                log('Hotkey Alt+U -> Umbenennen');
+                await triggerAllInlineSaves();
+            }
+
+            // Alt + C = Vorschau abbrechen
+            if (e.altKey && !e.shiftKey && !e.ctrlKey && e.code === 'KeyC') {
+                e.preventDefault();
+                log('Hotkey Alt+C -> Vorschau abbrechen');
+                revertPreviewInTable();
+            }
+
+            // Alt + Enter = Vorschau + direkt Umbenennen
+            if (e.altKey && !e.shiftKey && !e.ctrlKey && e.code === 'Enter') {
+                e.preventDefault();
+                log('Hotkey Alt+Enter -> Vorschau + Umbenennen');
+                await previewAndRenameAll();
+            }
+        });
+    }
+
+    // Kombi-Funktion: Vorschau + direkt Umbenennen
+    async function previewAndRenameAll() {
+        log('Kombi-Aktion: Vorschau + Umbenennen');
+
+        // Vorschau erstellen
+        applyPreviewInTableWithInputs();
+
+        // Kurze Pause, damit Inputs im DOM erstellt werden
+        await new Promise(r => setTimeout(r, 300));
+
+        // Direkt alle falsch benannten Fahrzeuge umbenennen
+        await triggerAllInlineSaves();
+    }
+
+
     // Initialisierung des Scriptes
     addMenuButton();
+    registerHotkeys();
     log('Rename Manager vollständig initialisiert');
 
 })();
