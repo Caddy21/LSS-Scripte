@@ -103,7 +103,6 @@
         migrateButton('#multiausblender-settings-btn', 'multiausblender-btn', 'Multiausblender');
         migrateButton('#Personalübersicht', 'personal-overview-btn', 'Personalübersicht');
         migrateButton('#open-alias-manager', 'open-alias-manager-btn', 'Wachenalias-Manager');
-        migrateButton('#statistics-button', 'statistics-button-btn', 'Fahrzeug- und Gebäudestatistik');
 
     }, 1000);
 
