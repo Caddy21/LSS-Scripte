@@ -1,10 +1,11 @@
 // ==UserScript==
-// @name         [LSS] 48 – Scriptmenü
+// @name         [LSS] 48 - Scriptmenü
 // @namespace    https://www.leitstellenspiel.de/caddy
 // @version      1.0
 // @description  Zentraler Ort für die Menüeinträge vom Erweiterungs-Manager, Fahrzeug-Manager, Multiausblender, Personalübersicht und Massenbauer
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
+// @match        https://polizei.leitstellenspiel.de/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
@@ -29,10 +30,10 @@
         rootA.href = '#';
         rootA.style.cursor = 'default';
         rootA.innerHTML = `
-            <img src="https://raw.githubusercontent.com/Caddy21/-docs-assets-css/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png"
-                 width="23" height="23" style="vertical-align:middle;margin-right:6px;">&nbsp; Scripte
-            <span style="float:right;">▶</span>
-        `;
+              <i class="glyphicon glyphicon-wrench" style="margin-right:6px;"></i>
+              Scripte
+              <span style="float:right;">▶</span>
+            `;
 
         const subUl = document.createElement('ul');
         subUl.className = 'caddy-flyout-menu';
@@ -96,11 +97,13 @@
 
     // Beispiele: vorhandene Buttons verschieben
     setTimeout(() => {
+        migrateButton('#lss_mb_open', 'mass-builder-btn', 'Bau-Manager');
         migrateButton('#open-extension-helper', 'extension-manager-btn', 'Erweiterungs-Manager');
         migrateButton('#fahrzeug-manager-btn', 'fahrzeug-manager-btn', 'Fahrzeug-Manager');
-        migrateButton('#lss_mb_open', 'mass-builder-btn', 'Massenbau');
         migrateButton('#multiausblender-settings-btn', 'multiausblender-btn', 'Multiausblender');
         migrateButton('#Personalübersicht', 'personal-overview-btn', 'Personalübersicht');
+        migrateButton('#open-alias-manager', 'open-alias-manager-btn', 'Wachenalias-Manager');
+        migrateButton('#statistics-button', 'statistics-button-btn', 'Fahrzeug- und Gebäudestatistik');
 
     }, 1000);
 
