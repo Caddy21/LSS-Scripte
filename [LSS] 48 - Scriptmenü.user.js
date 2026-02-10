@@ -30,7 +30,7 @@
         rootA.style.cursor = 'default';
         rootA.innerHTML = `
             <img src="https://raw.githubusercontent.com/Caddy21/-docs-assets-css/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png"
-                 width="23" height="23" style="vertical-align:middle;margin-right:6px;">&nbsp; Caddy's Scripte
+                 width="23" height="23" style="vertical-align:middle;margin-right:6px;">&nbsp; Scripte
             <span style="float:right;">▶</span>
         `;
 
