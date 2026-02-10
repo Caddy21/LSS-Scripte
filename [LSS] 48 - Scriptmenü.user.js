@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 48 - Scriptmenü
+// @name         [LSS] Scriptmenü
 // @namespace    https://www.leitstellenspiel.de/caddy
 // @version      1.0
 // @description  Zentraler Ort für die Menüeinträge vom Erweiterungs-Manager, Fahrzeug-Manager, Multiausblender, Personalübersicht und Massenbauer
