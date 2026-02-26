@@ -44,7 +44,7 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
 <details>
   <summary> Hier findet Ihr eine Übersicht meiner Scripte </summary>
   
-    - Fahne in der Einsatzliste entfernen
+    - Fahne in der Einsatzliste entfernen 
     - Erweiterungs-Manager
     - Alle LST umschalten
     - Fahrzeuge im S6 auflisten
@@ -96,4 +96,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Countdownanzeige
     - Wachenfahrzeug Toggler
     - Reaname-Manager
+    - Kleinwachen ausblender
 </details>
