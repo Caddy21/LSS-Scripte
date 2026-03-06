@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] - Fahrzeug-Manager (Beta)
 // @namespace    https://leitstellenspiel.de/
-// @version      1.0
+// @version      1.1
 // @description  Zeigt fehlden Fahrzeuge pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -255,6 +255,13 @@
         .fm-reset-log-btn:hover { background-color: #e0a800; }
         .fm-building-profile { background-color: var(--bs-body-bg, #fff); color: var(--bs-body-color, #000); }
         .fm-building-profile { background-color: #222; color: #f0f0f0; border-color: #444; }
+                .fm-building-link {
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .fm-building-link:hover {
+            text-decoration: underline;
+        }
     `);
 
     // Stellplatzberechnung für alle Gebäudetypen
@@ -934,6 +941,10 @@
         return html;
     }
 
+    function buildBuildingLink(building) {
+        const url = `/buildings/${building.id}`;
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="fm-building-link">${building.caption}</a>`;
+    }
     // Tabelle für Gebäude eines Typs
     function buildFahrzeugTable(buildings, tableId, vehicleMap, vehicleTypeMap, lssmBuildingDefs) {
         const leitstellen = [...new Set(buildings.map(b => b.leitstelle_caption).filter(Boolean))]
@@ -1060,7 +1071,7 @@
             <td><input type="checkbox" class="fm-select" id="fm-select-${tableId}-${idx}"
                        data-credits="${buyableData.totalCredits}" data-coins="${buyableData.totalCoins}"></td>
             <td>${b.leitstelle_caption ?? '-'}</td>
-            <td>${b.caption}</td>
+            <td>${buildBuildingLink(b)}</td>
             <td>${profileCell}</td>
             <td>${b.vehicle_count ?? 0}</td>
             <td><span class="badge fm-badge-green">${freieStellplaetze}</span></td>
