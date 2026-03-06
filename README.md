@@ -97,4 +97,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Wachenfahrzeug Toggler
     - Reaname-Manager
     - Kleinwachen ausblender
+    - Personalfilter
 </details>
