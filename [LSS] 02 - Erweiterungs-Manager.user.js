@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.4.4
+// @version      1.4.5
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -430,12 +430,12 @@
             { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ], // Polizeischule
         '9_normal': [
-            { id: 0, name: '1. Technischer Zug: Fachgruppe Bergung/Notinstandsetzung', cost: 25000, coins: 5 },
+            { id: 0, name: '1. Technischer Zug: Fachgruppe Notversorgung/Notinstandsetzung', cost: 25000, coins: 5 },
             { id: 1, name: '1. Technischer Zug: Zugtrupp', cost: 25000, coins: 5 },
             { id: 2, name: 'Fachgruppe Räumen', cost: 25000, coins: 5 },
             { id: 3, name: 'Fachgruppe Wassergefahren', cost: 500000, coins: 15 },
             { id: 4, name: '2. Technischer Zug - Bergungsgruppe', cost: 25000, coins: 5 },
-            { id: 5, name: '2. Technischer Zug: Fachgruppe Bergung/Notinstandsetzung', cost: 25000, coins: 5 },
+            { id: 5, name: '2. Technischer Zug: Notversorgung/Notinstandsetzung', cost: 25000, coins: 5 },
             { id: 6, name: '2. Technischer Zug: Zugtrupp', cost: 25000, coins: 5 },
             { id: 7, name: 'Fachgruppe Ortung', cost: 450000, coins: 25 },
             { id: 8, name: 'Fachgruppe Wasserschaden/Pumpen', cost: 200000, coins: 25 },
@@ -3066,7 +3066,7 @@
         const policeStationSmallAlwaysAllowed = [0, 1];
         const policeStationSmallLimited = [10, 11, 12, 13];
 
-        const thwAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // Alle THW-Erweiterungen
+        const thwAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; // Alle THW-Erweiterungen
         const bpolAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Alle BPol-Erweiterungen
         const polSonderEinheitAllExtensions = [0, 1, 2, 3, 4]; // Alle PolSondereinheit-Erweiterungen
         const KhAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Alle Krankenhaus-Erweiterungen
@@ -3122,8 +3122,8 @@
         if (building.building_type === 9) {
             // THW
             const thwRequiredFirst = [0, 1];
-            const thwRestrictedUntilFirstTwo = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13];
-            const thwAlwaysAllowed = [11];
+            const thwRestrictedUntilFirstTwo = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15];
+            const thwAlwaysAllowed = [11, 14];
 
             if (thwAlwaysAllowed.includes(extensionId)) return false;
 
