@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Rename-Manager
+// @name         [LSS] 55 - Rename-Manager
 // @namespace    https://leitstellenspiel.de/
 // @version      1.0
 // @description  Ermöglicht das Vergeben von Wachen-Aliasen und das schema-basierte Umbenennen von Fahrzeugen inkl. Vorschau, Fortschrittsanzeige und Performance-Optimierung.
@@ -16,7 +16,7 @@
 (async function () {
     'use strict';
 
-    const DEBUG = true;
+    const DEBUG = false;
     function log(...args) { if (DEBUG) console.log('[LSS-Rename]', ...args); }
     function warn(...args) { if (DEBUG) console.warn('[LSS-Rename]', ...args); }
     function error(...args) { if (DEBUG) console.error('[LSS-Rename]', ...args); }
@@ -100,7 +100,7 @@
     // Funktion um die Gebäude zu laden
     async function fetchAllBuildings() {
         try {
-            const res = await fetch('https://www.leitstellenspiel.de/api/buildings', { credentials: 'include' });
+            const res = await fetch('/api/buildings', { credentials: 'include' });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
             log('Wachen vom API geladen:', data.length);
@@ -151,7 +151,8 @@
                 <div id="lss-type-content" style="border:1px solid ${darkMode ? '#333' : '#ccc'}; border-radius:4px; padding:8px; min-height:200px;"></div>
 
                 <div style="margin-top:8px; text-align:right;">
-                  <button class="btn btn-success btn-sm" id="lss-save-close-aliases">💾 Speichern & Schließen</button>
+                  <button class="btn btn-success btn-sm" id="lss-save-aliases">💾 Speichern</button>
+<button class="btn btn-default btn-sm" id="lss-close-aliases">❌ Schließen</button>
                 </div>
               </div>
             </div>
@@ -279,14 +280,26 @@
         };
 
         // ---------- Save & Close ----------
-        modal.querySelector('#lss-save-close-aliases').onclick = async () => {
-            modal.querySelectorAll('.lss-alias-input').forEach(inp => {
-                const val = inp.value.trim();
-                if (val) map[inp.dataset.id] = val;
-                else delete map[inp.dataset.id];
-            });
+        // Nur speichern
+        modal.querySelector('#lss-save-aliases').onclick = async () => {
+            try {
+                modal.querySelectorAll('.lss-alias-input').forEach(inp => {
+                    const val = inp.value.trim();
+                    if (val) map[inp.dataset.id] = val;
+                    else delete map[inp.dataset.id];
+                });
 
-            await saveAliasMap(map);
+                await saveAliasMap(map);
+
+                alert("Aliase wurden erfolgreich gespeichert!");
+            } catch (e) {
+                console.error(e);
+                alert("Fehler beim Speichern!");
+            }
+        };
+
+        // Nur schließen
+        modal.querySelector('#lss-close-aliases').onclick = () => {
             modal.remove();
         };
     }
@@ -366,48 +379,121 @@
 
     // Erstellt die Vorschau mit Inline-Inputs
     function applyPreviewInTableWithInputs() {
-        if (!stationAlias) { alert('Kein Wachen-Alias gesetzt!'); return; }
+        if (!stationAlias) {
+            alert('Kein Wachen-Alias gesetzt!');
+            return;
+        }
 
-        const rows = document.querySelectorAll('tbody tr');
-        const typeCounters = {};
+        const rows = Array.from(document.querySelectorAll('tbody tr'));
+        if (!rows.length) return;
+
+        const existingNumbers = new Map();
+        const highestNumber = new Map();
+        const nextFreeNumbers = new Map();
+        const typeCounters = new Map();
+
         let total = 0;
 
-        rows.forEach(row => {
+        // 1️⃣ Bestehende Nummern EINMALIG sammeln
+        for (const row of rows) {
             const nameLink = row.querySelector('td a[href^="/vehicles/"]');
-            if (!nameLink) return;
-            if (nameLink.dataset.lssPreviewApplied) return;
+            if (!nameLink) continue;
+
+            const name = nameLink.textContent.trim();
+            const match = name.match(/^(.+?)-(\d+)\s+-\s+(.+)$/);
+            if (!match) continue;
+
+            const vehicleType = match[1];
+            const number = parseInt(match[2], 10);
+            const alias = match[3];
+
+            if (alias !== stationAlias) continue;
+
+            if (!existingNumbers.has(vehicleType)) {
+                existingNumbers.set(vehicleType, new Set());
+                highestNumber.set(vehicleType, 0);
+            }
+
+            existingNumbers.get(vehicleType).add(number);
+
+            if (number > highestNumber.get(vehicleType)) {
+                highestNumber.set(vehicleType, number);
+            }
+        }
+
+        // 2️⃣ Lücken effizient berechnen (O(n))
+        for (const [type, numbersSet] of existingNumbers.entries()) {
+            const max = highestNumber.get(type);
+            const missing = [];
+
+            for (let i = 1; i <= max; i++) {
+                if (!numbersSet.has(i)) {
+                    missing.push(i);
+                }
+            }
+
+            nextFreeNumbers.set(type, missing);
+            typeCounters.set(type, max);
+        }
+
+        // 3️⃣ Vorschau generieren
+        for (const row of rows) {
+            const nameLink = row.querySelector('td a[href^="/vehicles/"]');
+            if (!nameLink) continue;
+
+            // Schutz gegen mehrfaches Vorschau-Klicken
+            if (nameLink.dataset.lssPreviewApplied === 'true') continue;
 
             const oldName = nameLink.textContent.trim();
+
             if (!nameLink.dataset.originalValue) {
                 nameLink.dataset.originalValue = oldName;
             }
 
             let baseType = nameLink.dataset.lssBaseType;
-            if (!baseType) {baseType = oldName.replace(/\s*-\s*\d+.*$/, '').trim(); nameLink.dataset.lssBaseType = baseType; }
+            if (!baseType) {
+                baseType = oldName.replace(/\s*-\s*\d+.*$/, '').trim();
+                nameLink.dataset.lssBaseType = baseType;
+            }
 
             const vehicleType = baseType;
 
-            // Zähler pro Fahrzeugtyp
-            if (!typeCounters[vehicleType]) {
-                typeCounters[vehicleType] = 1;
-            } else {
-                typeCounters[vehicleType]++;
-            }
-
-            const typeNumber = typeCounters[vehicleType];
-            const newName = `${vehicleType}-${typeNumber} - ${stationAlias}`;
-
-            // Prüfen, ob Fahrzeug bereits korrekt benannt ist
+            // Bereits korrekt?
             if (isAlreadyCorrectlyNamed(oldName, vehicleType, stationAlias)) {
-                const infoSpan = document.createElement('span');
-                infoSpan.textContent = '✔ Bereits korrekt benannt';
-                infoSpan.style.color = '#5cb85c';
-                infoSpan.style.fontSize = '13px';
-                infoSpan.style.marginLeft = '6px';
 
-                nameLink.parentElement.appendChild(infoSpan);
-                return; // KEINE Vorschau + KEIN Save-Button
+                // Doppeltes Hinzufügen verhindern
+                if (!row.querySelector('.lss-already-ok')) {
+                    const infoSpan = document.createElement('span');
+                    infoSpan.textContent = ' ✔ Bereits korrekt benannt';
+                    infoSpan.className = 'lss-already-ok';
+                    infoSpan.style.color = '#5cb85c';
+                    infoSpan.style.fontSize = '13px';
+                    infoSpan.style.marginLeft = '6px';
+                    nameLink.parentElement.appendChild(infoSpan);
+                }
+
+                continue;
             }
+
+            // Nummer bestimmen (erst Lücke, dann max+1)
+            let typeNumber;
+
+            if (!nextFreeNumbers.has(vehicleType)) {
+                nextFreeNumbers.set(vehicleType, []);
+                typeCounters.set(vehicleType, 0);
+            }
+
+            const missing = nextFreeNumbers.get(vehicleType);
+
+            if (missing.length > 0) {
+                typeNumber = missing.shift();
+            } else {
+                const currentMax = typeCounters.get(vehicleType) || 0;
+                typeNumber = currentMax + 1;
+                typeCounters.set(vehicleType, typeNumber);
+            }
+
+            const newName = `${vehicleType}-${typeNumber} - ${stationAlias}`;
             const vehicleId = nameLink.getAttribute('href').split('/').pop();
 
             nameLink.style.display = 'none';
@@ -418,9 +504,7 @@
             input.className = 'form-control lss-inline-preview-input';
             input.value = newName;
             input.dataset.vehicleId = vehicleId;
-            input.dataset.originalValue = oldName;   // Backup
-            input.classList.add('lss-preview-input'); // Marker für Revert
-
+            input.dataset.originalValue = oldName;
 
             const saveBtn = document.createElement('button');
             saveBtn.type = 'button';
@@ -431,7 +515,9 @@
             const statusSpan = document.createElement('span');
             statusSpan.style.marginLeft = '6px';
 
-            saveBtn.onclick = async () => { await saveSingleVehicleName(vehicleId, input.value, nameLink, input, statusSpan); };
+            saveBtn.onclick = async () => {
+                await saveSingleVehicleName(vehicleId, input.value, nameLink, input, statusSpan);
+            };
 
             const container = document.createElement('div');
             container.style.display = 'flex';
@@ -443,10 +529,13 @@
             nameLink.parentElement.appendChild(container);
 
             total++;
-        });
+        }
 
         const statusDiv = document.getElementById('lss_status');
-        if (statusDiv) statusDiv.textContent = `Status: Vorschau angewendet (${total} Fahrzeuge)`;
+        if (statusDiv) {
+            statusDiv.textContent = `Status: Vorschau angewendet (${total} Fahrzeuge)`;
+        }
+
         log('Inline-Vorschau angewendet:', total);
     }
 
