@@ -98,4 +98,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Kleinwachen ausblender
     - Personalfilter
     - Zeitentracker
+    - Bundes- & Kreisgrenzen
 </details>
