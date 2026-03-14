@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 55 - Rename-Manager
+// @name         [LSS] Rename-Manager
 // @namespace    https://leitstellenspiel.de/
 // @version      1.0
 // @description  Ermöglicht das Vergeben von Wachen-Aliasen und das schema-basierte Umbenennen von Fahrzeugen inkl. Vorschau, Fortschrittsanzeige und Performance-Optimierung.
