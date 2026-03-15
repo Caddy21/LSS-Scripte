@@ -99,4 +99,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Personalfilter
     - Zeitentracker
     - Bundes- & Kreisgrenzen
+    - Navbar ausblender
 </details>
