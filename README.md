@@ -100,4 +100,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Zeitentracker
     - Bundes- & Kreisgrenzen
     - Navbar ausblender
+    - Bewerbungsstarter
 </details>
