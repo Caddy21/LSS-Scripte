@@ -101,4 +101,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Bundes- & Kreisgrenzen
     - Navbar ausblender
     - Bewerbungsstarter
+    - Editorhelfer
 </details>
