@@ -102,4 +102,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Navbar ausblender
     - Bewerbungsstarter
     - Editorhelfer
+    - Texthelfer
 </details>
