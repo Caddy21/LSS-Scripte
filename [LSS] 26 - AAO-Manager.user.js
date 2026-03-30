@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 26 - AAO-Manager
+// @name         [LSS] AAO-Manager
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Effizientes Verwalten deiner Alarm- und Ausrückeordnung (AAO): Fahrzeuge nachladen, AAO zurücksetzen, neu anlegen oder bearbeiten – alles mit einem Klick, in der optimalen Reihenfolge.
@@ -111,7 +111,7 @@
 
         aaoButtons.forEach(btn => {
             // Schon bearbeitet? Dann überspringen
-            if (btn.querySelector('.aao-edit-icon')) return;
+            if (btn.querySelector('.aao-edit-icon') || btn.querySelector('.aao-delete-icon')) return;
 
             // AAO-ID extrahieren
             const aaoId = btn.getAttribute('aao_id') || btn.id.replace('aao_', '');
@@ -134,8 +134,38 @@
                 window.open(`https://www.leitstellenspiel.de/aaos/${aaoId}/edit`, '_blank');
             });
 
+            // 🗑 Delete Icon erzeugen
+            const deleteIcon = document.createElement('span');
+            deleteIcon.className = 'aao-delete-icon';
+            deleteIcon.textContent = '🗑';
+            deleteIcon.title = 'AAO löschen';
+            deleteIcon.style.marginRight = '5px';
+            deleteIcon.style.cursor = 'pointer';
+            deleteIcon.style.userSelect = 'none';
+            deleteIcon.style.color = '#ff4d4d';
+
+            // Klick-Event für Löschen
+            deleteIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+
+                if (confirm('Möchtest du diese AAO wirklich löschen?')) {
+                    fetch(`/aaos/${aaoId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
+                        }
+                    }).then(() => {
+                        // Optional: Seite neu laden oder Button entfernen
+                        btn.remove();
+                    });
+                }
+            });
+
             // Icon als erstes Element im AAO-Button einfügen
             btn.insertBefore(icon, btn.firstChild);
+            btn.insertBefore(deleteIcon, btn.firstChild);
         });
     }
 
