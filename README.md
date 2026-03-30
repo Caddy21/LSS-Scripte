@@ -103,4 +103,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Bewerbungsstarter
     - Editorhelfer
     - Texthelfer
+    - Verbandsgebäudebutton
 </details>
