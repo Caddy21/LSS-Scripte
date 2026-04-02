@@ -28,7 +28,7 @@
 
         const rootA = document.createElement('a');
         rootA.href = '#';
-        rootA.style.cursor = 'default';
+        rootA.style.cursor = 'pointer';
         rootA.innerHTML = `
               <i class="glyphicon glyphicon-wrench" style="margin-right:6px;"></i>
               Scripte
