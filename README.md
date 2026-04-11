@@ -104,4 +104,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Editorhelfer
     - Texthelfer
     - Verbandsgebäudebutton
+    - Verbandschulen Filter
 </details>
