@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Verbandschulen Filter
 // @namespace    tampermonkey.net
-// @description  Filtert Eure Wachen per Leitstellenzugehörigkeit oder per Suche
+// @description  Filtert Eure Wachen per Leitstellenzugehörigkeit oder per Suche in den Verbandsschulen
 // @version      1.0
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/buildings/*
