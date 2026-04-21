@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] 29 - Fahrzeug-Manager (Beta)
+// @name         [LSS] Fahrzeug-Manager
 // @namespace    https://leitstellenspiel.de/
-// @version      0.1
+// @version      1.0
 // @description  Zeigt fehlden Fahrzeuge pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -628,10 +628,22 @@
                     profiles: {}
                 };
             }
+
             const parsed = JSON.parse(raw);
+
             if (!parsed.profiles) parsed.profiles = {};
-            if (!parsed.activeProfile) parsed.activeProfile = Object.keys(parsed.profiles)[0] || null;
+
+            // 🔥 Cleanup
+            if (parsed.profiles["null"]) {
+                delete parsed.profiles["null"];
+            }
+
+            if (!parsed.activeProfile || parsed.activeProfile === "null") {
+                parsed.activeProfile = Object.keys(parsed.profiles)[0] || null;
+            }
+
             return parsed;
+
         } catch (e) {
             console.warn(`[FM][Config] Fehler beim Laden der Profile ${buildingKey}:`, e);
             return {
@@ -649,12 +661,18 @@
     // Gibt die Konfiguration des aktuell aktiven Profils für ein bestimmtes Gebäude zurück.
     function getActiveProfileConfig(buildingKey) {
         const data = loadProfiles(buildingKey);
+
+        if (!data.activeProfile) return [];
+
         return data.profiles[data.activeProfile] || [];
     }
 
     // Speichert eine neue Konfiguration für das aktuell aktive Profil eines Gebäudes.
     function saveActiveProfileConfig(buildingKey, config) {
         const data = loadProfiles(buildingKey);
+
+        if (!data.activeProfile) return; // 💥 verhindert "null"-Profil
+
         data.profiles[data.activeProfile] = config;
         saveProfiles(buildingKey, data);
     }
@@ -749,34 +767,34 @@
             const amount = saved ? (parseInt(saved.amount) || 1) : 1;
 
             html += `
-<div class="fm-config-cell"
-     style="white-space:nowrap;display:${display};
-            flex-direction:column;gap:4px;padding:4px 6px;
-            border:1px solid var(--spoiler-border);
-            border-radius:4px;background:var(--spoiler-body-bg);">
+            <div class="fm-config-cell"
+                 style="white-space:nowrap;display:${display};
+                        flex-direction:column;gap:4px;padding:4px 6px;
+                        border:1px solid var(--spoiler-border);
+                        border-radius:4px;background:var(--spoiler-body-bg);">
 
-    <label style="cursor:pointer;display:flex;gap:4px;">
-        <input type="checkbox"
-               class="fm-config-select"
-               data-type-id="${vehicle.id}"
-               data-caption="${vehicle.caption}"
-               ${checked ? 'checked' : ''}>
-        <span title="${vehicle.caption}"
-              style="overflow:hidden;text-overflow:ellipsis;">
-              ${vehicle.caption}
-        </span>
-    </label>
+                <label style="cursor:pointer;display:flex;gap:4px;">
+                    <input type="checkbox"
+                           class="fm-config-select"
+                           data-type-id="${vehicle.id}"
+                           data-caption="${vehicle.caption}"
+                           ${checked ? 'checked' : ''}>
+                    <span title="${vehicle.caption}"
+                          style="overflow:hidden;text-overflow:ellipsis;">
+                          ${vehicle.caption}
+                    </span>
+                </label>
 
-    <input type="number"
-           class="fm-config-amount"
-           value="${amount}" min="1"
-           style="width:100%;padding:2px 4px;
-                  border:1px solid var(--spoiler-border);
-                  border-radius:3px;
-                  background:var(--spoiler-input-bg, #ffffff);
-                  color:var(--spoiler-input-text, #000000);
-                  color-scheme: light dark;">
-</div>`;
+                <input type="number"
+                       class="fm-config-amount"
+                       value="${amount}" min="1"
+                       style="width:100%;padding:2px 4px;
+                              border:1px solid var(--spoiler-border);
+                              border-radius:3px;
+                              background:var(--spoiler-input-bg, #ffffff);
+                              color:var(--spoiler-input-text, #000000);
+                              color-scheme: light dark;">
+             </div>`;
         });
 
         html += `</div>`;
@@ -786,63 +804,17 @@
         setTimeout(() => {
 
             const wrapper = document.getElementById(`fm-config-table-${tableId}`).parentElement;
-            const grid = wrapper.querySelector('.fm-config-grid');
-            const header = document.querySelector(`[data-target="fm-config-body-${tableId}"]`);
-
             if (wrapper.dataset.eventsAttached) return;
             wrapper.dataset.eventsAttached = "true";
 
-            let showingHidden = firstStart;
+            let profilesData = loadProfiles(tableId);
+            let currentProfile = profilesData.activeProfile;
+            let currentConfig = getActiveProfileConfig(tableId) || [];
 
-            function updateHeaderCount() {
-
-                const grid = wrapper.querySelector('.fm-config-grid');
-                if (!grid) return;
-
-                const profilesData = loadProfiles(tableId);
-                const currentProfile = profilesData.activeProfile;
-
-                let total = 0;
-
-                if (currentProfile && profilesData.profiles[currentProfile]) {
-
-                    profilesData.profiles[currentProfile].forEach(entry => {
-                        if (entry.checked) {
-                            total += parseInt(entry.amount) || 0;
-                        }
-                    });
-
-                }
-
-                const header = document.querySelector(`[data-target="fm-config-body-${tableId}"]`);
-
-                if (header) {
-
-                    // 👉 WICHTIG: Profil IMMER frisch laden
-                    const profilesData = loadProfiles(tableId);
-                    const profileNames = Object.keys(profilesData.profiles);
-                    const currentProfile = profilesData.activeProfile;
-
-                    let profileText = '';
-
-                    if (profileNames.length > 0) {
-                        profileText = ' (' + profileNames.map(name => {
-                            return name === currentProfile
-                                ? `<strong>${name}</strong>`
-                            : name;
-                        }).join(' | ') + ')';
-                    }
-
-                    header.innerHTML =
-                        `${buildingCaption} – ${total} Fahrzeuge` +
-                        profileText;
-                }
-            }
-
-            function saveConfig() {
+            function getCurrentConfigFromDOM() {
 
                 const grid = wrapper.querySelector('.fm-config-grid');
-                if (!grid) return;
+                if (!grid) return [];
 
                 const config = [];
 
@@ -860,166 +832,188 @@
 
                 });
 
-                saveActiveProfileConfig(tableId, config);
+                return config;
             }
 
-            /* ---------- EVENT DELEGATION ---------- */
+            function saveAndSync() {
+                currentConfig = getCurrentConfigFromDOM();
+                saveActiveProfileConfig(tableId, currentConfig);
+                updateHeaderCount();
+            }
 
-            wrapper.addEventListener('change', e => {
-                if (e.target.classList.contains('fm-profile-select')) {
-                    const data = loadProfiles(tableId);
-                    data.activeProfile = e.target.value;
-                    saveProfiles(tableId, data);
+            function updateHeaderCount() {
 
-                    wrapper.innerHTML = buildConfigGrid(vehicles, tableId, itemsPerRow, buildingCaption);
+                let total = 0;
 
-                    // 👉 WICHTIG: Header neu berechnen
-                    setTimeout(() => {
-                        const newWrapper = document.getElementById(`fm-config-table-${tableId}`)?.parentElement;
-                        if (!newWrapper) return;
+                currentConfig.forEach(entry => {
+                    if (entry.checked) {
+                        total += parseInt(entry.amount) || 0;
+                    }
+                });
 
-                        const grid = newWrapper.querySelector('.fm-config-grid');
-                        if (!grid) return;
+                const header = document.querySelector(`[data-target="fm-config-body-${tableId}"]`);
 
-                        let total = 0;
+                if (!header) return;
 
-                        const profilesData = loadProfiles(tableId);
-                        const currentProfile = profilesData.activeProfile;
+                profilesData = loadProfiles(tableId);
+                currentProfile = profilesData.activeProfile;
 
-                        if (currentProfile && profilesData.profiles[currentProfile]) {
-                            profilesData.profiles[currentProfile].forEach(entry => {
-                                if (entry.checked) {
-                                    total += parseInt(entry.amount) || 0;
-                                }
-                            });
-                        }
+                const profileNames = Object.keys(profilesData.profiles);
 
-                        const header = document.querySelector(`[data-target="fm-config-body-${tableId}"]`);
+                let profileText = '';
 
-                        if (header) {
-                            const profileNames = Object.keys(profilesData.profiles);
-
-                            let profileText = '';
-                            if (profileNames.length > 0) {
-                                profileText = ' (' + profileNames.map(name => {
-                                    return name === currentProfile
-                                        ? `<span style="color:#28a745; font-weight:bold;">${name}</span>`
-                                    : name;
-                                }).join(' | ') + ')';
-                            }
-
-                            header.innerHTML =
-                                `${buildingCaption} – ${total} Fahrzeuge` +
-                                profileText;
-                        }
-
-                    }, 0);
+                if (profileNames.length > 0) {
+                    profileText = ' (' + profileNames.map(name => {
+                        return name === currentProfile
+                            ? `<strong>${name}</strong>`
+                        : name;
+                    }).join(' | ') + ')';
                 }
-                if (e.target.classList.contains('fm-config-select')) {
-                    const cell = e.target.closest('.fm-config-cell');
-                    cell.style.display = e.target.checked ? 'flex' : 'none';
+
+                header.innerHTML =
+                    `${buildingCaption} – ${total} Fahrzeuge` +
+                    profileText;
+            }
+
+            function reRenderAndSync() {
+                wrapper.innerHTML = buildConfigGrid(vehicles, tableId, itemsPerRow, buildingCaption);
+
+                setTimeout(() => {
+                    currentConfig = getCurrentConfigFromDOM();
+                    saveActiveProfileConfig(tableId, currentConfig);
                     updateHeaderCount();
-                    saveConfig();
-                }
+                }, 0);
+            }
+
+            /* ---------------- EVENTS ---------------- */
+
+            // 🔥 LIVE UPDATE bei Eingabe
+            wrapper.addEventListener('input', e => {
                 if (e.target.classList.contains('fm-config-amount')) {
-                    updateHeaderCount();
-                    saveConfig();
+                    saveAndSync();
                 }
             });
+
+            wrapper.addEventListener('change', e => {
+
+                if (e.target.classList.contains('fm-profile-select')) {
+
+                    profilesData = loadProfiles(tableId);
+                    profilesData.activeProfile = e.target.value;
+                    saveProfiles(tableId, profilesData);
+
+                    reRenderAndSync();
+                    setTimeout(() => {
+                        currentConfig = getCurrentConfigFromDOM();
+                        saveActiveProfileConfig(tableId, currentConfig);
+                        updateHeaderCount();
+                    }, 0);
+                    return;
+                }
+
+                if (e.target.classList.contains('fm-config-select')) {
+
+                    const cell = e.target.closest('.fm-config-cell');
+                    cell.style.display = e.target.checked ? 'flex' : 'none';
+
+                    saveAndSync();
+                }
+
+            });
+
             wrapper.addEventListener('click', e => {
 
                 if (e.target.classList.contains('fm-profile-saveas')) {
+
                     const newName = prompt('Name des neuen Profils:');
                     if (!newName) return;
 
-                    const data = loadProfiles(tableId);
-                    if (data.profiles[newName]) { alert('Profil existiert bereits.'); return; }
+                    profilesData = loadProfiles(tableId);
 
-                    const config = [];
+                    if (profilesData.profiles[newName]) {
+                        alert('Profil existiert bereits.');
+                        return;
+                    }
 
-                    vehicles.forEach(vehicle => {
-                        config.push({
-                            typeId: parseInt(vehicle.id),
-                            caption: vehicle.caption,
-                            checked: true,
-                            amount: 1
-                        });
-                    });
+                    const config = vehicles.map(v => ({
+                        typeId: parseInt(v.id),
+                        caption: v.caption,
+                        checked: true,
+                        amount: 1
+                    }));
 
-                    data.profiles[newName] = config;
-                    data.activeProfile = newName;
-                    saveProfiles(tableId, data);
+                    profilesData.profiles[newName] = config;
+                    profilesData.activeProfile = newName;
 
-                    wrapper.innerHTML = buildConfigGrid(vehicles, tableId, itemsPerRow, buildingCaption);
-                } // Profil anlegen
+                    saveProfiles(tableId, profilesData);
+
+                    reRenderAndSync();
+                    return;
+                }
+
                 if (e.target.classList.contains('fm-profile-delete')) {
-                    const data = loadProfiles(tableId);
-                    const active = data.activeProfile;
-                    if (!active) { alert('Kein Profil aktiv.'); return; }
+
+                    profilesData = loadProfiles(tableId);
+                    const active = profilesData.activeProfile;
+
+                    if (!active) return;
                     if (!confirm(`Profil "${active}" löschen?`)) return;
 
-                    delete data.profiles[active];
-                    const remaining = Object.keys(data.profiles);
-                    data.activeProfile = remaining[0] || null;
+                    delete profilesData.profiles[active];
 
-                    saveProfiles(tableId, data);
-                    updateHeaderCount();
-                    wrapper.innerHTML = buildConfigGrid(vehicles, tableId, itemsPerRow, buildingCaption);
-                } // Profil löschen
-                if (e.target.classList.contains('fm-config-select-all')) {
+                    const remaining = Object.keys(profilesData.profiles);
+                    profilesData.activeProfile = remaining[0] || null;
 
-                    const grid = wrapper.querySelector('.fm-config-grid');
-                    if (!grid) return;
+                    saveProfiles(tableId, profilesData);
 
-                    grid.querySelectorAll('.fm-config-select').forEach(cb => {
-                        cb.checked = true;
-                    });
+                    reRenderAndSync();
+                    return;
+                }
 
-                    grid.querySelectorAll('.fm-config-cell').forEach(cell => {
-                        cell.style.display = 'flex';
-                    });
+                if (e.target.classList.contains('fm-config-select-all') ||
+                    e.target.classList.contains('fm-config-deselect-all')) {
 
-                    updateHeaderCount();
-                    saveConfig();
-                } // Alle anwählen
-                if (e.target.classList.contains('fm-config-deselect-all')) {
+                    const selectAll = e.target.classList.contains('fm-config-select-all');
 
                     const grid = wrapper.querySelector('.fm-config-grid');
                     if (!grid) return;
 
                     grid.querySelectorAll('.fm-config-select').forEach(cb => {
-                        cb.checked = false;
+                        cb.checked = selectAll;
                     });
 
                     grid.querySelectorAll('.fm-config-cell').forEach(cell => {
-                        cell.style.display = 'none';
+                        cell.style.display = selectAll ? 'flex' : 'none';
                     });
 
-                    updateHeaderCount();
-                    saveConfig();
-                } // Alle abwählen
+                    saveAndSync();
+                }
+
                 if (e.target.classList.contains('fm-config-toggle')) {
 
                     const grid = wrapper.querySelector('.fm-config-grid');
                     if (!grid) return;
 
-                    showingHidden = !showingHidden;
+                    const hidden = e.target.dataset.hidden === "true";
+                    const newState = !hidden;
 
                     grid.querySelectorAll('.fm-config-cell').forEach(cell => {
                         const cb = cell.querySelector('.fm-config-select');
 
                         if (!cb.checked) {
-                            cell.style.display = showingHidden ? 'flex' : 'none';
+                            cell.style.display = newState ? 'flex' : 'none';
                         }
                     });
 
-                    e.target.textContent = showingHidden
+                    e.target.dataset.hidden = newState;
+                    e.target.textContent = newState
                         ? 'Abgewählte Fahrzeuge ausblenden'
                     : 'Abgewählte Fahrzeuge anzeigen';
-                } // Ausgeblendete anzeigen
+                }
 
             });
 
+            // 🔥 Initial korrekt setzen
             updateHeaderCount();
 
         }, 0);
@@ -1027,9 +1021,10 @@
         return html;
     }
 
-    // Tabelle für Gebäude eines Typs
-    // --- Hauptfunktion: nur HTML bauen ---
-    function buildFahrzeugTable(buildings, tableId, vehicleMap, vehicleTypeMap, lssmBuildingDefs) {
+    // Tabelle bauen
+    function buildFahrzeugTable(buildings, tableId, vehicleMap, vehicleTypeMap, lssmBuildingDefs, filters = {}) {
+        const filterLeitstelle = filters.leitstelle || '';
+        const filterWache = filters.wache || '';
         const leitstellen = [...new Set(buildings.map(b => b.leitstelle_caption).filter(Boolean))]
         .sort((a, b) => a.localeCompare(b, 'de'));
         const wachen = [...new Set(buildings.map(b => b.caption).filter(Boolean))]
@@ -1089,6 +1084,8 @@
         const sortedBuildings = buildings.slice().sort((a, b) => a.caption.localeCompare(b.caption));
 
         sortedBuildings.forEach((b, idx) => {
+            if (filterLeitstelle && b.leitstelle_caption !== filterLeitstelle) return;
+            if (filterWache && b.caption !== filterWache) return;
             const vehiclesOnBuilding = vehicleMap[b.id] || [];
             const typeCountMapOnBuilding = {};
 
@@ -1175,7 +1172,7 @@
         return html;
     }
 
-    // --- Neue Funktion für alle Event-Listener ---
+    // Funktion für alle Event-Listener
     function setupTableEventListeners(tableId, buildings, vehicleMap, vehicleTypeMap, lssmBuildingDefs) {
         const table = document.getElementById(`fm-table-${tableId}`);
         if (!table) return;
@@ -1201,20 +1198,54 @@
 
                 // Tabelle neu rendern
                 const container = table.parentElement;
-                container.innerHTML = buildFahrzeugTable(buildings, tableId, vehicleMap, vehicleTypeMap, lssmBuildingDefs);
+                container.style.visibility = 'hidden';
+                const filterLeitstelle = table.querySelector('.fm-filter-leitstelle')?.value || '';
+                const filterWache = table.querySelector('.fm-filter-wache')?.value || '';
+                container.innerHTML = buildFahrzeugTable(
+                    buildings,
+                    tableId,
+                    vehicleMap,
+                    vehicleTypeMap,
+                    lssmBuildingDefs,
+                    {
+                        leitstelle: filterLeitstelle,
+                        wache: filterWache
+                    }
+                );
 
                 // Auswahl & Master wiederherstellen
                 const newTable = document.getElementById(`fm-table-${tableId}`);
+
                 if (newTable) {
+                    // Filter wiederherstellen
+                    const leitstelleSelect = newTable.querySelector('.fm-filter-leitstelle');
+                    const wacheSelect = newTable.querySelector('.fm-filter-wache');
+
+                    if (leitstelleSelect) leitstelleSelect.value = filterLeitstelle;
+                    if (wacheSelect) wacheSelect.value = filterWache;
+
+                    leitstelleSelect?.dispatchEvent(new Event('change'));
+                    wacheSelect?.dispatchEvent(new Event('change'));
+
+                    // ✅ Checkboxen wiederherstellen
                     newTable.querySelectorAll('tbody tr').forEach(row => {
-                        if (selectedBuildings.has(row.dataset.buildingId)) {
+                        const id = row.dataset.buildingId;
+                        if (selectedBuildings.has(id)) {
                             const cb = row.querySelector('.fm-select');
                             if (cb) cb.checked = true;
                         }
                     });
-                    const newMaster = newTable.querySelector('.fm-select-all');
-                    if (newMaster) newMaster.checked = masterChecked;
+
+                    // ✅ Master-Checkbox wiederherstellen
+                    const master = newTable.querySelector('.fm-select-all');
+                    if (master) master.checked = masterChecked;
+
+                    // Optional: Buttons aktualisieren
+                    updateBuyButtons(newTable);
                 }
+
+                // 👇 erst danach wieder anzeigen
+                container.style.visibility = 'visible';
             });
         });
 
@@ -1266,7 +1297,21 @@
 
         table.querySelector('.fm-filter-leitstelle')?.addEventListener('change', applyRowFilter);
         table.querySelector('.fm-filter-wache')?.addEventListener('change', applyRowFilter);
-        table.querySelector('.fm-filter-reset')?.addEventListener('click', () => setTimeout(applyRowFilter, 10));
+        table.querySelector('.fm-filter-reset')?.addEventListener('click', () => {
+            const container = table.parentElement;
+
+            container.innerHTML = buildFahrzeugTable(
+                buildings,
+                tableId,
+                vehicleMap,
+                vehicleTypeMap,
+                lssmBuildingDefs,
+                {
+                    leitstelle: '',
+                    wache: ''
+                }
+            );
+        });
 
         // --- initial anwenden ---
         applyRowFilter();
