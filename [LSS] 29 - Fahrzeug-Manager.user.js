@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Fahrzeug-Manager
 // @namespace    https://leitstellenspiel.de/
-// @version      1.0
+// @version      1.0.1
 // @description  Zeigt fehlden Fahrzeuge pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -1279,6 +1279,12 @@
                 if (hideNoMissing && missingText === 'Keine') visible = false;
 
                 row.style.display = visible ? '' : 'none';
+
+                if (!visible) {
+                    const cb = row.querySelector('.fm-select');
+                    if (cb) cb.checked = false;
+                }
+                updateBuyButtons(table);
             });
         }
 
@@ -1291,10 +1297,13 @@
 
         table.querySelector('.fm-select-all')?.addEventListener('change', e => {
             const checked = e.target.checked;
-            table.querySelectorAll('.fm-select').forEach(cb => cb.checked = checked);
+            const visibleCheckboxes = [...table.querySelectorAll('tbody .fm-select')]
+            .filter(cb => cb.closest('tr').offsetParent !== null);
+            visibleCheckboxes.forEach(cb => {
+                cb.checked = checked;
+            });
             updateBuyButtons(table);
         });
-
         table.querySelector('.fm-filter-leitstelle')?.addEventListener('change', applyRowFilter);
         table.querySelector('.fm-filter-wache')?.addEventListener('change', applyRowFilter);
         table.querySelector('.fm-filter-reset')?.addEventListener('click', () => {
@@ -1591,10 +1600,47 @@
 
                 try {
                     const res = await fetch(url, { signal: controller.signal });
-                    if (res.ok) boughtCount++;
+
+                    if (res.ok) {
+                        boughtCount++;
+
+                        // --- Kaufprotokoll speichern ---
+                        let purchaseLog = [];
+
+                        try {
+                            purchaseLog = JSON.parse(localStorage.getItem('fm-purchase-log')) || [];
+                        } catch {}
+
+                        const vehicleData = vehicleTypeMapGlobal[vehicleId];
+
+                        const buildingObj = (buildingDataGlobal || [])
+                        .find(b => Number(b.id) === Number(buildingId));
+
+                        purchaseLog.push({
+                            time: Date.now(),
+                            buildingId,
+                            buildingName: buildingObj?.caption || `Wache ${buildingId}`,
+                            vehicleId,
+                            vehicleName: vehicleData?.caption || `Fahrzeug ${vehicleId}`,
+                            price: currency === 'credits'
+                            ? (vehicleData?.credits || 0)
+                            : (vehicleData?.coins || 0),
+                            currency: currency === 'credits' ? 'Credits' : 'Coins'
+                        });
+
+                        localStorage.setItem(
+                            'fm-purchase-log',
+                            JSON.stringify(purchaseLog)
+                        );
+                    }
+
                 } catch (err) {
                     if (err.name === 'AbortError') break;
-                    console.error(`[Kauf] Fehler Typ ${vehicleId} Wache ${buildingId}:`, err);
+
+                    console.error(
+                        `[Kauf] Fehler Typ ${vehicleId} Wache ${buildingId}:`,
+                        err
+                    );
                 }
 
                 if (progressText && progressBar) {
@@ -1608,17 +1654,20 @@
             // ----------------- 7. Abschluss / Abbruch -----------------
             if (cancelRequested) {
                 if (progressText && spinner) {
-                    progressText.textContent = `⛔ Der Kauf wurde abgebrochen. Es wurden dennoch (${boughtCount} Fahrzeuge gekauft)`;
+                    progressText.textContent = `Der Kauf wurde abgebrochen. Es wurden dennoch (${boughtCount} Fahrzeuge gekauft)`;
                     spinner.textContent = '⛔';
                 }
                 await new Promise(r => setTimeout(r, 5000)); // Server wartet
             } else if (progressText && spinner) {
-                progressText.textContent = `✅ Kauf abgeschlossen (${boughtCount} Fahrzeuge)`;
+                progressText.textContent = `Kauf abgeschlossen (${boughtCount} Fahrzeuge)`;
                 spinner.textContent = '✅';
             }
 
             // Gebäude + Kosten aktualisieren
-            await loadBuildingsFromAPI();
+            await Promise.all([
+                loadBuildingsFromAPI()
+            ]);
+            updateUserResources();
             updateSelectedCosts();
 
         } finally {
