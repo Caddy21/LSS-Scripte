@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Fahrzeug-Manager
 // @namespace    https://leitstellenspiel.de/
-// @version      1.0.1
+// @version      1.0.2
 // @description  Zeigt fehlden Fahrzeuge pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -37,6 +37,7 @@
         '24_normal': 'Reiterstaffel',
         '25_normal': 'Bergrettungswache',
         '26_normal': 'Seenotrettungswache',
+        '29_normal': 'Autobahnpolizei',
     };
 
     // Button ins Profil-Dropdown einfügen
