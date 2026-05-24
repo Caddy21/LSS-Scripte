@@ -1,8 +1,7 @@
-
 // ==UserScript==
 // @name         [LSS] Einsatzkategorienfilter
 // @namespace    http://tampermonkey.net/
-// @version      1.8.1
+// @version      1.8.2
 // @description  Filtert die Einsatzliste nach Kategorien
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -17,6 +16,7 @@
     const defaultCategoryGroups = {
         "FF": ['fire'],
         "POL": ['police'],
+        "AP": ['highway_police'],
         "RD": ['ambulance'],
         "THW": ['thw'],
         "Be-Pol": ['criminal_investigation', 'riot_police'],
@@ -29,25 +29,7 @@
         "Stromausfälle": ['energy_supply', 'energy_supply_2'],
 
     }; // Beschriftung und Zusammenstellung der Gruppen -> Hier könnt Ihr euch die Button beschriften und die Gruppen zuordnen
-    const defaultEventMissionIds = [
-        53, 428, 581, 665, 787, 788, 789, 793, 794, 795, 831, 861, 862, // Winter
-        704, 705, 706, 707, 708, // Tag des Europüischen Notrufes
-        710, 711, 712, 713, 714, 715, 716, 717, 718, 719, // Karneval / Fasching
-        597, 598, 599, 600, 601, 602, 603, 604, 605, 790, 791, 792, 833, 834, 917, 918, 919, 920, 962, 963, // Valentinstag
-        722, 723, 724, 725, 726, 727, 728, 729, 730, //Frühling
-        284, 285, 286, 287, 288, 289, 290, 291, 442, 443, 444, 445, 446, 618, 732, 733, 734, 735, 736, 737, 739, 927, 928, 929, // Ostern
-        88, 626, 627, 628, 629, 630, 844, 845, 846, // Vatertag
-        360, 742, 743, 744, 745, 746, 747, 748, 847, // Muttertag
-        183, 184, 185, 461, 546, 547, 548, 646, 647, 648, 754, // Sommer
-        672, 673, 674, 675, 676, 677, 678, 679, 680, // Herbst
-        111, 112, 113, 114, 115, 116, 117, 118, 119, 943, 944, 945, 946, // Halloween
-        52, 54, 55, 56, 129, 130, 202, 203, 582, 583, 584, 585, 586, 587, 588, 589, 590, 783, 784, 785, 786, 901, 911, 912, 913, 952, 953, 954, 955, 956, 957, 958, // Weihnachten
-        23, 26, 29, 35, 42, 51, 80, 86, 96, 186, 187, 214, 283, 320, 324, 327, 388, 389, 395, 398, 399, 400, 407, 408, 430, 462, 465, 470, 502, 515, 702, // Rauchmeldertag
-        259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 326, 591, 695, // Silvester
-        371, 372, 373, 374, 375, 376, 641, 642, 849, 850, 851, 852, // WM / EM
-        756, 757, 758, 759, 760, 761, 762, 763, 764, 765, 766, 767, 768, 769, 770, 771, 772, // Jubiläum
-        868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, // Sportevent
-    ]; // IDs der Eventeinsätze
+    const defaultEventMissionIds = [];
     const specialMissionIds = [41, 43, 59, 75, 99, 207, 221, 222, 256, 350]; // Spezielle Einsatz-IDs (VGSL)
     const customCategoryLabels = {
         'fire': 'Feuerwehr',
@@ -56,6 +38,7 @@
         'thw': 'Technisches Hilfswerk',
         'criminal_investigation': 'Kripo',
         'riot_police': 'Bereitschaftspolizei',
+        'highway_police': 'Autobahnpolizei',
         'water_rescue': 'Wasserrettung',
         'mountain': 'Bergrettung',
         'coastal': 'Seenotrettung',
@@ -84,6 +67,7 @@
         'seg': 'Zeigt alle Einsätze der Schnelleinsatzgruppe',
         'energy_supply': 'Zeigt alle Einsätze der NEA50 an',
         'energy_supply_2': 'Zeigt alle Einsätze der NEA200 an',
+        'highway_police': 'Zeigt alle Einsätze der Autobahnpolizei an',
 
     }; // Tooltipps der Kategoriebutton
     const missionListIds = [
@@ -98,13 +82,13 @@
         'fire', 'police', 'ambulance', 'thw', 'criminal_investigation',
         'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport',
         'airport_specialization', 'factory_fire_brigade', 'seg', 'seg_medical_service',
-        'energy_supply', 'energy_supply_2',
+        'energy_supply', 'energy_supply_2', 'highway_police',
     ]; // Globale Konstanten für Kategorien & Labels
     const apiUrl = "https://v3.lss-manager.de/modules/lss-missionHelper/missions/de_DE.json"; // API zum Abrufen der Einsätze
     const settingsApiUrl = "https://www.leitstellenspiel.de/api/settings"; // API zum Abrufen der Einstellungen
     const storageKey = "lssMissionsData"; // Globale Konstanze für LocalStore
     const storageTimestampKey = "lssMissionsDataTimestamp"; // Zeitpunkt der letzten Speicherung
-    const updateInterval = 24 * 60 * 60 * 1000; // 24 Stunden in Millisekunden
+    const updateInterval = 12 * 60 * 60 * 1000; // 12 Stunden in Millisekunden
 
     let missions = {};
     let categories = new Set();
@@ -255,7 +239,7 @@
         buttonContainer.style.marginBottom = '10px';
 
         const desiredOrder = [
-            'fire', 'police', 'ambulance', 'thw', 'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport', 'factory_fire_brigade', 'criminal_investigation', 'seg', 'seg_medical_service', 'energy_supply', 'energy_supply_2', 'event'
+            'fire', 'police', 'highway_police', 'ambulance', 'thw', 'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport', 'factory_fire_brigade', 'criminal_investigation', 'seg', 'seg_medical_service', 'energy_supply', 'energy_supply_2', 'event'
         ];
 
         // Kategorie-Buttons erzeugen
@@ -555,6 +539,36 @@
             };
             groupDiv.appendChild(addCategoryBtn);
 
+            // Nach oben Button
+            const moveUpBtn = document.createElement('button');
+            moveUpBtn.textContent = '⬆';
+            moveUpBtn.className = 'btn btn-xs btn-move';
+            moveUpBtn.type = 'button';
+
+            moveUpBtn.onclick = () => {
+                const prev = groupDiv.previousElementSibling;
+                if (prev) {
+                    container.insertBefore(groupDiv, prev);
+                }
+            };
+
+            groupDiv.appendChild(moveUpBtn);
+
+            // Nach unten Button
+            const moveDownBtn = document.createElement('button');
+            moveDownBtn.textContent = '⬇';
+            moveDownBtn.className = 'btn btn-xs btn-move';
+            moveDownBtn.type = 'button';
+
+            moveDownBtn.onclick = () => {
+                const next = groupDiv.nextElementSibling;
+                if (next) {
+                    container.insertBefore(next, groupDiv);
+                }
+            };
+
+            groupDiv.appendChild(moveDownBtn);
+
             // Gruppe löschen Button
             const removeBtn = document.createElement('button');
             removeBtn.textContent = '✖';
@@ -620,6 +634,15 @@
         .category-group-row > * {
             margin-right: 6px;
         }
+        .btn-move {
+        background-color: #000 !important;
+        color: #fff !important;
+    border: 1px solid #444 !important;
+}
+
+.btn-move:hover {
+    background-color: #222 !important;
+}
     `;
             document.head.appendChild(style);
         }
@@ -628,7 +651,7 @@
             'fire', 'police', 'ambulance', 'thw', 'criminal_investigation',
             'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport',
             'airport_specialization', 'factory_fire_brigade', 'seg', 'seg_medical_service',
-            'energy_supply', 'energy_supply_2',
+            'energy_supply', 'energy_supply_2', 'highway_police',
         ];
 
         const customCategoryLabels = {
@@ -648,6 +671,7 @@
             'seg_medical_service': 'SEG-Sanitätsdienst',
             'energy_supply': 'NEA 50',
             'energy_supply_2': 'NEA 200',
+            'highway_police': 'Autobahnpolizei',
         };
 
         const eventMissions = {
@@ -787,6 +811,32 @@
                 groupDiv.insertBefore(dropdownWrapper, addCategoryBtn);
             };
             groupDiv.appendChild(addCategoryBtn);
+
+            const moveUpBtn = document.createElement('button');
+            moveUpBtn.textContent = '⬆';
+            moveUpBtn.className = 'btn btn-xs btn-move';
+            moveUpBtn.type = 'button';
+
+            moveUpBtn.onclick = () => {
+                const prev = groupDiv.previousElementSibling;
+                if (prev) {
+                    container.insertBefore(groupDiv, prev);
+                }
+            };
+            groupDiv.appendChild(moveUpBtn);
+
+            const moveDownBtn = document.createElement('button');
+            moveDownBtn.textContent = '⬇';
+            moveDownBtn.className = 'btn btn-xs btn-move';
+            moveDownBtn.type = 'button';
+
+            moveDownBtn.onclick = () => {
+                const next = groupDiv.nextElementSibling;
+                if (next) {
+                    container.insertBefore(next, groupDiv);
+                }
+            };
+            groupDiv.appendChild(moveDownBtn);
 
             const removeBtn = document.createElement('button');
             removeBtn.textContent = '✖';
