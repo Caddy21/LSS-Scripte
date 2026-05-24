@@ -88,7 +88,7 @@
     const settingsApiUrl = "https://www.leitstellenspiel.de/api/settings"; // API zum Abrufen der Einstellungen
     const storageKey = "lssMissionsData"; // Globale Konstanze für LocalStore
     const storageTimestampKey = "lssMissionsDataTimestamp"; // Zeitpunkt der letzten Speicherung
-    const updateInterval = 12 * 60 * 60 * 1000; // 12 Stunden in Millisekunden
+    const updateInterval = 6 * 60 * 60 * 1000; // 12 Stunden in Millisekunden
 
     let missions = {};
     let categories = new Set();
