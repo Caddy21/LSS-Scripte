@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.4.5
+// @version      1.4.6
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -467,7 +467,7 @@
         ], // Bereitschaftspolizei
         '12_normal': [
             { id: 0, name: 'Führung', cost: 25000, coins: 5 },
-            { id: 1, name: 'Sanitätsdienst', cost: 25500, coins: 5 },
+            { id: 1, name: 'Sanitätsdienst', cost: 25000, coins: 5 },
             { id: 2, name: 'Wasserrettung', cost: 500000, coins: 25 },
             { id: 3, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
             { id: 4, name: 'SEG-Drohne', cost: 50000, coins: 15 },
@@ -527,6 +527,18 @@
             { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
             { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
         ], // Schule für Seefahrt und Seenotrettung
+        '29_normal': [
+            { id: 0, name: '1te Zelle', cost: 25000, coins: 5 },
+            { id: 1, name: '2te Zelle', cost: 25000, coins: 5 },
+            { id: 2, name: '3te Zelle', cost: 25000, coins: 5 },
+            { id: 3, name: '4te Zelle', cost: 25000, coins: 5 },
+            { id: 4, name: '5te Zelle', cost: 25000, coins: 5 },
+            { id: 5, name: '6te Zelle', cost: 25000, coins: 5 },
+            { id: 6, name: '7te Zelle', cost: 25000, coins: 5 },
+            { id: 7, name: '8te Zelle', cost: 25000, coins: 5 },
+            { id: 8, name: '9te Zelle', cost: 25000, coins: 5 },
+            { id: 9, name: '10te Zelle', cost: 25000, coins: 5 },
+        ], // Autobahnpolizei
     };
     const manualStorageRooms = {
         '0_normal': [
@@ -544,7 +556,7 @@
             { id: 'additional_containers_1', name: '1te Zusätzlicher Lagerraum', cost: 50000, coins: 10, additionalStorage: 30 },
             { id: 'additional_containers_2', name: '2te Zusätzlicher Lagerraum', cost: 50000, coins: 10, additionalStorage: 30 },
         ], // Feuerwache (Kleinwache)
-         '5_normal': [
+        '5_normal': [
             { id: 'initial_helicopter_equipment', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
         ], // Rettungshubschrauber-Station
         '13_normal': [
@@ -678,6 +690,18 @@
             { id: 3, name: '4', cost: 100000, coins: 20 },
             { id: 4, name: '5', cost: 100000, coins: 20 },
         ], // Seenotrettungswache
+        '29_normal': [
+            { id: 0, name: '1', cost: 10000, coins: 10 },
+            { id: 1, name: '2', cost: 50000, coins: 15 },
+            { id: 2, name: '3', cost: 100000, coins: 20 },
+            { id: 3, name: '4', cost: 100000, coins: 20 },
+            { id: 4, name: '5', cost: 100000, coins: 20 },
+            { id: 5, name: '6', cost: 100000, coins: 20 },
+            { id: 6, name: '7', cost: 100000, coins: 20 },
+            { id: 7, name: '8', cost: 100000, coins: 20 },
+            { id: 8, name: '9', cost: 100000, coins: 20 },
+        ], // Autobahnpolizei
+
     };
     const buildingTypeNames = {
         '0_normal': 'Feuerwache (Normal)',
@@ -702,6 +726,7 @@
         '25_normal': 'Bergrettungswache',
         '26_normal': 'Seenotrettungswache',
         '27_normal': 'Schule für Seefahrt und Seenotrettung',
+        '29_normal': 'Autobahnpolizei',
     };
     const allowedBuildings = new Set([
         '0_normal', // Feuerwache (Normal)
@@ -714,6 +739,7 @@
         '15_normal', // Wasserrettung
         '25_normal', // Bergrettungswache
         '26_normal', // Seenotrettungswache)
+        '29_normal', // Autobahnpolizei
     ]);
     const progressBars = {
         activate: null,
