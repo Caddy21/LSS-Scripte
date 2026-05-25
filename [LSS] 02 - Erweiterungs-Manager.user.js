@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Erweiterungs-Manager
+// @name         [LSS] 02 - Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
 // @version      1.4.6
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
@@ -423,6 +423,7 @@
             { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
             { id: 14, name: 'Großwache', cost: 1000000, coins: 50 },
             { id: 15, name: 'Großgewahrsam', cost: 200000, coins: 50 },
+            { id: 16, name: 'Autobahnpolizei', cost: 75000, coins: 15 },
         ], // Polizeiwache
         '8_normal': [
             { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
@@ -507,6 +508,7 @@
             { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
             { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
             { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
+            { id: 16, name: 'Autobahnpolizei', cost: 75000, coins: 15 },
         ], // Polizei (Kleinwache)
         '24_normal': [
             { id: 0, name: 'Reiterstaffel', cost: 300000, coins: 25 },
@@ -3090,7 +3092,7 @@
         const fireStationSmallLimited = [0, 6, 8, 13, 14, 16, 18, 19, 25];
 
         const policeStationSmallAlwaysAllowed = [0, 1];
-        const policeStationSmallLimited = [10, 11, 12, 13];
+        const policeStationSmallLimited = [10, 11, 12, 13, 16];
 
         const thwAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; // Alle THW-Erweiterungen
         const bpolAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Alle BPol-Erweiterungen
@@ -3225,14 +3227,15 @@
                 onload: function(response) {
                     // Überprüfen, ob die Zeile existiert
                     if (row) {
-                        // Wenn es sich um eine Polizei-Kleinwache handelt und Erweiterungen 10, 11, 12 oder 13 betroffen sind
-                        if (building.building_type === 6 && building.small_building && [10, 11, 12, 13].includes(extensionId)) {
+                        // Wenn es sich um eine Polizei-Kleinwache handelt und Erweiterungen 10, 11, 12, 13 oder 16 betroffen sind
+                        if (building.building_type === 6 && building.small_building && [10, 11, 12, 13, 16].includes(extensionId)) {
                             // Alle Erweiterungen der Polizei-Kleinwache ausblenden, die noch nicht gebaut wurden
                             const allRows = document.querySelectorAll(
                                 `.row-${building.id}-10,
                          .row-${building.id}-11,
                          .row-${building.id}-12,
-                         .row-${building.id}-13`
+                         .row-${building.id}-13,
+                         .row-${building.id}-16`
                             );
                             allRows.forEach(otherRow => {
                                 if (otherRow !== row) {
@@ -3412,7 +3415,7 @@
             let zellenCount = 0;
 
             selectedExtensions.forEach(extensionId => {
-                if ([10, 11, 12, 13].includes(extensionId)) {
+                if ([10, 11, 12, 13, 16].includes(extensionId)) {
                     extensionCount++;
                 } else if (extensionId === 0) {
                     zellenCount++;
@@ -3497,7 +3500,7 @@
                 }
 
                 if (building.building_type === 6) {
-                    const invalidCombinationsPolizei = [10, 11, 12, 13];
+                    const invalidCombinationsPolizei = [10, 11, 12, 13, 16];
                     const selectedInvalidExtensionsPolizei = extensions.filter(extId =>
                                                                                invalidCombinationsPolizei.includes(extId)
                                                                               );
