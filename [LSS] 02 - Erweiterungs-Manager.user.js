@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] 02 - Erweiterungs-Manager
+// @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.4.6
+// @version      1.4.7
 // @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
