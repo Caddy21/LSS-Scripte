@@ -1,10 +1,11 @@
 // ==UserScript==
-// @name         [LSS] 42 - Wachenfilter
+// @name         [LSS] Wachenfilter
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @author       Caddy21
 // @description  Verbesserte Filterfunktion für Schulen im Leitstellenspiel
 // @match        https://www.leitstellenspiel.de/buildings/*
+// @match        https://polizei.leitstellenspiel.de/buildings/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
@@ -29,9 +30,7 @@
         addFilters(school.building_type, apiById);
     }
 
-    // ---------------------------------------------------------
-    // DEFINIERE FILTER JE SCHUL-TYP
-    // ---------------------------------------------------------
+    // Filterdefinierung
     function addFilters(type, apiById) {
         let filters = [];
 
@@ -47,7 +46,8 @@
                 { label: "Pol Normal", fn: el => is(el, apiById, 6, false) },
                 { label: "Pol Klein",  fn: el => is(el, apiById, 6, true) },
                 { label: "Be-Pol", fn: el => typeIs(el, 11) },
-                { label: "Pol-Hubbi", fn: el => typeIs(el, 13) }
+                { label: "Pol-Hubbi", fn: el => typeIs(el, 13) },
+                { label: "AP", fn: el => typeIs(el, 29) },
             ];
         }
 
@@ -79,9 +79,7 @@
         return api.building_type === type && api.small_building === small;
     }
 
-    // ---------------------------------------------------------
-    // BUTTON-UI
-    // ---------------------------------------------------------
+    // Buttons
     function createButtons(filters) {
         const target = document.querySelector("#building-filters");
         if (!target) return;
