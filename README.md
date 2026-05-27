@@ -106,4 +106,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Verbandsgebäudebutton
     - Verbandschulen Filter
     - Rückruf
+    - Verschiebe-Manager
+    - Lehrgangsfilter
 </details>
