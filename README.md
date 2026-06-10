@@ -79,7 +79,7 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Zuweisungsbutton
     - Einsatznummerierung 
     - Besatzungshelfen
-    - Personalübersicht
+    - Personalübersicht (Beta)
     - FMS-Wechsler
     - Bewerbungsfilter
     - Lehrgänge ausblenden
@@ -94,11 +94,11 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - LST-Dropdown
     - Countdownanzeige
     - Wachenfahrzeug Toggler
-    - Reaname-Manager
+    - Reaname-Manager (Beta)
     - Kleinwachen ausblender
     - Personalfilter
     - Zeitentracker
-    - Bundes- & Kreisgrenzen
+    - Bundes- & Kreisgrenzen (Beta)
     - Navbar ausblender
     - Bewerbungsstarter
     - Editorhelfer
@@ -106,6 +106,7 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Verbandsgebäudebutton
     - Verbandschulen Filter
     - Rückruf
-    - Verschiebe-Manager
+    - Verschiebe-Manager (Gammaversion)
+    - Spezialgebietsfilter
     - Lehrgangsfilter
 </details>
