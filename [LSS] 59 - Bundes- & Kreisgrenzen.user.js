@@ -6,12 +6,56 @@
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @match        https://polizei.leitstellenspiel.de/*
+// @run-at       document-start
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
+
+    window.__lssMaps = [];
+
+    const mapHook = setInterval(() => {
+
+        if (typeof L === 'undefined' || !L.map || L.__hookedMaps) {
+            return;
+        }
+
+        L.__hookedMaps = true;
+
+        const originalMap = L.map;
+
+        L.map = function (...args) {
+
+            const map = originalMap.apply(this, args);
+
+            console.log(
+                '[LSS Grenzen] Map erkannt:',
+                map._container?.id
+            );
+
+            window.__lssMaps.push(map);
+
+            return map;
+        };
+
+        clearInterval(mapHook);
+
+    }, 10);
+
+    function getAllMaps() {
+
+        if (window.__lssMaps.length) {
+            return window.__lssMaps;
+        }
+
+        if (window.map) {
+            return [window.map];
+        }
+
+        return [];
+    }
 
     let bundeslaenderLayerMap = {};
     let kreiseLayerMap = {};
@@ -25,11 +69,19 @@
     const STORAGE_KEY = "LSS_LayerOverlaySelection";
 
     function waitForLeaflet() {
-        if(typeof L !== "undefined" && typeof window.map !== "undefined"){
+
+        if (
+            typeof L !== "undefined" &&
+            getAllMaps().length
+        ) {
+
             addLayerButton();
             restoreSelectionOnMap();
+
         } else {
+
             setTimeout(waitForLeaflet, 500);
+
         }
     }
 
@@ -55,7 +107,35 @@
                 return container;
             }
         });
-        window.map.addControl(new LayerControl());
+        const firstMap = getAllMaps()[0];
+
+        if (firstMap) {
+            firstMap.addControl(new LayerControl());
+        }
+    }
+
+    function addLayerToAllMaps(feature, style) {
+
+        return getAllMaps().map(map =>
+                                L.geoJSON(feature, {
+            style
+        }).addTo(map)
+                               );
+    }
+
+    function removeLayerArray(layerArray) {
+
+        if (!Array.isArray(layerArray)) {
+            return;
+        }
+
+        layerArray.forEach(layer => {
+
+            if (layer && layer._map) {
+                layer._map.removeLayer(layer);
+            }
+
+        });
     }
 
     function toggleOverlay(){
@@ -143,47 +223,52 @@
     function loadBundeslaender(){
         fetch(bundeslaenderURL)
             .then(res => {
-                if(!res.ok) throw new Error("Bundesländer GeoJSON konnte nicht geladen werden: " + res.status);
-                return res.json();
-            })
+            if(!res.ok) throw new Error("Bundesländer GeoJSON konnte nicht geladen werden: " + res.status);
+            return res.json();
+        })
             .then(data => {
-                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-                data.features.forEach(bl => {
-                    const blId = bl.properties.id;
-                    const blName = bl.properties.name;
-                    const cb = document.createElement('input');
-                    cb.type = 'checkbox';
-                    cb.id = 'bl_' + blId;
-                    cb.style.marginRight = '5px';
-                    if(saved.bundeslaender && saved.bundeslaender.includes(blId)) cb.checked = true;
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            data.features.forEach(bl => {
+                const blId = bl.properties.id;
+                const blName = bl.properties.name;
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.id = 'bl_' + blId;
+                cb.style.marginRight = '5px';
+                if(saved.bundeslaender && saved.bundeslaender.includes(blId)) cb.checked = true;
 
-                    cb.onchange = function(e){
-                        if(e.target.checked){
-                            if(!bundeslaenderLayerMap[blId]){
-                                bundeslaenderLayerMap[blId] = L.geoJSON(bl, {style: bundeslaenderStyle}).addTo(window.map);
-                            }
-                            loadKreiseForBundesland(blName, saved.kreise);
-                        } else {
-                            if(bundeslaenderLayerMap[blId]){
-                                window.map.removeLayer(bundeslaenderLayerMap[blId]);
-                                delete bundeslaenderLayerMap[blId];
-                            }
-                            clearRightColumn();
+                cb.onchange = function(e){
+                    if(e.target.checked){
+                        if(!bundeslaenderLayerMap[blId]){
+                            bundeslaenderLayerMap[blId] =
+                                addLayerToAllMaps(
+                                bl,
+                                bundeslaenderStyle
+                            );                        }
+                        loadKreiseForBundesland(blName, saved.kreise);
+                    } else {
+                        if(bundeslaenderLayerMap[blId]){
+                            removeLayerArray(
+                                bundeslaenderLayerMap[blId]
+                            );
+                            delete bundeslaenderLayerMap[blId];
                         }
-                    };
+                        clearRightColumn();
+                    }
+                };
 
-                    const label = document.createElement('label');
-                    label.htmlFor = cb.id;
-                    label.innerText = blName;
-                    label.style.display = 'block';
-                    label.style.cursor = 'pointer';
-                    label.style.marginBottom = '2px';
-                    label.prepend(cb);
-                    leftCol.appendChild(label);
+                const label = document.createElement('label');
+                label.htmlFor = cb.id;
+                label.innerText = blName;
+                label.style.display = 'block';
+                label.style.cursor = 'pointer';
+                label.style.marginBottom = '2px';
+                label.prepend(cb);
+                leftCol.appendChild(label);
 
-                    if(cb.checked) cb.onchange({target: cb});
-                });
-            })
+                if(cb.checked) cb.onchange({target: cb});
+            });
+        })
             .catch(err => console.error("[ERROR] Bundesländer fetch:", err));
     }
 
@@ -198,51 +283,57 @@
         fetch(kreiseURL)
             .then(res => res.json())
             .then(data => {
-                const kreiseGefiltert = data.features
-                    .filter(k => k.properties.NAME_1 === blName)
-                    .sort((a,b) => a.properties.NAME_3.localeCompare(b.properties.NAME_3));
+            const kreiseGefiltert = data.features
+            .filter(k => k.properties.NAME_1 === blName)
+            .sort((a,b) => a.properties.NAME_3.localeCompare(b.properties.NAME_3));
 
-                kreiseGefiltert.forEach(kreis => {
-                    const kreisName = kreis.properties.NAME_3;
+            kreiseGefiltert.forEach(kreis => {
+                const kreisName = kreis.properties.NAME_3;
 
-                    // Direkt Layer setzen, wenn restoreMode
-                    if(restoreMode && savedKreise.includes(kreisName) && !kreiseLayerMap[kreisName]){
-                        kreiseLayerMap[kreisName] = L.geoJSON(kreis, {style: kreiseStyle}).addTo(window.map);
-                    }
+                // Direkt Layer setzen, wenn restoreMode
+                if(restoreMode && savedKreise.includes(kreisName) && !kreiseLayerMap[kreisName]){
+                    kreiseLayerMap[kreisName] =
+                        addLayerToAllMaps(
+                        kreis,
+                        kreiseStyle
+                    );
+                }
 
-                    if(panelVisible){
-                        const cb = document.createElement('input');
-                        cb.type = 'checkbox';
-                        cb.id = 'kreis_' + kreisName.replace(/\s/g,'_');
-                        cb.style.marginRight = '5px';
-                        if(savedKreise.includes(kreisName)) cb.checked = true;
+                if(panelVisible){
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.id = 'kreis_' + kreisName.replace(/\s/g,'_');
+                    cb.style.marginRight = '5px';
+                    if(savedKreise.includes(kreisName)) cb.checked = true;
 
-                        cb.onchange = function(e){
-                            if(e.target.checked){
-                                if(!kreiseLayerMap[kreisName]){
-                                    kreiseLayerMap[kreisName] = L.geoJSON(kreis, {style: kreiseStyle}).addTo(window.map);
-                                }
-                            } else {
-                                if(kreiseLayerMap[kreisName]){
-                                    window.map.removeLayer(kreiseLayerMap[kreisName]);
-                                    delete kreiseLayerMap[kreisName];
-                                }
+                    cb.onchange = function(e){
+                        if(e.target.checked){
+                            if(!kreiseLayerMap[kreisName]){
+                                kreiseLayerMap[kreisName] = L.geoJSON(kreis, {style: kreiseStyle}).addTo(window.map);
                             }
-                        };
+                        } else {
+                            if(kreiseLayerMap[kreisName]){
+                                removeLayerArray(
+                                    kreiseLayerMap[kreisName]
+                                );
+                                delete kreiseLayerMap[kreisName];
+                            }
+                        }
+                    };
 
-                        const label = document.createElement('label');
-                        label.htmlFor = cb.id;
-                        label.innerText = kreisName;
-                        label.style.display = 'block';
-                        label.style.cursor = 'pointer';
-                        label.style.marginBottom = '2px';
-                        label.prepend(cb);
-                        rightCol.appendChild(label);
+                    const label = document.createElement('label');
+                    label.htmlFor = cb.id;
+                    label.innerText = kreisName;
+                    label.style.display = 'block';
+                    label.style.cursor = 'pointer';
+                    label.style.marginBottom = '2px';
+                    label.prepend(cb);
+                    rightCol.appendChild(label);
 
-                        if(cb.checked) cb.onchange({target: cb});
-                    }
-                });
-            })
+                    if(cb.checked) cb.onchange({target: cb});
+                }
+            });
+        })
             .catch(err => console.error("[ERROR] Kreise fetch:", err));
     }
 
@@ -266,16 +357,20 @@
         fetch(bundeslaenderURL)
             .then(res => res.json())
             .then(data => {
-                data.features.forEach(bl => {
-                    const blId = bl.properties.id;
-                    const blName = bl.properties.name;
-                    if(saved.bundeslaender.includes(blId)) {
-                        bundeslaenderLayerMap[blId] = L.geoJSON(bl, {style: bundeslaenderStyle}).addTo(window.map);
-                        // restoreMode = true -> Kreise-Layer direkt auf Karte
-                        loadKreiseForBundesland(blName, saved.kreise, true);
-                    }
-                });
-            })
+            data.features.forEach(bl => {
+                const blId = bl.properties.id;
+                const blName = bl.properties.name;
+                if(saved.bundeslaender.includes(blId)) {
+                    bundeslaenderLayerMap[blId] =
+                        addLayerToAllMaps(
+                        bl,
+                        bundeslaenderStyle
+                    );
+                    // restoreMode = true -> Kreise-Layer direkt auf Karte
+                    loadKreiseForBundesland(blName, saved.kreise, true);
+                }
+            });
+        })
             .catch(err => console.error("[ERROR] Restore Bundesländer:", err));
     }
 })();
