@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] Spezialgebietsfilter
+// @name         [LSS] 70 - Spezialgebietsfilter
 // @version      1.0
-// @description  Blendet auf der Spezialgebietsetz-Seite alle Wachen bis auf Autobahnpolizei, Seenotrettung und Bergwacht aus.
+// @description  Blendet auf der Spezialgebietseite alle Wachen bis auf Autobahnpolizei, Seenotrettung und Bergwacht aus.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/buildings/*/set_mission_spawn_area*
 // @match        https://polizei.leitstellenspiel.de/buildings/*/set_mission_spawn_area*
@@ -28,20 +28,20 @@
         switch (currentFilter) {
 
             case 'highway':
-                return src.includes('building_highway_police');
+                return src.includes('building_highway_police'); // Bei eigenen Grafiken hier die src anpassen!
 
             case 'coastal':
-                return src.includes('building_coastal_rescue');
+                return src.includes('building_coastal_rescue'); // Bei eigenen Grafiken hier die src anpassen!
 
             case 'mountain':
-                return src.includes('building_mountain_rescue');
+                return src.includes('building_mountain_rescue'); // Bei eigenen Grafiken hier die src anpassen!
 
             case 'all':
             default:
                 return (
-                    src.includes('building_highway_police') ||
-                    src.includes('building_coastal_rescue') ||
-                    src.includes('building_mountain_rescue')
+                    src.includes('building_highway_police') || // Bei eigenen Grafiken hier die src anpassen!
+                    src.includes('building_coastal_rescue') || // Bei eigenen Grafiken hier die src anpassen!
+                    src.includes('building_mountain_rescue') // Bei eigenen Grafiken hier die src anpassen!
                 );
         }
     }
