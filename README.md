@@ -108,5 +108,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Rückruf
     - Verschiebe-Manager (Gammaversion)
     - Spezialgebietsfilter
+    - Schulauslastung
     - Lehrgangsfilter
 </details>
