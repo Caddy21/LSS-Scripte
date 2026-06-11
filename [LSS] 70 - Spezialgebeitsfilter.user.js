@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 70 - Spezialgebietsfilter
+// @name         [LSS] Spezialgebietsfilter
 // @version      1.0
 // @description  Blendet auf der Spezialgebietseite alle Wachen bis auf Autobahnpolizei, Seenotrettung und Bergwacht aus.
 // @author       Caddy21
