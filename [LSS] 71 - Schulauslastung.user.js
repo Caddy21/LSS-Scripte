@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] 71 - Schulauslastung
+// @name         [LSS] Schulauslastung
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.1
+// @version      1.0
 // @description  Markiert Schulen anhand freier Klassenräume
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
