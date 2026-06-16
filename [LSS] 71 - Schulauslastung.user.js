@@ -79,8 +79,6 @@
                     element.style.backgroundColor = '#fcf8e3';
                     element.style.borderLeft = '5px solid #f0ad4e';
                 }
-
-                // Mehr als 3 frei → keine Hervorhebung
             });
 
         } catch (error) {
@@ -106,7 +104,7 @@
     // Sofortiger erster Versuch
     updateSchoolColors();
 
-    // Danach jede Minute aktualisieren
-    setInterval(updateSchoolColors, 60000);
+    // Danach alle 10 Minute aktualisieren
+    setInterval(updateSchoolColors, 10 * 60 * 1000);
 
 })();
