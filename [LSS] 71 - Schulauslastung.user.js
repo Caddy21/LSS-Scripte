@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         [LSS] Schulauslastung
+// @name         [LSS] 71 - Schulauslastung
 // @namespace    https://www.leitstellenspiel.de/
-// @version      1.0
+// @version      1.1
 // @description  Markiert Schulen anhand freier Klassenräume
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -18,29 +18,38 @@
         3,   // Rettungsschule
         8,   // Polizeischule
         10,  // THW Bundesschule
+        27,  // Seenotrettungsschule
     ];
 
     async function updateSchoolColors() {
         try {
-            const response = await fetch('/api/buildings');
-            const buildings = await response.json();
+            const response = await fetch('/api/v2/buildings');
+            const data = await response.json();
 
-            buildings.forEach(building => {
+            const schools = Array.isArray(data.result)
+            ? data.result.filter(building =>
+                                 SCHOOL_TYPES.includes(building.building_type)
+                                )
+            : [];
 
-                if (!SCHOOL_TYPES.includes(building.building_type)) {
-                    return;
-                }
+            schools.forEach(building => {
 
+                // Grundsätzlich 1 Klassenraum vorhanden
                 let classrooms = 1;
 
-                if (building.extensions) {
+                // Nur verfügbare Klassenräume zählen
+                if (Array.isArray(building.extensions)) {
                     classrooms += building.extensions.filter(ext =>
-                        ext.enabled &&
-                        ext.caption === 'Weiterer Klassenraum'
-                    ).length;
+                                                             ext.enabled &&
+                                                             ext.available &&
+                                                             ext.caption === 'Weiterer Klassenraum'
+                                                            ).length;
                 }
 
-                const occupied = building.schoolings?.length || 0;
+                const occupied = Array.isArray(building.schoolings)
+                ? building.schoolings.length
+                : 0;
+
                 const free = classrooms - occupied;
 
                 const element = document.getElementById(
@@ -49,7 +58,7 @@
 
                 if (!element) return;
 
-                // Zurücksetzen
+                // Vorherige Markierungen entfernen
                 element.style.backgroundColor = '';
                 element.style.borderLeft = '';
 
@@ -65,7 +74,7 @@
                     element.style.borderLeft = '5px solid #d9534f';
                 }
 
-                // 🟡 Noch 1-3 Räume frei
+                // 🟡 Noch 1–3 Räume frei
                 else if (free <= 3) {
                     element.style.backgroundColor = '#fcf8e3';
                     element.style.borderLeft = '5px solid #f0ad4e';
@@ -75,13 +84,29 @@
             });
 
         } catch (error) {
-            console.error('LSS Schul-Auslastung:', error);
+            console.error('[LSS] Schulauslastung:', error);
         }
     }
 
+    // Beim Spielstart mehrfach versuchen
+    let startupChecks = 0;
+    const startupInterval = setInterval(() => {
+        startupChecks++;
+
+        if (document.querySelector('[id^="building_list_"]')) {
+            updateSchoolColors();
+            clearInterval(startupInterval);
+        }
+
+        if (startupChecks >= 20) {
+            clearInterval(startupInterval);
+        }
+    }, 1000);
+
+    // Sofortiger erster Versuch
     updateSchoolColors();
 
-    // Aktualisierung jede Minute
+    // Danach jede Minute aktualisieren
     setInterval(updateSchoolColors, 60000);
 
 })();
