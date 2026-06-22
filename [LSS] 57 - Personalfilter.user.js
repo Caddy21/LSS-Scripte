@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Personalfilter
+// @name         [LSS] 57 - Personalfilter
 // @namespace    https://leitstellenspiel.de/
 // @version      1.0
 // @description  Blendet unpassendes Personal auf der Zuweisungsseite aus
@@ -34,13 +34,13 @@
         // FALL 2: Keine Highlight Rows → Ausbildung prüfen
         else {
             rows.forEach(row => {
-                const ausbildungCell = row.children[1];
-                if (!ausbildungCell) return;
-                const ausbildung = ausbildungCell.textContent.trim();
-                if (ausbildung !== "") {
+                const btn = row.querySelector("a.btn");
+
+                // Nur grüne Buttons (= keinem Fahrzeug zugewiesen)
+                if (!btn || !btn.classList.contains("btn-success")) {
                     row.style.display = "none";
                 }
-           });
+            });
         }
     }
 
