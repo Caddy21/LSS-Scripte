@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Fahrzeug-Manager
 // @namespace    https://leitstellenspiel.de/
-// @version      1.0.2
+// @version      1.1
 // @description  Zeigt fehlden Fahrzeuge pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -99,22 +99,24 @@
 
     // Fahrzeugkonfigurations-Modal
     const configModalHTML = `
-        <div class="modal fade" id="fahrzeugConfigModal" tabindex="-1" role="dialog" aria-labelledby="fahrzeugConfigLabel">
-          <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-              <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 class="modal-title" id="fahrzeugConfigLabel" style="font-weight: bold; margin: 0;">⚙️ Fahrzeugkonfiguration ⚙️</h3>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <button type="button" class="fm-close-btn" data-dismiss="modal">Schließen ✖</button>
-                </div>
-              </div>
-                <br><div id="fahrzeug-config-content">
-                  <p>Bitte warten, Daten werden geladen...</p>
-                </div>
-              </div>
+    <div class="modal fade" id="fahrzeugConfigModal" tabindex="-1" role="dialog" aria-labelledby="fahrzeugConfigLabel">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="modal-title" id="fahrzeugConfigLabel" style="font-weight: bold; margin: 0;">⚙️ Fahrzeugkonfiguration ⚙️</h3>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button type="button" class="fm-export-btn" id="fm-export-profiles" title="Alle Profile exportieren">💾 Export</button>
+              <button type="button" class="fm-import-btn" id="fm-import-profiles" title="Profile importieren">📂 Import</button>
+              <button type="button" class="fm-close-btn" data-dismiss="modal">Schließen ✖</button>
             </div>
           </div>
-        </div>`;
+            <br><div id="fahrzeug-config-content">
+              <p>Bitte warten, Daten werden geladen...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
 
     // Kaufprotokoll-Modal
     const logModalHTML = `
@@ -175,6 +177,18 @@
             loadBuildingsFromAPI();
         }
     }); // Managerbutton
+    document.addEventListener('click', e => {
+        if (e.target && e.target.id === 'fm-export-profiles') {
+            e.preventDefault();
+            exportAllProfiles();
+        }
+    }); // Exportbutton
+    document.addEventListener('click', e => {
+        if (e.target && e.target.id === 'fm-import-profiles') {
+            e.preventDefault();
+            importAllProfiles();
+        }
+    }); // Importbutton
 
     // CSS
     GM_addStyle(`
@@ -184,26 +198,6 @@
         #fahrzeugManagerModal .modal-content { display: flex;  flex-direction: column;  height: 90vh; /* gesamte Modalhöhe */ }
         #fahrzeugManagerModal .modal-header { flex-shrink: 0;  position: sticky;  top: 0;  z-index: 10;  background: var(--spoiler-body-bg); }
         #fahrzeugManagerModal .modal-body { overflow-y: auto;  flex-grow: 1; }
-        .modal-backdrop { z-index: 9999 !important; }
-        .fm-close-btn { background-color: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
-        .fm-close-btn:hover { background-color: #c82333; }
-        .fm-select { cursor: pointer; }
-        .btn-xs { padding: 2px 6px; font-size: 12px; }
-        .fm-spoiler { border: 1px solid var(--spoiler-border); border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
-        .fm-spoiler-header { background-color: var(--spoiler-header-bg); color: var(--spoiler-header-text); padding: 8px 12px; cursor: pointer; font-weight: bold; user-select: none; transition: background-color 0.2s; }
-        .fm-spoiler-header:hover { background-color: var(--spoiler-header-hover); }
-        .fm-spoiler-body { display: none; padding: 10px; background: var(--spoiler-body-bg); color: var(--spoiler-body-text); overflow-x: auto; }
-        .fm-spoiler-body.active { display: block; }
-        body:not(.dark) { --spoiler-border: #ddd; --spoiler-header-bg: #f7f7f7; --spoiler-header-text: #000; --spoiler-header-hover: #eaeaea; --spoiler-body-bg: #fff; --spoiler-body-text: #000; --table-header-bg: #f1f1f1; --spoiler-input-bg: #ffffff; --spoiler-input-text: #000000; }
-        body.dark { --spoiler-border: #444; --spoiler-header-bg: #333; --spoiler-header-text: #eee; --spoiler-header-hover: #444; --spoiler-body-bg: #222; --spoiler-body-text: #ddd; --table-header-bg: #333; --spoiler-input-bg: #3a3a3a; --spoiler-input-text: #ffffff; }
-        .fm-spoiler table { border-collapse: collapse; width: 100%; table-layout: auto; min-width: 800px; }
-        .fm-spoiler table th, .fm-spoiler table td, .fm-spoiler table .fm-filter-row td { border: none; padding: 6px 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
-        .fm-spoiler table thead th, .fm-spoiler table .fm-filter-row td { background-color: var(--table-header-bg); font-weight: bold; }
-        .fm-filter-row select, .fm-filter-row button.fm-filter-reset { font-size: 12px; padding: 2px 4px; min-width: 100px; width: 100%; }
-        .fm-badge-green { background-color: #28a745 !important; color: #fff !important; }
-        .fm-vehicle-list { white-space: normal !important; word-break: normal !important; overflow-wrap: normal !important; max-width: 350px; display: inline-block; }
-        .fm-config-btn { background-color: #007bff; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
-        .fm-config-btn:hover { background-color: #0069d9; }
         #fahrzeugConfigModal .modal-dialog { max-width: 2000px; width: 90%; margin: 30px auto; }
         #fahrzeugConfigModal .modal-content { width: 100%; overflow-x: auto; }
         #fahrzeugConfigModal { z-index: 10001 !important; }  /* höher als FahrzeugManager */
@@ -212,6 +206,22 @@
         #fahrzeugLogModal .modal-content { width: 100%; overflow-x: auto; }
         #fahrzeugLogModal .modal-dialog { max-width: 1500px; width: 70%; margin: 30px auto; }
         #fahrzeugLogModal + .modal-backdrop { z-index: 10001 !important; }
+        .fm-close-btn { background-color: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+        .fm-close-btn:hover { background-color: #c82333; }
+        .fm-select { cursor: pointer; }
+        .fm-spoiler { border: 1px solid var(--spoiler-border); border-radius: 4px; margin-bottom: 8px; overflow: hidden; }
+        .fm-spoiler-header { background-color: var(--spoiler-header-bg); color: var(--spoiler-header-text); padding: 8px 12px; cursor: pointer; font-weight: bold; user-select: none; transition: background-color 0.2s; }
+        .fm-spoiler-header:hover { background-color: var(--spoiler-header-hover); }
+        .fm-spoiler-body { display: none; padding: 10px; background: var(--spoiler-body-bg); color: var(--spoiler-body-text); overflow-x: auto; }
+        .fm-spoiler-body.active { display: block; }
+        .fm-spoiler table { border-collapse: collapse; width: 100%; table-layout: auto; min-width: 800px; }
+        .fm-spoiler table th, .fm-spoiler table td, .fm-spoiler table .fm-filter-row td { border: none; padding: 6px 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
+        .fm-spoiler table thead th, .fm-spoiler table .fm-filter-row td { background-color: var(--table-header-bg); font-weight: bold; }
+        .fm-filter-row select, .fm-filter-row button.fm-filter-reset { font-size: 12px; padding: 2px 4px; min-width: 100px; width: 100%; }
+        .fm-badge-green { background-color: #28a745 !important; color: #fff !important; }
+        .fm-vehicle-list { white-space: normal !important; word-break: normal !important; overflow-wrap: normal !important; max-width: 350px; display: inline-block; }
+        .fm-config-btn { background-color: #007bff; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+        .fm-config-btn:hover { background-color: #0069d9; }
         .fm-log-btn { background-color: #17a2b8; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
         .fm-reset-log-btn { background-color: #ffc107; color: #333; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; margin-left: 10px; }
         .fm-reset-log-btn:hover { background-color: #e0a800; }
@@ -225,6 +235,14 @@
         .fm-building-link:visited,
         .fm-building-link:hover,
         .fm-building-link:active { color: inherit !important; font-weight: normal !important; text-decoration: none !important; background: none !important; }
+        .fm-export-btn { background-color: #28a745; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+        .fm-export-btn:hover { background-color: #218838; }
+        .fm-import-btn { background-color: #6f42c1; color: white; border: none; border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+        .fm-import-btn:hover { background-color: #5a32a3; }
+        .modal-backdrop { z-index: 9999 !important; }
+        .btn-xs { padding: 2px 6px; font-size: 12px; }
+        body:not(.dark) { --spoiler-border: #ddd; --spoiler-header-bg: #f7f7f7; --spoiler-header-text: #000; --spoiler-header-hover: #eaeaea; --spoiler-body-bg: #fff; --spoiler-body-text: #000; --table-header-bg: #f1f1f1; --spoiler-input-bg: #ffffff; --spoiler-input-text: #000000; }
+        body.dark { --spoiler-border: #444; --spoiler-header-bg: #333; --spoiler-header-text: #eee; --spoiler-header-hover: #444; --spoiler-body-bg: #222; --spoiler-body-text: #ddd; --table-header-bg: #333; --spoiler-input-bg: #3a3a3a; --spoiler-input-text: #ffffff; }
 
     `);
 
@@ -659,6 +677,96 @@
         localStorage.setItem(`fm-config-${buildingKey}-profiles`, JSON.stringify(data));
     }
 
+    // Export: Alle Profile als JSON-Datei herunterladen
+    function exportAllProfiles() {
+        const exportData = {};
+
+        // Alle Profile für jeden Wachentyp sammeln
+        Object.keys(buildingTypeNames).forEach(key => {
+            const profilesData = loadProfiles(key);
+            if (Object.keys(profilesData.profiles).length > 0) {
+                exportData[key] = profilesData;
+            }
+        });
+
+        if (Object.keys(exportData).length === 0) {
+            alert('Es gibt keine Profile zum Exportieren.');
+            return;
+        }
+
+        // JSON erstellen und herunterladen
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `fahrzeug-manager-profile-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        alert(`✅ ${Object.keys(exportData).length} Wachentypen exportiert!`);
+    }
+
+    // Import: Profile aus JSON-Datei importieren
+    function importAllProfiles() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            try {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const content = await file.text();
+                const importData = JSON.parse(content);
+
+                if (typeof importData !== 'object' || !Object.keys(importData).length) {
+                    alert('❌ Ungültige Dateiformat oder leere Datei.');
+                    return;
+                }
+
+                let importedCount = 0;
+                let existingCount = 0;
+
+                // Alle Profile importieren
+                Object.entries(importData).forEach(([key, data]) => {
+                    if (data.profiles && Object.keys(data.profiles).length > 0) {
+                        const existingData = loadProfiles(key);
+
+                        // Merge-Modus: Neuer Profile hinzufügen, bestehende nicht überschreiben
+                        Object.entries(data.profiles).forEach(([profileName, profileConfig]) => {
+                            if (existingData.profiles[profileName]) {
+                                existingCount++;
+                            } else {
+                                existingData.profiles[profileName] = profileConfig;
+                                importedCount++;
+                            }
+                        });
+
+                        // Active Profile setzen (falls noch nicht gesetzt)
+                        if (!existingData.activeProfile && data.activeProfile) {
+                            existingData.activeProfile = data.activeProfile;
+                        }
+
+                        saveProfiles(key, existingData);
+                    }
+                });
+
+                alert(`✅ Import abgeschlossen!\n• ${importedCount} neue Profile hinzugefügt\n• ${existingCount} Profile (bereits vorhanden, nicht überschrieben)`);
+
+                // Config-Modal neu laden
+                loadVehicleConfig();
+
+            } catch (err) {
+                alert(`❌ Fehler beim Import: ${err.message}`);
+                console.error(err);
+            }
+        };
+        input.click();
+    }
+
     // Gibt die Konfiguration des aktuell aktiven Profils für ein bestimmtes Gebäude zurück.
     function getActiveProfileConfig(buildingKey) {
         const data = loadProfiles(buildingKey);
@@ -894,7 +1002,6 @@
                     saveAndSync();
                 }
             });
-
             wrapper.addEventListener('change', e => {
 
                 if (e.target.classList.contains('fm-profile-select')) {
@@ -921,9 +1028,7 @@
                 }
 
             });
-
             wrapper.addEventListener('click', e => {
-
                 if (e.target.classList.contains('fm-profile-saveas')) {
 
                     const newName = prompt('Name des neuen Profils:');
@@ -936,12 +1041,18 @@
                         return;
                     }
 
-                    const config = vehicles.map(v => ({
-                        typeId: parseInt(v.id),
-                        caption: v.caption,
-                        checked: true,
-                        amount: 1
-                    }));
+                    let config;
+
+                    if (!profilesData.activeProfile) {
+                        config = vehicles.map(v => ({
+                            typeId: parseInt(v.id),
+                            caption: v.caption,
+                            checked: true,
+                            amount: 1
+                        }));
+                    } else {
+                        config = JSON.parse(JSON.stringify(getCurrentConfigFromDOM()));
+                    }
 
                     profilesData.profiles[newName] = config;
                     profilesData.activeProfile = newName;
@@ -951,7 +1062,6 @@
                     reRenderAndSync();
                     return;
                 }
-
                 if (e.target.classList.contains('fm-profile-delete')) {
 
                     profilesData = loadProfiles(tableId);
@@ -970,7 +1080,6 @@
                     reRenderAndSync();
                     return;
                 }
-
                 if (e.target.classList.contains('fm-config-select-all') ||
                     e.target.classList.contains('fm-config-deselect-all')) {
 
@@ -989,7 +1098,6 @@
 
                     saveAndSync();
                 }
-
                 if (e.target.classList.contains('fm-config-toggle')) {
 
                     const grid = wrapper.querySelector('.fm-config-grid');
@@ -1023,102 +1131,159 @@
     }
 
     // Tabelle bauen
-    function buildFahrzeugTable(buildings, tableId, vehicleMap, vehicleTypeMap, lssmBuildingDefs, filters = {}) {
+    function buildFahrzeugTable(buildings, tableId, vehicleMap, vehicleTypeMap, lssmBuildingDefs, filters = {} ) {
         const filterLeitstelle = filters.leitstelle || '';
         const filterWache = filters.wache || '';
-        const leitstellen = [...new Set(buildings.map(b => b.leitstelle_caption).filter(Boolean))]
-        .sort((a, b) => a.localeCompare(b, 'de'));
-        const wachen = [...new Set(buildings.map(b => b.caption).filter(Boolean))]
-        .sort((a, b) => a.localeCompare(b, 'de'));
+
+        const leitstellen = [...new Set(
+            buildings.map(b => b.leitstelle_caption).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, 'de'));
+
+        const wachen = [...new Set(
+            buildings.map(b => b.caption).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, 'de'));
 
         let html = `
     <table class="table fm-table" id="fm-table-${tableId}">
-        <thead>
-            <tr>
-                <th>Auswahl</th>
-                <th>Leitstelle</th>
-                <th>Wache</th>
-                <th>Profil</th>
-                <th>Fahrzeuge</th>
-                <th>Freie Stellplätze</th>
-                <th>Fahrzeuge auf Wache</th>
-                <th>Fehlende Fahrzeuge</th>
-                <th>Kaufen mit Credits</th>
-                <th>Kaufen mit Coins</th>
-            </tr>
-            <tr class="fm-filter-row">
-                <td><input type="checkbox" class="fm-select-all" data-table="${tableId}"></td>
-                <td>
-                    <select class="fm-filter-leitstelle" data-table="${tableId}">
-                        <option value="">Alle</option>
-                        ${leitstellen.map(n => `<option value="${n}">${n}</option>`).join('')}
-                    </select>
-                </td>
-                <td>
-                    <select class="fm-filter-wache" data-table="${tableId}">
-                        <option value="">Alle</option>
-                        ${wachen.map(n => `<option value="${n}">${n}</option>`).join('')}
-                    </select>
-                </td>
-                <td>
-                    <button class="fm-filter-reset btn btn-primary btn-xs" data-table="${tableId}">Filter zurücksetzen</button>
-                </td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td style="text-align:center;">
-                    <button class="btn btn-info btn-xs fm-toggle-hide-no-missing" data-table="${tableId}" title="Blendet Wachen aus, bei denen keine Fahrzeuge fehlen">
-                        Keine fehlenden
-                    </button>
-                </td>
-                <td style="text-align: center;">
-                    <button class="btn btn-success btn-xs fm-buy-selected-credits" data-table="${tableId}">💳 Alle kaufen</button>
-                </td>
-                <td style="text-align: center;">
-                    <button class="btn btn-danger btn-xs fm-buy-selected-coins" data-table="${tableId}">🪙 Alle kaufen</button>
-                </td>
-            </tr>
-        </thead>
-        <tbody>
-    `;
+      <thead>
+        <tr>
+          <th>Auswahl</th>
+          <th>Leitstelle</th>
+          <th>Wache</th>
+          <th>Profil</th>
+          <th>Fahrzeuge</th>
+          <th>Freie Stellplätze</th>
+          <th>Fahrzeuge auf Wache</th>
+          <th>Fehlende Fahrzeuge</th>
+          <th>Kaufen mit Credits</th>
+          <th>Kaufen mit Coins</th>
+        </tr>
 
-        const sortedBuildings = buildings.slice().sort((a, b) => a.caption.localeCompare(b.caption));
+        <tr class="fm-filter-row">
+          <td>
+            <input type="checkbox" class="fm-select-all" data-table="${tableId}">
+          </td>
+
+          <td>
+            <select class="fm-filter-leitstelle" data-table="${tableId}">
+              <option value="">Alle</option>
+              ${leitstellen.map(n => `<option value="${n}">${n}</option>`).join('')}
+            </select>
+          </td>
+
+          <td>
+            <select class="fm-filter-wache" data-table="${tableId}">
+              <option value="">Alle</option>
+              ${wachen.map(n => `<option value="${n}">${n}</option>`).join('')}
+            </select>
+          </td>
+
+          <td>
+            <button class="fm-filter-reset btn btn-primary btn-xs" data-table="${tableId}">
+              Filter zurücksetzen
+            </button>
+          </td>
+
+          <td></td>
+          <td></td>
+          <td></td>
+
+          <td style="text-align:center;">
+            <button class="btn btn-info btn-xs fm-toggle-hide-no-missing" data-table="${tableId}" title="Blendet Wachen aus, bei denen keine Fahrzeuge fehlen">
+              Keine fehlenden
+            </button>
+          </td>
+
+          <td style="text-align: center;">
+            <button class="btn btn-success btn-xs fm-buy-selected-credits" data-table="${tableId}">
+              💳 Alle kaufen
+            </button>
+          </td>
+
+          <td style="text-align: center;">
+            <button class="btn btn-danger btn-xs fm-buy-selected-coins" data-table="${tableId}">
+              🪙 Alle kaufen
+            </button>
+          </td>
+        </tr>
+      </thead>
+
+      <tbody>
+  `;
+
+        const sortedBuildings = buildings
+        .slice()
+        .sort((a, b) => a.caption.localeCompare(b.caption));
 
         sortedBuildings.forEach((b, idx) => {
             if (filterLeitstelle && b.leitstelle_caption !== filterLeitstelle) return;
             if (filterWache && b.caption !== filterWache) return;
-            const vehiclesOnBuilding = vehicleMap[b.id] || [];
-            const typeCountMapOnBuilding = {};
 
+            const vehiclesOnBuilding = vehicleMap[b.id] || [];
+
+            const typeCountMapOnBuilding = {};
             vehiclesOnBuilding.forEach(v => {
                 const typeId = v.vehicle_type;
-                const typeName = vehicleTypeMap[typeId]?.caption || `Unbekannt (Typ ${typeId})`;
-                typeCountMapOnBuilding[typeName] = (typeCountMapOnBuilding[typeName] || 0) + 1;
+                const typeName =
+                      vehicleTypeMap[typeId]?.caption || `Unbekannt (Typ ${typeId})`;
+
+                typeCountMapOnBuilding[typeName] =
+                    (typeCountMapOnBuilding[typeName] || 0) + 1;
             });
 
             const vehicleNames = Object.entries(typeCountMapOnBuilding)
-            .map(([name, count]) => count > 1 ? `${count}x ${name}` : name)
+            .map(([name, count]) =>
+                 count > 1 ? `${count}x ${name}` : name
+                )
             .join(',<wbr> ') || 'Keine Fahrzeuge auf Wache vorhanden';
 
             const configKey = `${b.building_type}_${b.small_building ? 'small' : 'normal'}`;
+
             const profilesData = loadProfiles(configKey);
             const profileNames = Object.keys(profilesData.profiles);
             const hasProfiles = profileNames.length > 0;
-            const activeProfile = hasProfiles ? getBuildingActiveProfile(b.id, configKey) : null;
 
-            const missingData = getMissingVehiclesForBuilding(b, vehicleMap, vehicleTypeMap, configKey);
-            const buyableData = getBuyableMissingVehicles(b, vehicleMap, vehicleTypeMap, lssmBuildingDefs);
+            const activeProfile = hasProfiles
+            ? getBuildingActiveProfile(b.id, configKey)
+            : null;
 
-            const coloredMissingNames = missingData.vehiclesIds && missingData.vehiclesIds.length > 0
-            ? Object.entries(missingData.vehiclesIds.reduce((acc, id) => {
-                acc[id] = (acc[id] || 0) + 1;
-                return acc;
-            }, {}))
+            const missingData = getMissingVehiclesForBuilding(
+                b,
+                vehicleMap,
+                vehicleTypeMap,
+                configKey
+            );
+
+            const buyableData = getBuyableMissingVehicles(
+                b,
+                vehicleMap,
+                vehicleTypeMap,
+                lssmBuildingDefs
+            );
+
+            const coloredMissingNames =
+                  missingData.vehiclesIds && missingData.vehiclesIds.length > 0
+            ? Object.entries(
+                missingData.vehiclesIds.reduce((acc, id) => {
+                    acc[id] = (acc[id] || 0) + 1;
+                    return acc;
+                }, {})
+            )
             .map(([id, count]) => {
                 const typeId = parseInt(id, 10);
-                const status = getExtensionStatusForVehicle(b, typeId, lssmBuildingDefs);
-                const name = vehicleTypeMap[typeId]?.caption || `Unbekannt (Typ ${id})`;
-                const displayName = count > 1 ? `${count}x ${name}` : name;
+
+                const status = getExtensionStatusForVehicle(
+                    b,
+                    typeId,
+                    lssmBuildingDefs
+                );
+
+                const name =
+                      vehicleTypeMap[typeId]?.caption || `Unbekannt (Typ ${id})`;
+
+                const displayName =
+                      count > 1 ? `${count}x ${name}` : name;
+
                 switch (status) {
                     case 'locked':
                     case 'missing':
@@ -1128,47 +1293,94 @@
                     default:
                         return displayName;
                 }
-            }).join(',<wbr>&nbsp;')
+            })
+            .join(',<wbr>&nbsp;')
             : missingData.names;
 
             const missingVehiclesJson = JSON.stringify(missingData.vehiclesIds || []);
+
             const maxVehicles = calcMaxParkingLots(b, lssmBuildingDefs);
             const freieStellplaetze = Math.max(maxVehicles - vehiclesOnBuilding.length, 0);
 
             const profileCell = hasProfiles
             ? `<select class="fm-building-profile" data-building-id="${b.id}" data-config-key="${configKey}" style="padding:2px 4px; border:1px solid var(--spoiler-border); border-radius:4px; background:var(--spoiler-body-bg); color:var(--spoiler-body-text); width:100%;">
-                ${profileNames.map(p => `<option value="${p}" ${p === activeProfile ? 'selected' : ''}>${p}</option>`).join('')}
-              </select>`
+          ${profileNames
+            .map(p => `
+              <option value="${p}" ${p === activeProfile ? 'selected' : ''}>${p}</option>
+            `)
+            .join('')}
+        </select>`
             : `<span style="color: var(--text-color-secondary, #999); font-style: italic;">– kein Profil –</span>`;
 
             html += `
-            <tr data-building-id="${b.id}" data-config-key="${configKey}" data-missing-vehicle-ids='${missingVehiclesJson}'>
-                <td><input type="checkbox" class="fm-select" id="fm-select-${tableId}-${idx}" data-credits="${buyableData.totalCredits}" data-coins="${buyableData.totalCoins}"></td>
-                <td>${b.leitstelle_caption ?? '-'}</td>
-                <td>${buildBuildingLink(b)}</td>
-                <td>${profileCell}</td>
-                <td>${b.vehicle_count ?? 0}</td>
-                <td><span class="badge fm-badge-green">${freieStellplaetze}</span></td>
-                <td><span class="fm-vehicle-list">${vehicleNames}</span></td>
-                <td><span class="fm-vehicle-list">${coloredMissingNames}</span></td>
-                <td>
-                    <button class="btn btn-success btn-xs fm-buy-credit" ${buyableData.totalCredits === 0 ? 'disabled title="Keine kaufbaren Fahrzeuge"' : (buyableData.totalCredits > currentCredits ? 'disabled title="Nicht genug Credits"' : '')}>
-                        ${buyableData.totalCredits.toLocaleString()} Credits
-                    </button>
-                </td>
-                <td>
-                    <button class="btn btn-danger btn-xs fm-buy-coin" ${buyableData.totalCoins === 0 ? 'disabled title="Keine kaufbaren Fahrzeuge"' : (buyableData.totalCoins > currentCoins ? 'disabled title="Nicht genug Coins"' : '')}>
-                        ${buyableData.totalCoins.toLocaleString()} Coins
-                    </button>
-                </td>
-            </tr>
-        `;
+      <tr data-building-id="${b.id}" data-config-key="${configKey}" data-missing-vehicle-ids='${missingVehiclesJson}'>
+        <td>
+          <input type="checkbox"
+                 class="fm-select"
+                 id="fm-select-${tableId}-${idx}"
+                 data-credits="${buyableData.totalCredits}"
+                 data-coins="${buyableData.totalCoins}">
+        </td>
+
+        <td>${b.leitstelle_caption ?? '-'}</td>
+        <td>${buildBuildingLink(b)}</td>
+        <td>${profileCell}</td>
+        <td>${b.vehicle_count ?? 0}</td>
+
+        <td>
+          <span class="badge fm-badge-green">${freieStellplaetze}</span>
+        </td>
+
+        <td>
+          <span class="fm-vehicle-list">${vehicleNames}</span>
+        </td>
+
+        <td>
+          <span class="fm-vehicle-list">${coloredMissingNames}</span>
+        </td>
+
+        <td>
+          <button class="btn btn-success btn-xs fm-buy-credit"
+            ${
+            buyableData.totalCredits === 0
+                ? 'disabled title="Keine kaufbaren Fahrzeuge"'
+            : buyableData.totalCredits > currentCredits
+                ? 'disabled title="Nicht genug Credits"'
+            : ''
+        }>
+            ${buyableData.totalCredits.toLocaleString()} Credits
+          </button>
+        </td>
+
+        <td>
+          <button class="btn btn-danger btn-xs fm-buy-coin"
+            ${
+            buyableData.totalCoins === 0
+                ? 'disabled title="Keine kaufbaren Fahrzeuge"'
+            : buyableData.totalCoins > currentCoins
+                ? 'disabled title="Nicht genug Coins"'
+            : ''
+        }>
+            ${buyableData.totalCoins.toLocaleString()} Coins
+          </button>
+        </td>
+      </tr>
+    `;
         });
 
         html += '</tbody></table>';
 
         // Event-Listener in separate Funktion auslagern
-        setTimeout(() => setupTableEventListeners(tableId, buildings, vehicleMap, vehicleTypeMap, lssmBuildingDefs), 0);
+        setTimeout(() =>
+                   setupTableEventListeners(
+            tableId,
+            buildings,
+            vehicleMap,
+            vehicleTypeMap,
+            lssmBuildingDefs
+        ),
+                   0
+                  );
 
         return html;
     }
@@ -1568,9 +1780,15 @@
                 });
             });
 
-            if (filteredBuyList.length === 0) {
-                alert("Keine Fahrzeuge zu kaufen – Stellplätze belegt oder Fahrzeuge vorhanden!");
-                return;
+            if (filteredBuyList.length < totalWanted) {
+                const proceed = confirm(
+                    `Es sind nicht genügend freie Stellplätze vorhanden.\n\n` +
+                    `Von ${totalWanted} gewünschten Fahrzeugen können nur ` +
+                    `${filteredBuyList.length} Fahrzeuge gekauft werden.\n\n` +
+                    `Soll der Kauf trotzdem durchgeführt werden?`
+                );
+
+                if (!proceed) return;
             }
 
             // ----------------- 5. Kosten prüfen -----------------
