@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Anhänger-Manager
+// @name         [LSS] Anhänger-Manager (Beta)
 // @namespace    https://leitstellenspiel.de/
 // @version      1.0
 // @description  Prüft Anhänger auf korrekte Zugfahrzeuge (robust refactored)
