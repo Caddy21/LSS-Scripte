@@ -107,7 +107,10 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Verbandschulen Filter
     - Rückruf
     - Verschiebe-Manager (Gammaversion)
+    - Lehrgangsfilter
+    - Be-Pol Personalbeschafer
     - Spezialgebietsfilter
     - Schulauslastung
-    - Lehrgangsfilter
+    - Anhänger-Manager (Beta)
+    - Gebäudelöschbutton
 </details>
