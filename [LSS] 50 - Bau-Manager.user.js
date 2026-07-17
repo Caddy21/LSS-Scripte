@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         [LSS] 50 - Bau-Manager (Beta)
 // @namespace    http://tampermonkey.net/
-// @version      0.9.5
-// @description  Hiermit kannst du Wachen & Gebäude schnell in Serie bauen
+// @version      0.9.6
+// @description  Hiermit kannst du Wachen & Gebäude schnell in Serie bauen und Baupläne erstellen
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
 // @match        https://polizei.leitstellenspiel.de/*
