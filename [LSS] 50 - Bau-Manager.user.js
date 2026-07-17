@@ -446,18 +446,19 @@
                 if (minimized) {
                     // ===== MINIMIEREN: Nach rechts verschieben =====
                     Object.assign(container.style, {
-                        width: '70px',
-                        height: '70px',
+                        width: '430px',
+                        height: 'auto',
                         left: 'auto',
                         right: '10px',
-                        maxHeight: 'auto',
-                        overflow: 'visible',
-                        padding: '0',
+                        maxHeight: '90vh',
+                        overflow: 'auto',
+                        padding: '10px',
                         flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        gap: '0'
+                        justifyContent: 'flex-start',
+                        alignItems: 'stretch',
+                        gap: '8px'
                     });
+                    this.setCompactRowsMode(true);
 
                     // Header verstecken
                     if (headerContainer) {
@@ -468,11 +469,18 @@
                     const resDiv = document.getElementById('lss_mb_resources');
                     const rowsWrapper = document.getElementById('lss_mb_rows_wrapper');
                     const buttonsWrapper = document.getElementById('lss_mb_buttons_wrapper');
+                    const blueprintWrapper = document.getElementById('lss_mb_blueprint_wrapper');
                     const globalControls = document.getElementById('lss_mb_global_controls');
 
                     if (resDiv) resDiv.style.display = 'none';
-                    if (rowsWrapper) rowsWrapper.style.display = 'none';
+                    if (rowsWrapper) {
+                        rowsWrapper.style.display = 'flex';
+                        rowsWrapper.style.maxHeight = 'calc(90vh - 60px)';
+                        rowsWrapper.style.overflowY = 'auto';
+                        rowsWrapper.style.paddingRight = '0';
+                    }
                     if (buttonsWrapper) buttonsWrapper.style.display = 'none';
+                    if (blueprintWrapper) blueprintWrapper.style.display = 'none';
                     if (globalControls) globalControls.style.display = 'none';
 
                     // Minimize-Button-Clone anzeigen
@@ -522,11 +530,19 @@
                     const resDiv = document.getElementById('lss_mb_resources');
                     const rowsWrapper = document.getElementById('lss_mb_rows_wrapper');
                     const buttonsWrapper = document.getElementById('lss_mb_buttons_wrapper');
+                    const blueprintWrapper = document.getElementById('lss_mb_blueprint_wrapper');
                     const globalControls = document.getElementById('lss_mb_global_controls');
 
                     if (resDiv) resDiv.style.display = '';
-                    if (rowsWrapper) rowsWrapper.style.display = 'flex';
+                    if (rowsWrapper) {
+                        rowsWrapper.style.display = 'flex';
+                        rowsWrapper.style.maxHeight = '55vh';
+                        rowsWrapper.style.overflowY = 'auto';
+                        rowsWrapper.style.paddingRight = '6px';
+                    }
+                    this.setCompactRowsMode(false);
                     if (buttonsWrapper) buttonsWrapper.style.display = 'flex';
+                    if (blueprintWrapper) blueprintWrapper.style.display = 'flex';
                     if (globalControls) globalControls.style.display = 'flex';
 
                     // Minimize-Button-Clone verstecken
@@ -577,13 +593,183 @@
                 const rowsWrapper = document.getElementById('lss_mb_rows_wrapper');
                 const buttonsWrapper = document.getElementById('lss_mb_buttons_wrapper');
                 const globalControls = document.getElementById('lss_mb_global_controls');
+                const blueprintWrapper = document.getElementById('lss_mb_blueprint_wrapper');
                 const minimizeBtnClone = document.getElementById('lss_mb_minimize_btn_clone');
 
                 if (resDiv) resDiv.style.display = '';
-                if (rowsWrapper) rowsWrapper.style.display = 'flex';
+                if (rowsWrapper) {
+                    rowsWrapper.style.maxHeight = '55vh';
+                    rowsWrapper.style.overflowY = 'auto';
+                    rowsWrapper.style.paddingRight = '6px';
+                }
+
+                this.setCompactRowsMode(false);
                 if (buttonsWrapper) buttonsWrapper.style.display = 'flex';
                 if (globalControls) globalControls.style.display = 'flex';
+                if (blueprintWrapper) blueprintWrapper.style.display = 'flex';
                 if (minimizeBtnClone) minimizeBtnClone.style.display = 'none';
+            },
+            setRowCompactMode(rowState, compact) {
+                if (!rowState?.ui) return;
+
+                const {
+                    rowLabel,
+                    buildingSelect,
+                    hospitalModeSelect,
+                    schoolModeSelect,
+                    bereitstellungsraumModeSelect,
+                    numberLabel,
+                    creditsLabel,
+                    coinsLabel,
+                    addressInput,
+                    nameInput,
+                    lstSelect,
+                    vehicleSelect,
+                    markerBtn,
+                    deleteBtn,
+                    statusLabel
+                } = rowState.ui;
+
+                if (compact) {
+
+                    // Kompakte Seitenansicht
+                    rowState.el.style.flexWrap = 'wrap';
+                    rowState.el.style.alignItems = 'center';
+                    rowState.el.style.gap = '6px';
+
+                    // Ausblenden was in der Kompaktansicht nicht gebraucht wird
+                    [
+                        rowLabel,
+                        hospitalModeSelect,
+                        schoolModeSelect,
+                        bereitstellungsraumModeSelect,
+                        numberLabel,
+                        creditsLabel,
+                        coinsLabel,
+                        lstSelect,
+                        vehicleSelect,
+                        statusLabel
+                    ].forEach(el => {
+                        if (el) el.style.display = 'none';
+                    });
+
+
+                    // Wachentyp volle Breite
+                    if (buildingSelect) {
+                        buildingSelect.style.display = '';
+                        buildingSelect.style.flex = '1 1 100%';
+                        buildingSelect.style.minWidth = '0';
+                    }
+
+
+                    // Adresse volle Breite
+                    if (addressInput) {
+                        addressInput.style.display = '';
+                        addressInput.style.flex = '1 1 100%';
+                        addressInput.style.minWidth = '0';
+                    }
+
+
+                    // Name + Buttons in einer Zeile
+                    if (nameInput) {
+                        nameInput.style.display = '';
+                        nameInput.style.flex = '1 1 auto';
+                        nameInput.style.minWidth = '120px';
+                    }
+
+
+                    if (markerBtn) {
+                        markerBtn.style.display = '';
+                        markerBtn.style.flex = '0 0 auto';
+                    }
+
+
+                    if (deleteBtn) {
+                        deleteBtn.style.display = '';
+                        deleteBtn.style.flex = '0 0 auto';
+                    }
+
+
+                    return;
+                }
+
+                rowState.el.style.flexWrap = 'wrap';
+                rowState.el.style.alignItems = 'center';
+                rowState.el.style.gap = '10px';
+
+                if (rowLabel) rowLabel.style.display = '';
+                if (numberLabel) numberLabel.style.display = '';
+                if (creditsLabel) creditsLabel.style.display = '';
+                if (addressInput) {
+                    addressInput.style.display = '';
+                    addressInput.style.flex = '0 0 200px';
+                    addressInput.style.minWidth = '';
+                }
+                if (markerBtn) markerBtn.style.display = '';
+                if (deleteBtn) deleteBtn.style.display = '';
+
+                if (buildingSelect) {
+                    buildingSelect.style.display = '';
+                    buildingSelect.style.flex = '0 0 110px';
+                }
+
+                if (nameInput) {
+                    nameInput.style.display = '';
+                    nameInput.style.flex = '0 0 110px';
+                    nameInput.style.minWidth = '';
+                }
+
+                if (coinsLabel) {
+                    coinsLabel.style.display = HIDE_COINS_BUTTON ? 'none' : '';
+                }
+
+                if (statusLabel) {
+                    statusLabel.style.display =
+                        statusLabel.textContent.trim() ? 'block' : 'none';
+                }
+
+                const data = rowState.data || {};
+
+                if (hospitalModeSelect) {
+                    hospitalModeSelect.style.display =
+                        Number(data.buildingType) === 4 &&
+                        LSS_MB.state.alliance.canBuildAllianceHospital
+                        ? 'block'
+                    : 'none';
+                }
+
+                if (schoolModeSelect) {
+                    schoolModeSelect.style.display =
+                        ALLIANCE_SCHOOL_TYPES.has(Number(data.buildingType)) &&
+                        LSS_MB.state.alliance.canBuildAllianceHospital
+                        ? 'block'
+                    : 'none';
+                }
+
+                if (bereitstellungsraumModeSelect) {
+                    bereitstellungsraumModeSelect.style.display =
+                        Number(data.buildingType) === 14 &&
+                        LSS_MB.state.alliance.canBuildAllianceHospital
+                        ? 'block'
+                    : 'none';
+                }
+
+                if (lstSelect) {
+                    updateLeitstelleVisibility(data, lstSelect);
+                }
+
+                if (vehicleSelect) {
+                    const isFire =
+                          data.building?.caption?.toLowerCase().includes('feuerwache') &&
+                          vehicleSelect.options.length > 1;
+
+                    vehicleSelect.style.display = isFire ? 'block' : 'none';
+                }
+            },
+            setCompactRowsMode(compact) {
+                (LSS_MB.state.buildRows || []).forEach(row =>
+                                                       this.setRowCompactMode(row, compact)
+                                                      );
             },
             clearBuildRows() {
                 if (LSS_MB.state.buildRows?.length) {
@@ -1111,6 +1297,24 @@
 
                 // Referenz im Row-State speichern
                 rowState.statusEl = statusLabel;
+                // Referenzen für Kompaktansicht speichern
+                rowState.ui = {
+                    rowLabel,
+                    buildingSelect: select,
+                    hospitalModeSelect,
+                    schoolModeSelect,
+                    bereitstellungsraumModeSelect,
+                    numberLabel,
+                    creditsLabel,
+                    coinsLabel,
+                    addressInput,
+                    nameInput,
+                    lstSelect,
+                    vehicleSelect,
+                    markerBtn,
+                    deleteBtn,
+                    statusLabel
+                };
                 renumberBuildRows();
                 updateRowCountDisplay();
                 injectGlobalButtons();
@@ -1729,1989 +1933,1960 @@
             blueprintWrapper.appendChild(importBtn);
             blueprintWrapper.appendChild(fileInput);
         }
-            updateBuildAllButtonState();
-            createGlobalControls();
+        updateBuildAllButtonState();
+        createGlobalControls();
+    }
+
+    // Funktion für Globale Auswahl
+    function createGlobalControls() {
+        let wrap = document.getElementById('lss_mb_global_controls');
+        if (wrap) return;
+
+        const buttonsWrapper = document.getElementById('lss_mb_buttons_wrapper');
+        if (!buttonsWrapper) return;
+
+        wrap = document.createElement('div');
+        wrap.id = 'lss_mb_global_controls';
+
+        const mode = document.body.classList.contains('dark') ? 'dark' : 'light';
+        const bgColor = mode === 'dark' ? '#2b2b2b' : '#fff';
+        const textColor = mode === 'dark' ? '#eee' : '#000';
+        const borderColor = mode === 'dark' ? '#555' : '#ccc';
+
+        Object.assign(wrap.style, {
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '10px',
+            alignItems: 'center',
+            marginTop: '8px',
+            padding: '8px',
+            borderRadius: '6px',
+            backgroundColor: mode === 'dark' ? '#3a3a3a' : '#f5f5f5',
+            border: `1px solid ${borderColor}`
+        });
+
+        // ===== Checkbox in eigener Zeile oben =====
+        const checkboxRow = document.createElement('div');
+        Object.assign(checkboxRow.style, {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            width: '100%', // nimmt volle Breite ein, damit sie oben sitzt
+            marginBottom: '4px',
+            fontSize: '13px',
+            color: textColor
+        });
+
+        const autoApplyCheckbox = document.createElement('input');
+        autoApplyCheckbox.type = 'checkbox';
+        autoApplyCheckbox.checked = LSS_MB.state.autoApplyGlobals ?? false;
+        LSS_MB.state.autoApplyGlobals = autoApplyCheckbox.checked;
+        log('Initialer Auto-Apply-State:', LSS_MB.state.autoApplyGlobals);
+        autoApplyCheckbox.addEventListener('change', () => {
+            LSS_MB.state.autoApplyGlobals = autoApplyCheckbox.checked;
+            localStorage.setItem('lss_mb_auto_apply_globals', JSON.stringify(autoApplyCheckbox.checked));
+            log('Automatisches Übernehmen globaler Einstellungen:', autoApplyCheckbox.checked);
+        });
+
+        const autoApplyLabel = document.createElement('span');
+        autoApplyLabel.textContent = 'Neue Reihen übernehmen automatisch globale Einstellungen';
+
+        checkboxRow.append(autoApplyCheckbox, autoApplyLabel);
+        wrap.appendChild(checkboxRow);
+
+        // ===== Hauptlabel „Globale Einstellungen“ =====
+        const label = document.createElement('div');
+        label.textContent = 'Globale Einstellungen';
+        label.style.fontWeight = 'bold';
+        label.style.marginRight = '10px';
+        label.style.color = textColor;
+        wrap.appendChild(label);
+
+        function styleField(el, width = '160px') {
+            el.style.boxSizing = 'border-box';
+            el.style.flex = `0 0 ${width}`;
+            el.style.height = '30px';
+            el.style.padding = '2px 6px';
+            el.style.borderRadius = '4px';
+            el.style.border = `1px solid ${borderColor}`;
+            el.style.backgroundColor = bgColor;
+            el.style.color = textColor;
+            el.style.fontSize = '13px';
+            el.style.fontFamily = 'inherit';
+            return el;
         }
 
-        // Funktion für Globale Auswahl
-        function createGlobalControls() {
-            let wrap = document.getElementById('lss_mb_global_controls');
-            if (wrap) return;
+        // ===== Globale Selects =====
+        const globalBuilding = styleField(document.createElement('select'));
+        const globalLST = styleField(document.createElement('select'));
+        const globalVehicle = styleField(document.createElement('select'));
 
-            const buttonsWrapper = document.getElementById('lss_mb_buttons_wrapper');
-            if (!buttonsWrapper) return;
+        globalBuilding.innerHTML = `<option value="">🏢 Wachentyp</option>`;
+        globalLST.innerHTML = `<option value="">📡 Leitstelle</option>`;
+        globalVehicle.innerHTML = `<option value="">🚒 Fahrzeug</option>`;
+        globalVehicle.style.display = 'none';
 
-            wrap = document.createElement('div');
-            wrap.id = 'lss_mb_global_controls';
+        const globalHospitalMode = styleField(document.createElement('select'), '120px');
+        globalHospitalMode.style.display = 'none';
+        globalHospitalMode.innerHTML = `<option value="own">Eigenes</option><option value="alliance">Verband</option>`;
 
-            const mode = document.body.classList.contains('dark') ? 'dark' : 'light';
-            const bgColor = mode === 'dark' ? '#2b2b2b' : '#fff';
-            const textColor = mode === 'dark' ? '#eee' : '#000';
-            const borderColor = mode === 'dark' ? '#555' : '#ccc';
+        const globalSchoolMode = styleField(document.createElement('select'), '120px');
+        globalSchoolMode.style.display = 'none';
+        globalSchoolMode.innerHTML = `<option value="own">Eigene</option><option value="alliance">Verband</option>`;
 
-            Object.assign(wrap.style, {
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '10px',
-                alignItems: 'center',
-                marginTop: '8px',
-                padding: '8px',
-                borderRadius: '6px',
-                backgroundColor: mode === 'dark' ? '#3a3a3a' : '#f5f5f5',
-                border: `1px solid ${borderColor}`
+        const globalBereitsstellungsraumMode = styleField(document.createElement('select'), '120px');
+        globalBereitsstellungsraumMode.style.display = 'none';
+        globalBereitsstellungsraumMode.innerHTML = `<option value="own">Eigener</option><option value="alliance">Verband</option>`;
+
+        wrap.append(globalBuilding, globalHospitalMode, globalSchoolMode, globalBereitsstellungsraumMode, globalLST, globalVehicle);
+
+        // ===== Gebäude laden =====
+        let buildings = LSS_MB.state.buildingsData;
+        if (!Array.isArray(buildings)) buildings = Object.values(buildings);
+        buildings = buildings.slice().sort((a, b) => (a.caption || '').localeCompare(b.caption || '', 'de', { sensitivity: 'base' }));
+        const userLevel = Number(LSS_MB.state.userInfo?.user_level ?? 0);
+
+        buildings.forEach(b => {
+            const type = b.building_type;
+            if ((type === 26 && userLevel < 4) ||
+                (type === 25 && userLevel < 0) ||
+                ((type === 5 || type === 13) && userLevel < 7) ||
+                (type === 28 && userLevel < 5) ||
+                (type === 24 && userLevel < 3) ||
+                (type === 15 && userLevel < 6) ||
+                (type === 16 && !LSS_MB.state.alliance.canBuildAllianceHospital)
+               ) return;
+
+            const opt = document.createElement('option');
+            opt.value = String(b.building_type);
+            opt.textContent = b.caption;
+            globalBuilding.appendChild(opt);
+        });
+
+        // ===== Leitstellen laden =====
+        fetch('/api/buildings')
+            .then(r => r.json())
+            .then(data => {
+            data.filter(b => b.building_type === 7)
+                .sort((a, b) => a.caption.localeCompare(b.caption, 'de', { sensitivity: 'base' }))
+                .forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id;
+                opt.textContent = b.caption;
+                globalLST.appendChild(opt);
             });
+            log('Globale Leitstellen geladen');
+        });
 
-            // ===== Checkbox in eigener Zeile oben =====
-            const checkboxRow = document.createElement('div');
-            Object.assign(checkboxRow.style, {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                width: '100%', // nimmt volle Breite ein, damit sie oben sitzt
-                marginBottom: '4px',
-                fontSize: '13px',
-                color: textColor
-            });
+        // ===== Fahrzeuge laden =====
+        const vehicleMapping = { "LF 20": 0, "LF 10": 1, "LF 8/6": 6, "LF 20/16": 7, "LF 10/6": 8, "LF 16-TS": 9, "LF-L": 107, "KLF": 88, "MLF": 89, "TSF-W": 37, "HLF 10": 90, "HLF 20": 30 };
+        Object.entries(vehicleMapping).forEach(([name, id]) => {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = name;
+            globalVehicle.appendChild(opt);
+        });
 
-            const autoApplyCheckbox = document.createElement('input');
-            autoApplyCheckbox.type = 'checkbox';
-            autoApplyCheckbox.checked = LSS_MB.state.autoApplyGlobals ?? false;
-            LSS_MB.state.autoApplyGlobals = autoApplyCheckbox.checked;
-            log('Initialer Auto-Apply-State:', LSS_MB.state.autoApplyGlobals);
-            autoApplyCheckbox.addEventListener('change', () => {
-                LSS_MB.state.autoApplyGlobals = autoApplyCheckbox.checked;
-                localStorage.setItem('lss_mb_auto_apply_globals', JSON.stringify(autoApplyCheckbox.checked));
-                log('Automatisches Übernehmen globaler Einstellungen:', autoApplyCheckbox.checked);
-            });
+        updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
 
-            const autoApplyLabel = document.createElement('span');
-            autoApplyLabel.textContent = 'Neue Reihen übernehmen automatisch globale Einstellungen';
+        function updateGlobalVehicleVisibility() {
+            const selected = globalBuilding.selectedOptions[0];
+            if (!selected) return;
+            const text = selected.textContent.toLowerCase();
+            const isFeuerwache = text.includes('feuerwache');
+            globalVehicle.style.display = isFeuerwache ? 'block' : 'none';
+            if (!isFeuerwache) {
+                globalVehicle.value = '';
+                LSS_MB.state.globalDefaults.startVehicle = null;
+            }
+        }
 
-            checkboxRow.append(autoApplyCheckbox, autoApplyLabel);
-            wrap.appendChild(checkboxRow);
+        // ===== Event-Listener =====
+        globalBuilding.addEventListener('change', () => {
+            LSS_MB.state.globalDefaults.buildingType = globalBuilding.value || null;
+            updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
 
-            // ===== Hauptlabel „Globale Einstellungen“ =====
-            const label = document.createElement('div');
-            label.textContent = 'Globale Einstellungen';
-            label.style.fontWeight = 'bold';
-            label.style.marginRight = '10px';
-            label.style.color = textColor;
-            wrap.appendChild(label);
+            const typeId = Number(globalBuilding.value);
+            const canBuildAlliance = LSS_MB.state.alliance.canBuildAllianceHospital;
 
-            function styleField(el, width = '160px') {
-                el.style.boxSizing = 'border-box';
-                el.style.flex = `0 0 ${width}`;
-                el.style.height = '30px';
-                el.style.padding = '2px 6px';
-                el.style.borderRadius = '4px';
-                el.style.border = `1px solid ${borderColor}`;
-                el.style.backgroundColor = bgColor;
-                el.style.color = textColor;
-                el.style.fontSize = '13px';
-                el.style.fontFamily = 'inherit';
-                return el;
+            // Krankenhaus
+            if (typeId === 4 && canBuildAlliance) {
+                globalHospitalMode.style.display = 'block';
+            } else {
+                globalHospitalMode.style.display = 'none';
             }
 
-            // ===== Globale Selects =====
-            const globalBuilding = styleField(document.createElement('select'));
-            const globalLST = styleField(document.createElement('select'));
-            const globalVehicle = styleField(document.createElement('select'));
+            // Schulen
+            if (ALLIANCE_SCHOOL_TYPES.has(typeId) && canBuildAlliance) {
+                globalSchoolMode.style.display = 'block';
+            } else {
+                globalSchoolMode.style.display = 'none';
+            }
 
-            globalBuilding.innerHTML = `<option value="">🏢 Wachentyp</option>`;
-            globalLST.innerHTML = `<option value="">📡 Leitstelle</option>`;
-            globalVehicle.innerHTML = `<option value="">🚒 Fahrzeug</option>`;
-            globalVehicle.style.display = 'none';
+            // Bereitsstellungsraum
+            if (typeId === 14 && canBuildAlliance) {
+                globalBereitsstellungsraumMode.style.display = 'block';
+            } else {
+                globalBereitsstellungsraumMode.style.display = 'none';
+            }
 
-            const globalHospitalMode = styleField(document.createElement('select'), '120px');
+            updateGlobalVehicleVisibility();
+        });
+
+        globalLST.addEventListener('change', () => {
+            LSS_MB.state.globalDefaults.leitstelle = globalLST.value || null;
+        });
+
+        globalVehicle.addEventListener('change', () => {
+            LSS_MB.state.globalDefaults.startVehicle = globalVehicle.value || null;
+        });
+
+        globalHospitalMode.addEventListener('change', () => {
+            LSS_MB.state.globalDefaults.hospitalMode = globalHospitalMode.value;
+            updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
+        });
+
+        globalSchoolMode.addEventListener('change', () => {
+            LSS_MB.state.globalDefaults.schoolMode = globalSchoolMode.value;
+            updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
+        });
+
+        globalBereitsstellungsraumMode.addEventListener('change', () => {
+            LSS_MB.state.globalDefaults.bereitschaftsraumMode = globalBereitsstellungsraumMode.value;
+            updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
+        });
+
+        // ===== Apply- und Delete-Buttons =====
+        const applyBtn = document.createElement('button');
+        applyBtn.textContent = '⚡ Auf alle Reihen anwenden';
+        applyBtn.className = BUTTON_CLASSES.primary;
+        applyBtn.style.height = '30px';
+        applyBtn.onclick = () => {
+            LSS_MB.state.buildRows.forEach(row => applyGlobalsToRow(row));
+            updateCostPreview();
+        };
+        wrap.appendChild(applyBtn);
+
+        LSS_MB.state.applyBtn = applyBtn;
+
+        const deleteAllBtn = document.createElement('button');
+        deleteAllBtn.textContent = '🗑 Alle Reihen entfernen';
+        deleteAllBtn.className = BUTTON_CLASSES.danger;
+        deleteAllBtn.style.height = '30px';
+        deleteAllBtn.onclick = () => {
+            if (!confirm('Wirklich alle Reihen entfernen?')) return;
+
+            // Marker von der Karte entfernen
+            LSS_MB.state.buildRows.forEach(row => {
+                if (row.marker) {
+                    try { LSS_MB.state.map.removeLayer(row.marker); } catch {}
+                }
+            });
+
+            // Reihen im DOM löschen
+            const rowsWrapper = document.getElementById('lss_mb_rows_wrapper');
+            if (rowsWrapper) rowsWrapper.innerHTML = '';
+
+            // State zurücksetzen
+            LSS_MB.state.buildRows = [];
+            LSS_MB.state.buildRowCounter = 0;
+            LSS_MB.state.globalDefaults = {
+                buildingType: null,
+                leitstelle: null,
+                startVehicle: null,
+                hospitalMode: 'own',
+                schoolMode: 'own',
+                bereitschaftsraumMode: 'own'
+            };
+
+            // Globale Inputs zurücksetzen
+            globalBuilding.value = '';
+            globalLST.value = '';
+            globalVehicle.value = '';
+            globalHospitalMode.value = 'own';
+            globalSchoolMode.value = 'own';
+            globalBereitsstellungsraumMode.value = 'own';
+
             globalHospitalMode.style.display = 'none';
-            globalHospitalMode.innerHTML = `<option value="own">Eigenes</option><option value="alliance">Verband</option>`;
-
-            const globalSchoolMode = styleField(document.createElement('select'), '120px');
             globalSchoolMode.style.display = 'none';
-            globalSchoolMode.innerHTML = `<option value="own">Eigene</option><option value="alliance">Verband</option>`;
-
-            const globalBereitsstellungsraumMode = styleField(document.createElement('select'), '120px');
             globalBereitsstellungsraumMode.style.display = 'none';
-            globalBereitsstellungsraumMode.innerHTML = `<option value="own">Eigener</option><option value="alliance">Verband</option>`;
-
-            wrap.append(globalBuilding, globalHospitalMode, globalSchoolMode, globalBereitsstellungsraumMode, globalLST, globalVehicle);
-
-            // ===== Gebäude laden =====
-            let buildings = LSS_MB.state.buildingsData;
-            if (!Array.isArray(buildings)) buildings = Object.values(buildings);
-            buildings = buildings.slice().sort((a, b) => (a.caption || '').localeCompare(b.caption || '', 'de', { sensitivity: 'base' }));
-            const userLevel = Number(LSS_MB.state.userInfo?.user_level ?? 0);
-
-            buildings.forEach(b => {
-                const type = b.building_type;
-                if ((type === 26 && userLevel < 4) ||
-                    (type === 25 && userLevel < 0) ||
-                    ((type === 5 || type === 13) && userLevel < 7) ||
-                    (type === 28 && userLevel < 5) ||
-                    (type === 24 && userLevel < 3) ||
-                    (type === 15 && userLevel < 6) ||
-                    (type === 16 && !LSS_MB.state.alliance.canBuildAllianceHospital)
-                   ) return;
-
-                const opt = document.createElement('option');
-                opt.value = String(b.building_type);
-                opt.textContent = b.caption;
-                globalBuilding.appendChild(opt);
-            });
-
-            // ===== Leitstellen laden =====
-            fetch('/api/buildings')
-                .then(r => r.json())
-                .then(data => {
-                data.filter(b => b.building_type === 7)
-                    .sort((a, b) => a.caption.localeCompare(b.caption, 'de', { sensitivity: 'base' }))
-                    .forEach(b => {
-                    const opt = document.createElement('option');
-                    opt.value = b.id;
-                    opt.textContent = b.caption;
-                    globalLST.appendChild(opt);
-                });
-                log('Globale Leitstellen geladen');
-            });
-
-            // ===== Fahrzeuge laden =====
-            const vehicleMapping = { "LF 20": 0, "LF 10": 1, "LF 8/6": 6, "LF 20/16": 7, "LF 10/6": 8, "LF 16-TS": 9, "LF-L": 107, "KLF": 88, "MLF": 89, "TSF-W": 37, "HLF 10": 90, "HLF 20": 30 };
-            Object.entries(vehicleMapping).forEach(([name, id]) => {
-                const opt = document.createElement('option');
-                opt.value = id;
-                opt.textContent = name;
-                globalVehicle.appendChild(opt);
-            });
+            globalVehicle.style.display = 'none';
 
             updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
 
-            function updateGlobalVehicleVisibility() {
-                const selected = globalBuilding.selectedOptions[0];
-                if (!selected) return;
-                const text = selected.textContent.toLowerCase();
-                const isFeuerwache = text.includes('feuerwache');
-                globalVehicle.style.display = isFeuerwache ? 'block' : 'none';
-                if (!isFeuerwache) {
-                    globalVehicle.value = '';
-                    LSS_MB.state.globalDefaults.startVehicle = null;
-                }
-            }
-
-            // ===== Event-Listener =====
-            globalBuilding.addEventListener('change', () => {
-                LSS_MB.state.globalDefaults.buildingType = globalBuilding.value || null;
-                updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
-
-                const typeId = Number(globalBuilding.value);
-                const canBuildAlliance = LSS_MB.state.alliance.canBuildAllianceHospital;
-
-                // Krankenhaus
-                if (typeId === 4 && canBuildAlliance) {
-                    globalHospitalMode.style.display = 'block';
-                } else {
-                    globalHospitalMode.style.display = 'none';
-                }
-
-                // Schulen
-                if (ALLIANCE_SCHOOL_TYPES.has(typeId) && canBuildAlliance) {
-                    globalSchoolMode.style.display = 'block';
-                } else {
-                    globalSchoolMode.style.display = 'none';
-                }
-
-                // Bereitsstellungsraum
-                if (typeId === 14 && canBuildAlliance) {
-                    globalBereitsstellungsraumMode.style.display = 'block';
-                } else {
-                    globalBereitsstellungsraumMode.style.display = 'none';
-                }
-
-                updateGlobalVehicleVisibility();
-            });
-
-            globalLST.addEventListener('change', () => {
-                LSS_MB.state.globalDefaults.leitstelle = globalLST.value || null;
-            });
-
-            globalVehicle.addEventListener('change', () => {
-                LSS_MB.state.globalDefaults.startVehicle = globalVehicle.value || null;
-            });
-
-            globalHospitalMode.addEventListener('change', () => {
-                LSS_MB.state.globalDefaults.hospitalMode = globalHospitalMode.value;
-                updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
-            });
-
-            globalSchoolMode.addEventListener('change', () => {
-                LSS_MB.state.globalDefaults.schoolMode = globalSchoolMode.value;
-                updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
-            });
-
-            globalBereitsstellungsraumMode.addEventListener('change', () => {
-                LSS_MB.state.globalDefaults.bereitschaftsraumMode = globalBereitsstellungsraumMode.value;
-                updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
-            });
-
-            // ===== Apply- und Delete-Buttons =====
-            const applyBtn = document.createElement('button');
-            applyBtn.textContent = '⚡ Auf alle Reihen anwenden';
-            applyBtn.className = BUTTON_CLASSES.primary;
-            applyBtn.style.height = '30px';
-            applyBtn.onclick = () => {
-                LSS_MB.state.buildRows.forEach(row => applyGlobalsToRow(row));
-                updateCostPreview();
-            };
-            wrap.appendChild(applyBtn);
-
-            LSS_MB.state.applyBtn = applyBtn;
-
-            const deleteAllBtn = document.createElement('button');
-            deleteAllBtn.textContent = '🗑 Alle Reihen entfernen';
-            deleteAllBtn.className = BUTTON_CLASSES.danger;
-            deleteAllBtn.style.height = '30px';
-            deleteAllBtn.onclick = () => {
-                if (!confirm('Wirklich alle Reihen entfernen?')) return;
-
-                // Marker von der Karte entfernen
-                LSS_MB.state.buildRows.forEach(row => {
-                    if (row.marker) {
-                        try { LSS_MB.state.map.removeLayer(row.marker); } catch {}
-                    }
-                });
-
-                // Reihen im DOM löschen
-                const rowsWrapper = document.getElementById('lss_mb_rows_wrapper');
-                if (rowsWrapper) rowsWrapper.innerHTML = '';
-
-                // State zurücksetzen
-                LSS_MB.state.buildRows = [];
-                LSS_MB.state.buildRowCounter = 0;
-                LSS_MB.state.globalDefaults = {
-                    buildingType: null,
-                    leitstelle: null,
-                    startVehicle: null,
-                    hospitalMode: 'own',
-                    schoolMode: 'own',
-                    bereitschaftsraumMode: 'own'
-                };
-
-                // Globale Inputs zurücksetzen
-                globalBuilding.value = '';
-                globalLST.value = '';
-                globalVehicle.value = '';
-                globalHospitalMode.value = 'own';
-                globalSchoolMode.value = 'own';
-                globalBereitsstellungsraumMode.value = 'own';
-
-                globalHospitalMode.style.display = 'none';
-                globalSchoolMode.style.display = 'none';
-                globalBereitsstellungsraumMode.style.display = 'none';
-                globalVehicle.style.display = 'none';
-
-                updateLeitstelleVisibility(LSS_MB.state.globalDefaults, globalLST);
-
-                updateCostPreview();
-                updateBuildAllButtonState();
-                checkBereitsstellungsraumLimits();
-                updateRowCountDisplay();
-
-                // WICHTIG: applyBtn deaktivieren
-                applyBtn.disabled = true;
-
-                log('Alle Reihen entfernt, globale Einstellungen zurückgesetzt');
-            };
-
-            wrap.appendChild(deleteAllBtn);
-
-            const blueprintWrapper = document.getElementById('lss_mb_blueprint_wrapper');
-
-            if (blueprintWrapper) {
-                blueprintWrapper.parentNode.insertBefore(wrap, blueprintWrapper.nextSibling);
-            } else {
-                buttonsWrapper.parentNode.insertBefore(wrap, buttonsWrapper.nextSibling);
-            }
-            LSS_MB.state.globalControlsWrap = wrap;
-
+            updateCostPreview();
             updateBuildAllButtonState();
+            checkBereitsstellungsraumLimits();
+            updateRowCountDisplay();
+
+            // WICHTIG: applyBtn deaktivieren
+            applyBtn.disabled = true;
+
+            log('Alle Reihen entfernt, globale Einstellungen zurückgesetzt');
+        };
+
+        wrap.appendChild(deleteAllBtn);
+
+        const blueprintWrapper = document.getElementById('lss_mb_blueprint_wrapper');
+
+        if (blueprintWrapper) {
+            blueprintWrapper.parentNode.insertBefore(wrap, blueprintWrapper.nextSibling);
+        } else {
+            buttonsWrapper.parentNode.insertBefore(wrap, buttonsWrapper.nextSibling);
+        }
+        LSS_MB.state.globalControlsWrap = wrap;
+
+        updateBuildAllButtonState();
+    }
+
+    // Funktion um alles in die Reihen zu übernehmen
+    function applyGlobalsToRow(rowState) {
+        const defs = LSS_MB.state.globalDefaults;
+        const s = rowState.selects;
+
+        if (!s) {
+            return;
         }
 
-        // Funktion um alles in die Reihen zu übernehmen
-        function applyGlobalsToRow(rowState) {
-            const defs = LSS_MB.state.globalDefaults;
-            const s = rowState.selects;
+        // 1️⃣ Wachentyp setzen
+        if (defs.buildingType && s.building) {
+            s.building.value = defs.buildingType;
+            s.building.dispatchEvent(new Event('change'));
 
-            if (!s) {
-                return;
-            }
+            const canBuildAlliance = LSS_MB.state.alliance.canBuildAllianceHospital;
 
-            // 1️⃣ Wachentyp setzen
-            if (defs.buildingType && s.building) {
-                s.building.value = defs.buildingType;
-                s.building.dispatchEvent(new Event('change'));
+            setTimeout(() => {
+                if (s.hospitalMode) {
+                    s.hospitalMode.style.display =
+                        defs.buildingType == 4 && canBuildAlliance ? 'block' : 'none';
+                }
 
-                const canBuildAlliance = LSS_MB.state.alliance.canBuildAllianceHospital;
+                if (s.schoolMode) {
+                    s.schoolMode.style.display =
+                        ALLIANCE_SCHOOL_TYPES.has(Number(defs.buildingType)) && canBuildAlliance
+                        ? 'block'
+                    : 'none';
+                }
 
-                setTimeout(() => {
-                    if (s.hospitalMode) {
-                        s.hospitalMode.style.display =
-                            defs.buildingType == 4 && canBuildAlliance ? 'block' : 'none';
-                    }
+                if (s.bereitstellungsraum) {
+                    s.bereitstellungsraum.style.display =
+                        defs.buildingType == 14 && canBuildAlliance ? 'block' : 'none';
+                }
+            }, 50);
+        }
 
-                    if (s.schoolMode) {
-                        s.schoolMode.style.display =
-                            ALLIANCE_SCHOOL_TYPES.has(Number(defs.buildingType)) && canBuildAlliance
-                            ? 'block'
-                        : 'none';
-                    }
+        // 2️⃣ Mode-Selects setzen
+        if (s.hospitalMode && defs.hospitalMode) {
+            setTimeout(() => {
+                s.hospitalMode.value = defs.hospitalMode;
+                s.hospitalMode.dispatchEvent(new Event('change'));
+            }, 100);
+        }
 
-                    if (s.bereitstellungsraum) {
-                        s.bereitstellungsraum.style.display =
-                            defs.buildingType == 14 && canBuildAlliance ? 'block' : 'none';
-                    }
-                }, 50);
-            }
+        if (s.schoolMode && defs.schoolMode) {
+            setTimeout(() => {
+                s.schoolMode.value = defs.schoolMode;
+                s.schoolMode.dispatchEvent(new Event('change'));
+            }, 100);
+        }
 
-            // 2️⃣ Mode-Selects setzen
-            if (s.hospitalMode && defs.hospitalMode) {
-                setTimeout(() => {
-                    s.hospitalMode.value = defs.hospitalMode;
-                    s.hospitalMode.dispatchEvent(new Event('change'));
-                }, 100);
-            }
+        if (s.bereitstellungsraum && defs.bereitschaftsraumMode) {
+            setTimeout(() => {
+                s.bereitstellungsraum.value = defs.bereitschaftsraumMode;
+                s.bereitstellungsraum.dispatchEvent(new Event('change'));
+            }, 100);
+        }
 
-            if (s.schoolMode && defs.schoolMode) {
-                setTimeout(() => {
-                    s.schoolMode.value = defs.schoolMode;
-                    s.schoolMode.dispatchEvent(new Event('change'));
-                }, 100);
-            }
+        // 3️⃣ Leitstelle setzen
+        if (s.leitstelle && defs.leitstelle) {
+            let retryCount = 0;
+            const applyLST = () => {
+                retryCount++;
+                const isLoaded = rowState.lstSelectLoaded?.() || false;
 
-            if (s.bereitstellungsraum && defs.bereitschaftsraumMode) {
-                setTimeout(() => {
-                    s.bereitstellungsraum.value = defs.bereitschaftsraumMode;
-                    s.bereitstellungsraum.dispatchEvent(new Event('change'));
-                }, 100);
-            }
-
-            // 3️⃣ Leitstelle setzen
-            if (s.leitstelle && defs.leitstelle) {
-                let retryCount = 0;
-                const applyLST = () => {
-                    retryCount++;
-                    const isLoaded = rowState.lstSelectLoaded?.() || false;
-
-                    if (isLoaded) {
-                        const hasOption = [...s.leitstelle.options].some(o => o.value == defs.leitstelle);
-                        if (hasOption) {
-                            s.leitstelle.value = defs.leitstelle;
-                            s.leitstelle.dispatchEvent(new Event('change'));
-                            return;
-                        }
-                    }
-
-                    if (retryCount > 15) {
+                if (isLoaded) {
+                    const hasOption = [...s.leitstelle.options].some(o => o.value == defs.leitstelle);
+                    if (hasOption) {
+                        s.leitstelle.value = defs.leitstelle;
+                        s.leitstelle.dispatchEvent(new Event('change'));
                         return;
                     }
+                }
 
-                    setTimeout(applyLST, 200);
-                };
+                if (retryCount > 15) {
+                    return;
+                }
 
-                setTimeout(applyLST, 100);
-            }
+                setTimeout(applyLST, 200);
+            };
 
-            // 4️⃣ Fahrzeug setzen
-            if (s.vehicle && defs.startVehicle) {
-                let retryCount = 0;
-                const applyVehicle = () => {
-                    retryCount++;
-                    const optionCount = s.vehicle.options.length;
+            setTimeout(applyLST, 100);
+        }
 
-                    if (optionCount > 1) {
-                        const hasOption = [...s.vehicle.options].some(o => o.value == defs.startVehicle);
-                        if (hasOption) {
-                            s.vehicle.value = defs.startVehicle;
-                            s.vehicle.dispatchEvent(new Event('change'));
-                            return;
-                        }
-                    }
+        // 4️⃣ Fahrzeug setzen
+        if (s.vehicle && defs.startVehicle) {
+            let retryCount = 0;
+            const applyVehicle = () => {
+                retryCount++;
+                const optionCount = s.vehicle.options.length;
 
-                    if (retryCount > 15) {
+                if (optionCount > 1) {
+                    const hasOption = [...s.vehicle.options].some(o => o.value == defs.startVehicle);
+                    if (hasOption) {
+                        s.vehicle.value = defs.startVehicle;
+                        s.vehicle.dispatchEvent(new Event('change'));
                         return;
                     }
+                }
 
-                    setTimeout(applyVehicle, 200);
-                };
+                if (retryCount > 15) {
+                    return;
+                }
 
-                setTimeout(applyVehicle, 100);
+                setTimeout(applyVehicle, 200);
+            };
+
+            setTimeout(applyVehicle, 100);
+        }
+    }
+
+    // Reihenzähler
+    function updateRowCountDisplay() {
+        const el = document.getElementById('lss_mb_row_count');
+        if (!el) return;
+
+        const count = LSS_MB.state.buildRows?.length || 0;
+        el.textContent = `Reihen: ${count}`;
+    }
+
+    // Funktion um Leistellenauswahl anzuzeigen oder nicht
+    function updateLeitstelleVisibility(data, lstSelect) {
+        const rawType = data.buildingType;
+
+        // ❗ FIX: 0 ist gültig → nicht mit ! prüfen
+        if (rawType === null || rawType === undefined || rawType === '') {
+            lstSelect.style.display = 'none';
+            return;
+        }
+
+        const typeId = Number(rawType);
+
+        const isAllianceHospital =
+              typeId === 4 && data.hospitalMode === 'alliance';
+
+        const isAllianceSchool =
+              ALLIANCE_SCHOOL_TYPES.has(typeId) && data.schoolMode === 'alliance';
+
+        const isAllianceBereitstellungsraum =
+              typeId === 14 && data.bereitschaftsraumMode === 'alliance';
+
+        const isAllianceOnlyBuilding =
+              typeId === 16;
+
+        if (
+            typeId === 7 ||
+            isAllianceHospital ||
+            isAllianceSchool ||
+            isAllianceBereitstellungsraum ||
+            isAllianceOnlyBuilding
+        ) {
+            lstSelect.style.display = 'none';
+            delete data.leitstelle;
+        } else {
+            lstSelect.style.display = '';
+        }
+    }
+
+    // Funktion um den Baubutton zu deaktivieren.
+    function updateBuildAllButtonState() {
+        const buildBtn = document.getElementById('lss_mb_build_all_btn');
+        const coinsBtn = document.getElementById('lss_mb_build_all_coins_btn');
+        if (!buildBtn && !coinsBtn) return;
+
+        const hasRows = Array.isArray(LSS_MB.state.buildRows)
+        && LSS_MB.state.buildRows.length > 0;
+
+        if (buildBtn) {
+            buildBtn.disabled = !hasRows;
+            buildBtn.style.opacity = hasRows ? '1' : '0.5';
+            buildBtn.style.cursor = hasRows ? 'pointer' : 'not-allowed';
+        }
+        if (coinsBtn) {
+            coinsBtn.disabled = !hasRows;
+            coinsBtn.style.opacity = hasRows ? '1' : '0.5';
+            coinsBtn.style.cursor = hasRows ? 'pointer' : 'not-allowed';
+        }
+    }
+
+    // Funktion um den Maker zu benennen
+    function updateMarkerLabel(rowState) {
+        if (!rowState.marker) return;
+
+        const parts = [];
+
+        // Sichtbare Reihen-Nummer verwenden
+        const rowNr = rowState.visualIndex ?? rowState.id;
+        parts.push(`Reihe ${rowNr}`);
+
+        if (rowState.data.building?.caption)
+            parts.push(rowState.data.building.caption);
+        if (rowState.data.name)
+            parts.push(rowState.data.name);
+
+        const label = parts.join(' – ');
+
+        rowState.marker.bindTooltip(label, {
+            permanent: true,
+            direction: 'top',
+            offset: [0, -10]
+        }).openTooltip();
+    }
+
+    // Fehlerhaftes Feld anzeigen
+    function highlightField(el, isError) {
+        if (!el) return;
+        el.style.borderColor = isError ? '#ff4d4f' : '';
+    }
+
+    // Zählung der geplanten Bereitstelungsräume
+    function countPlannedBereitsstellungsraeume() {
+        let own = 0;
+        let alliance = 0;
+
+        for (const r of LSS_MB.state.buildRows || []) {
+            const d = r.data || {};
+            if (String(d.buildingType) === '14') {
+                if (d.bereitschaftsraumMode === 'alliance') {
+                    alliance++;
+                } else {
+                    own++;
+                }
             }
         }
 
-        // Reihenzähler
-        function updateRowCountDisplay() {
-            const el = document.getElementById('lss_mb_row_count');
-            if (!el) return;
+        return { own, alliance };
+    }
 
-            const count = LSS_MB.state.buildRows?.length || 0;
-            el.textContent = `Reihen: ${count}`;
-        }
+    // Prüfung des Limits der Bereitstellungsräumen
+    function checkBereitsstellungsraumLimits(triggerRow) {
+        try {
+            const allowedOwnBR = LSS_MB.state.isPremium ? 8 : 4;
+            const allowedAllianceBR = 4; // Verbandslimit
 
-        // Funktion um Leistellenauswahl anzuzeigen oder nicht
-        function updateLeitstelleVisibility(data, lstSelect) {
-            const rawType = data.buildingType;
+            const existingOwnBR = Number(LSS_MB.state.userBuildings?.[14] || 0);
+            const existingAllianceBR = Number(LSS_MB.state.allianceBuildings?.[14] || 0);
+            // ↑ falls vorhanden, sonst 0 lassen oder anpassen
 
-            // ❗ FIX: 0 ist gültig → nicht mit ! prüfen
-            if (rawType === null || rawType === undefined || rawType === '') {
-                lstSelect.style.display = 'none';
-                return;
-            }
+            const plannedCounts = countPlannedBereitsstellungsraeume();
+            const totalOwn = existingOwnBR + plannedCounts.own;
+            const totalAlliance = existingAllianceBR + plannedCounts.alliance;
 
-            const typeId = Number(rawType);
-
-            const isAllianceHospital =
-                  typeId === 4 && data.hospitalMode === 'alliance';
-
-            const isAllianceSchool =
-                  ALLIANCE_SCHOOL_TYPES.has(typeId) && data.schoolMode === 'alliance';
-
-            const isAllianceBereitstellungsraum =
-                  typeId === 14 && data.bereitschaftsraumMode === 'alliance';
-
-            const isAllianceOnlyBuilding =
-                  typeId === 16;
-
-            if (
-                typeId === 7 ||
-                isAllianceHospital ||
-                isAllianceSchool ||
-                isAllianceBereitstellungsraum ||
-                isAllianceOnlyBuilding
-            ) {
-                lstSelect.style.display = 'none';
-                delete data.leitstelle;
-            } else {
-                lstSelect.style.display = '';
-            }
-        }
-
-        // Funktion um den Baubutton zu deaktivieren.
-        function updateBuildAllButtonState() {
-            const buildBtn = document.getElementById('lss_mb_build_all_btn');
-            const coinsBtn = document.getElementById('lss_mb_build_all_coins_btn');
-            if (!buildBtn && !coinsBtn) return;
-
-            const hasRows = Array.isArray(LSS_MB.state.buildRows)
-            && LSS_MB.state.buildRows.length > 0;
-
-            if (buildBtn) {
-                buildBtn.disabled = !hasRows;
-                buildBtn.style.opacity = hasRows ? '1' : '0.5';
-                buildBtn.style.cursor = hasRows ? 'pointer' : 'not-allowed';
-            }
-            if (coinsBtn) {
-                coinsBtn.disabled = !hasRows;
-                coinsBtn.style.opacity = hasRows ? '1' : '0.5';
-                coinsBtn.style.cursor = hasRows ? 'pointer' : 'not-allowed';
-            }
-        }
-
-        // Funktion um den Maker zu benennen
-        function updateMarkerLabel(rowState) {
-            if (!rowState.marker) return;
-
-            const parts = [];
-
-            // Sichtbare Reihen-Nummer verwenden
-            const rowNr = rowState.visualIndex ?? rowState.id;
-            parts.push(`Reihe ${rowNr}`);
-
-            if (rowState.data.building?.caption)
-                parts.push(rowState.data.building.caption);
-            if (rowState.data.name)
-                parts.push(rowState.data.name);
-
-            const label = parts.join(' – ');
-
-            rowState.marker.bindTooltip(label, {
-                permanent: true,
-                direction: 'top',
-                offset: [0, -10]
-            }).openTooltip();
-        }
-
-        // Fehlerhaftes Feld anzeigen
-        function highlightField(el, isError) {
-            if (!el) return;
-            el.style.borderColor = isError ? '#ff4d4f' : '';
-        }
-
-        // Zählung der geplanten Bereitstelungsräume
-        function countPlannedBereitsstellungsraeume() {
-            let own = 0;
-            let alliance = 0;
+            const exceededOwn = totalOwn > allowedOwnBR;
+            const exceededAlliance = totalAlliance > allowedAllianceBR;
 
             for (const r of LSS_MB.state.buildRows || []) {
                 const d = r.data || {};
-                if (String(d.buildingType) === '14') {
-                    if (d.bereitschaftsraumMode === 'alliance') {
-                        alliance++;
-                    } else {
-                        own++;
-                    }
-                }
-            }
-
-            return { own, alliance };
-        }
-
-        // Prüfung des Limits der Bereitstellungsräumen
-        function checkBereitsstellungsraumLimits(triggerRow) {
-            try {
-                const allowedOwnBR = LSS_MB.state.isPremium ? 8 : 4;
-                const allowedAllianceBR = 4; // Verbandslimit
-
-                const existingOwnBR = Number(LSS_MB.state.userBuildings?.[14] || 0);
-                const existingAllianceBR = Number(LSS_MB.state.allianceBuildings?.[14] || 0);
-                // ↑ falls vorhanden, sonst 0 lassen oder anpassen
-
-                const plannedCounts = countPlannedBereitsstellungsraeume();
-                const totalOwn = existingOwnBR + plannedCounts.own;
-                const totalAlliance = existingAllianceBR + plannedCounts.alliance;
-
-                const exceededOwn = totalOwn > allowedOwnBR;
-                const exceededAlliance = totalAlliance > allowedAllianceBR;
-
-                for (const r of LSS_MB.state.buildRows || []) {
-                    const d = r.data || {};
-                    if (String(d.buildingType) !== '14') {
-                        if (r.statusEl) {
-                            const txt = r.statusEl.textContent || '';
-                            if (txt.startsWith('❌')) {
-                                r.statusEl.style.display = 'none';
-                                r.statusEl.textContent = '';
-                            }
+                if (String(d.buildingType) !== '14') {
+                    if (r.statusEl) {
+                        const txt = r.statusEl.textContent || '';
+                        if (txt.startsWith('❌')) {
+                            r.statusEl.style.display = 'none';
+                            r.statusEl.textContent = '';
                         }
-                        const sel = r.el?.querySelector('select');
-                        if (sel) highlightField(sel, false);
-                        continue;
                     }
-
-                    const isAlliance = d.bereitschaftsraumMode === 'alliance';
                     const sel = r.el?.querySelector('select');
-
-                    let showError = false;
-                    let errorText = '';
-
-                    if (!isAlliance && exceededOwn) {
-                        showError = true;
-                        errorText = `❌ Fehler`;
-                    }
-
-                    if (isAlliance && exceededAlliance) {
-                        showError = true;
-                        errorText = `❌ Fehler`;
-                    }
-
-                    if (showError) {
-                        if (r.statusEl) {
-                            r.statusEl.style.display = 'block';
-                            r.statusEl.textContent = errorText;
-                        }
-                        if (sel) highlightField(sel, true);
-                    } else {
-                        if (r.statusEl) {
-                            const txt = r.statusEl.textContent || '';
-                            if (txt.startsWith('❌')) {
-                                r.statusEl.style.display = 'none';
-                                r.statusEl.textContent = '';
-                            }
-                        }
-                        if (sel) highlightField(sel, false);
-                    }
+                    if (sel) highlightField(sel, false);
+                    continue;
                 }
 
-                try { updateCostPreview(); } catch (e) { log('updateCostPreview Fehler nach BR-Check', e); }
-            } catch (e) {
-                log('checkBereitsstellungsraumLimits Fehler', e);
+                const isAlliance = d.bereitschaftsraumMode === 'alliance';
+                const sel = r.el?.querySelector('select');
+
+                let showError = false;
+                let errorText = '';
+
+                if (!isAlliance && exceededOwn) {
+                    showError = true;
+                    errorText = `❌ Fehler`;
+                }
+
+                if (isAlliance && exceededAlliance) {
+                    showError = true;
+                    errorText = `❌ Fehler`;
+                }
+
+                if (showError) {
+                    if (r.statusEl) {
+                        r.statusEl.style.display = 'block';
+                        r.statusEl.textContent = errorText;
+                    }
+                    if (sel) highlightField(sel, true);
+                } else {
+                    if (r.statusEl) {
+                        const txt = r.statusEl.textContent || '';
+                        if (txt.startsWith('❌')) {
+                            r.statusEl.style.display = 'none';
+                            r.statusEl.textContent = '';
+                        }
+                    }
+                    if (sel) highlightField(sel, false);
+                }
+            }
+
+            try { updateCostPreview(); } catch (e) { log('updateCostPreview Fehler nach BR-Check', e); }
+        } catch (e) {
+            log('checkBereitsstellungsraumLimits Fehler', e);
+        }
+    }
+
+    // Funktion um Buttons während des Bauens zu deaktivieren
+    function disableButtonsDuringBuild(disabled) {
+        LSS_MB.state.isBuilding = disabled;
+
+        const buildBtn = document.getElementById('lss_mb_build_all_btn');
+        const coinsBtn = document.getElementById('lss_mb_build_all_coins_btn');
+        const addBtn = document.getElementById('lss_mb_add_row_btn');
+        const btn5 = document.getElementById('lss_mb_add_5_rows_btn');
+        const btn10 = document.getElementById('lss_mb_add_10_rows_btn');
+
+        if (btn5) {
+            btn5.disabled = disabled || btn5.disabled;
+            btn5.style.opacity = disabled ? '0.5' : '';
+        }
+        if (btn10) {
+            btn10.disabled = disabled || btn10.disabled;
+            btn10.style.opacity = disabled ? '0.5' : '';
+        }
+        if (buildBtn) {
+            buildBtn.disabled = disabled || buildBtn.disabled;
+            buildBtn.style.opacity = disabled ? '0.5' : '';
+        }
+        if (coinsBtn) {
+            coinsBtn.disabled = disabled || coinsBtn.disabled;
+            coinsBtn.style.opacity = disabled ? '0.5' : '';
+        }
+        if (addBtn) {
+            addBtn.disabled = disabled || addBtn.disabled;
+            addBtn.style.opacity = disabled ? '0.5' : '';
+        }
+    }
+
+    // Funktion um die Wachen zu bauen
+    async function buildAll() {
+        const rows = LSS_MB.state.buildRows;
+        const errorMessages = [];
+
+        log('buildAll gestartet, Reihenanzahl=', rows.length);
+
+        for (const row of rows) {
+            if (row.statusEl) {
+                row.statusEl.style.display = 'block'; // sichtbar machen
+                row.statusEl.textContent = '⏳ Wartet';
             }
         }
 
-        // Funktion um Buttons während des Bauens zu deaktivieren
-        function disableButtonsDuringBuild(disabled) {
-            LSS_MB.state.isBuilding = disabled;
+        for (const row of rows) {
+            const d = row.data;
+            if (
+                d.building &&
+                String(d.building.building_type) !== String(d.buildingType)
+            ) {
+                console.error(
+                    '[LSS-MB][FATAL] building_type-Mismatch',
+                    d.building.building_type,
+                    d.buildingType
+                );
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
+                alert(`❌ Interner Fehler in Reihe ${rowLabel(row)} (Gebäudetyp inkonsistent)`);
+                return;
+            }
+        }
 
+        for (let row of rows) {
+            try {
+                row.statusEl && (row.statusEl.textContent = '🔍 Prüfe…');
+                await validateRow(row);
+                row.statusEl && (row.statusEl.textContent = '⏳ Bereit');
+            } catch (e) {
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
+                errorMessages.push(`Reihe ${rowLabel(row)}: ${e.message}`);
+            }
+        }
+
+        if (errorMessages.length > 0) {
+            log('Fehler beim Bau, Abbruch:', errorMessages);
+            alert('❌ Fehler beim Bau:\n' + errorMessages.join('\n'));
+            return;
+        }
+
+        for (let row of rows) {
+            const d = row.data;
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+
+            row.statusEl && (row.statusEl.textContent = '🔨 Baue…');
+
+            const fd = new FormData();
+            // utf8 wie beim Formular-Submit ergänzen (Rails-Forms nutzen das)
+            fd.append('utf8', '✓');
+            fd.append('authenticity_token', csrf);
+            fd.append('building[building_type]', d.buildingType);
+            fd.append('building[name]', d.name);
+            fd.append('building[latitude]', d.lat);
+            fd.append('building[longitude]', d.lng);
+            fd.append('building[address]', '');
+            fd.append('building[leitstelle_building_id]', d.leitstelle || '');
+
+            if (d.startVehicle) {
+                const key = d.buildingType === '18'
+                ? 'building[start_vehicle_feuerwache_kleinwache]'
+                : 'building[start_vehicle_feuerwache]';
+                fd.append(key, d.startVehicle);
+            }
+
+            const typeId = Number(d.building?.building_type);
+
+            // ===== Krankenhaus =====
+            if (typeId === 4) {
+                fd.append('commit', 'Bauen 200.000 Credits');
+                if (d.hospitalMode === 'alliance') {
+                    // richtiges Feld für Verbandsbau
+                    fd.append('build_as_alliance', '1');
+                    console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Verbandskrankenhaus');
+                } else {
+                    console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Eigenes Krankenhaus');
+                }
+            }
+
+            // ===== Verbandszellen =====
+            if (typeId === 16) {
+                fd.append('commit', 'Bauen 200.000 Credits');
+                fd.append('build_as_alliance', '1');
+                console.info('[LSS-MB][BUILD]', 'Reihe', row.id, '→ Verbandszellen');
+            }
+
+            // ===== Schulen =====
+            if (ALLIANCE_SCHOOL_TYPES.has(typeId)) {
+                fd.append('commit', 'Bauen 200.000 Credits');
+                if (d.schoolMode === 'alliance') {
+                    fd.append('build_as_alliance', '1');
+                    console.info('[LSS-MB][BUILD]', 'Reihe', row.id, '→ Verbandsschule');
+                }
+            }
+
+            // ===== Bereitsstellungsraum (Typ 14) =====
+            if (typeId === 14) {
+                fd.append('commit', 'Bauen Bereitsstellungsraum');
+                if (d.bereitschaftsraumMode === 'alliance') {
+                    fd.append('build_as_alliance', '1');
+                    console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Verbands-Bereitstellungsraum');
+                } else {
+                    console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Eigener Bereitsstellungsraum');
+                }
+            }
+
+            // Debug
+            for (let [k, v] of fd.entries()) {
+            }
+
+            try {
+                const resp = await fetch('/buildings', {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin'
+                });
+
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+
+                row.statusEl && (row.statusEl.textContent = '✅ Fertig');
+                log('POST abgeschlossen für Reihe', row.id, 'Status:', resp.status);
+            } catch (e) {
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
+                log('Fehler beim POST für Reihe', row.id, e);
+            }
+
+            await new Promise(r => setTimeout(r, 700));
+        }
+
+        log('buildAll fertig');
+        alert(`✅ Fertig: ${rows.length} Gebäude gebaut. Seite wird neugeladen.`);
+        location.reload();
+    }
+
+    // Validierung wie beim Credits-Bau, Bestätigung vor dem Absenden.
+    async function buildAllCoins() {
+        const rows = LSS_MB.state.buildRows;
+        const errorMessages = [];
+
+        log('buildAllCoins gestartet, Reihenanzahl=', rows.length);
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            alert('Keine Reihen vorhanden.');
+            return;
+        }
+
+        // 1) Status auf "Wartet" setzen (sichtbar machen)
+        for (const row of rows) {
+            if (row.statusEl) {
+                row.statusEl.style.display = 'block';
+                row.statusEl.textContent = '⏳ Wartet';
+            }
+        }
+
+        // 2) Gleiche FATAL-Prüfung wie bei buildAll: building_type mismatch für ALLE Reihen
+        for (const row of rows) {
+            const d = row.data;
+            if (
+                d.building &&
+                String(d.building.building_type) !== String(d.buildingType)
+            ) {
+                console.error(
+                    '[LSS-MB][FATAL][COINS] building_type-Mismatch',
+                    d.building.building_type,
+                    d.buildingType
+                );
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
+                alert(`❌ Interner Fehler in Reihe ${rowLabel(row)} (Gebäudetyp inkonsistent)`);
+                return;
+            }
+        }
+
+        // 3) Verbandsgebäude herausfiltern (können nicht mit Coins gekauft werden)
+        const rowsToBuy = [];
+        let skippedAllianceCount = 0;
+        for (const row of rows) {
+            const d = row.data;
+            if (!d.building) continue;
+
+            const typeId = Number(d.building.building_type);
+            const isAlliance =
+                  (typeId === 4 && d.hospitalMode === 'alliance') ||
+                  (ALLIANCE_SCHOOL_TYPES.has(typeId) && d.schoolMode === 'alliance') ||
+                  (typeId === 16);
+
+            if (isAlliance) {
+                skippedAllianceCount++;
+                if (row.statusEl) {
+                    row.statusEl.style.display = 'block';
+                    row.statusEl.textContent = '🔒 Verbandsbau (kein Coins)';
+                }
+                continue;
+            }
+            rowsToBuy.push(row);
+        }
+
+        if (rowsToBuy.length === 0) {
+            alert(
+                skippedAllianceCount > 0
+                ? 'Alle gewählten Reihen sind Verbandsgebäude und können nicht per Coins gekauft werden.'
+                : 'Keine gültigen Reihen zum Bauen mit Coins gefunden.'
+            );
+            return;
+        }
+
+        // 4) Validierung nutzt validateRow
+        for (let row of rowsToBuy) {
+            try {
+                row.statusEl && (row.statusEl.textContent = '🔍 Prüfe…');
+                await validateRow(row);
+                row.statusEl && (row.statusEl.textContent = '⏳ Bereit');
+            } catch (e) {
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
+                errorMessages.push(`Reihe ${rowLabel(row)}: ${e.message}`);
+            }
+        }
+
+        if (errorMessages.length > 0) {
+            log('Fehler beim Bau (Coins), Abbruch:', errorMessages);
+            alert('❌ Fehler beim Bau (Coins):\n' + errorMessages.join('\n'));
+            return;
+        }
+
+        // 5) Sicherstellen, dass Kostenvorschau aktuell ist
+        try { await updateCostPreview(); } catch (e) { log('updateCostPreview fehlgeschlagen vor Coins-Bau', e); }
+
+        // 6) Coins-Gesamtkosten aus der Anzeige summiere
+        let totalCoins = 0;
+        let unknownCoins = false;
+        let buildingCount = 0;
+
+        for (const row of rowsToBuy) {
+            const d = row.data;
+            if (!d.building) continue;
+            buildingCount++;
+
+            const coinEl = document.getElementById(`lss_mb_coins_${row.id}`);
+            const txt = (coinEl?.textContent || '').trim();
+            const match = txt.match(/([\d\.]+)/);
+            if (!match) {
+                unknownCoins = true;
+                continue;
+            }
+            const num = Number(match[1].replace(/\./g, ''));
+            if (!Number.isFinite(num)) {
+                unknownCoins = true;
+                continue;
+            }
+            totalCoins += num;
+        }
+
+        if (buildingCount === 0) {
+            alert('Keine gültigen Gebäude/Reihen zum Bauen gefunden.');
+            return;
+        }
+
+        // 7) Bestätigungsdialog
+        const totalFormatted = totalCoins.toLocaleString('de-DE');
+        let confirmMsg = '';
+        if (skippedAllianceCount > 0) {
+            confirmMsg += `${skippedAllianceCount} Verbandsgebäude werden ausgeschlossen (können nicht mit Coins gekauft werden).\n\n`;
+        }
+        if (unknownCoins) {
+            confirmMsg += `Für einige ausgewählte Gebäude sind die Coin-Kosten nicht bekannt.\nMöchtest du trotzdem versuchen, ${buildingCount} Gebäude für insgesamt ca. ${totalFormatted} Coins zu kaufen?`;
+        } else {
+            confirmMsg += `Möchtest du wirklich ${buildingCount} Gebäude für insgesamt ${totalFormatted} Coins kaufen?`;
+        }
+
+        if (!window.confirm(confirmMsg)) {
+            log('User hat den Coins-Kauf abgebrochen');
+            for (const row of rowsToBuy) {
+                if (row.statusEl) {
+                    row.statusEl.style.display = 'block';
+                    row.statusEl.textContent = '⛔ Abgebrochen';
+                }
+            }
+            return;
+        }
+
+        // 8) POSTs mit build_with_coins (nur rowsToBuy)
+        for (let row of rowsToBuy) {
+            const d = row.data;
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+
+            row.statusEl && (row.statusEl.textContent = '🔨 Baue');
+
+            const fd = new FormData();
+            fd.append('utf8', '✓');
+            fd.append('authenticity_token', csrf);
+            fd.append('building[building_type]', d.buildingType);
+            fd.append('building[name]', d.name);
+            fd.append('building[latitude]', d.lat);
+            fd.append('building[longitude]', d.lng);
+            fd.append('building[address]', d.address || '');
+            fd.append('building[leitstelle_building_id]', d.leitstelle || '');
+            fd.append('build_with_coins', '1');
+
+            if (d.startVehicle) {
+                const key = d.buildingType === '18'
+                ? 'building[start_vehicle_feuerwache_kleinwache]'
+                : 'building[start_vehicle_feuerwache]';
+                fd.append(key, d.startVehicle);
+            }
+
+            const typeId = Number(d.building?.building_type);
+            if (typeId === 4 || ALLIANCE_SCHOOL_TYPES.has(typeId) || typeId === 16) {
+                fd.append('commit', 'Bauen (Coins)');
+                if (typeId === 16) {
+                    fd.append('build_as_alliance', '1');
+                }
+            }
+
+            // Debug-Ausgabe
+            for (let [k, v] of fd.entries()) {
+            }
+
+            try {
+                const resp = await fetch('/buildings', {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin'
+                });
+
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+                row.statusEl && (row.statusEl.textContent = '✅ Fertig');
+                log('POST (Coins) abgeschlossen für Reihe', row.id, 'Status:', resp.status);
+            } catch (e) {
+                row.statusEl && (row.statusEl.textContent = '❌ Fehler');
+                log('Fehler beim POST (Coins) für Reihe', row.id, e);
+            }
+            await new Promise(r => setTimeout(r, 700));
+        }
+        log('buildAllCoins fertig');
+        alert(`✅ Fertig: ${rowsToBuy.length} Gebäude gebaut. ${skippedAllianceCount > 0 ? skippedAllianceCount + ' Verbandsgebäude wurden ausgeschlossen.' : ''} Seite wird neugeladen.`);
+        location.reload();
+    }
+
+    // Funktion um die Kosten zu berechnen
+    async function validateRow(rowState) {
+        const d = rowState.data;
+
+        const rowEl = rowState.el;
+        const selects = rowEl?.querySelectorAll('select');
+        const typeSelect = selects ? selects[0] : null;
+        const addressInput = rowEl?.querySelector('input[placeholder="Adresse (optional)"]');
+        const nameInput = rowEl?.querySelector('input[placeholder="Name (max 40 Zeichen)"]');
+
+        [typeSelect, addressInput, nameInput].forEach(f => highlightField(f, false));
+
+        const errors = [];
+        if (!d.buildingType) { errors.push('Kein Wachentyp gewählt'); highlightField(typeSelect, true); }
+        if (!d.name) { errors.push('Kein Wachenname angegeben'); highlightField(nameInput, true); }
+        if (!Number.isFinite(d.lat) || !Number.isFinite(d.lng)) { errors.push('Keine Position gewählt (Marker fehlt)'); }
+        if (!d.name || typeof d.name !== 'string' || d.name.trim().length === 0) {
+            errors.push('Kein Wachenname angegeben');
+            highlightField(nameInput, true);
+        } else {
+            const nameLen = d.name.trim().length;
+            if (nameLen < 2) {
+                errors.push('Wachenname muss mindestens 2 Zeichen lang sein');
+                highlightField(nameInput, true);
+            } else if (nameLen > 40) {
+                errors.push('Wachenname darf maximal 40 Zeichen haben');
+                highlightField(nameInput, true);
+            }
+        }
+
+        if (d.building) {
+            const caption = (d.building.caption || '').toLowerCase();
+            const isLeitstelle = caption.includes('leitstelle') || Number(d.building.building_type) === 7;
+            if (isLeitstelle) {
+                if (typeof LSS_MB.state.userBuildingsTotal !== 'number' || LSS_MB.state.userBuildingsTotal === 0) {
+                    await fetchUserBuildingsCount();
+                }
+                const total = LSS_MB.state.userBuildingsTotal || 0;
+                const existingLeitstellen = LSS_MB.state.userBuildings[7] || 0;
+
+                // PREMIUM: 10 Gebäude pro Leitstelle, NON-PREMIUM: 15 Gebäude pro Leitstelle
+                const per = LSS_MB.state.isPremium ? 10 : 15;
+                const allowed = Math.floor(total / per);
+                if (existingLeitstellen >= allowed) {
+                    errors.push(`Leitstelle nicht erlaubt (erlaubt: ${allowed}, vorhanden: ${existingLeitstellen}). Pro ${per} Gebäude maximal 1 Leitstelle.`);
+                    highlightField(typeSelect, true);
+                }
+            }
+        }
+
+        if (d.building) {
+            const typeId = Number(d.building.building_type);
+
+            // Verbandskrankenhaus
+            if (
+                typeId === 4 &&
+                d.hospitalMode === 'alliance' &&
+                !LSS_MB.state.alliance.canBuildAllianceHospital
+            ) {
+                throw new Error('Keine Berechtigung für Verbandskrankenhaus');
+            }
+
+            // Verbandszellen
+            if (
+                typeId === 16 &&
+                !LSS_MB.state.alliance.canBuildAllianceHospital
+            ) {
+                throw new Error('Keine Berechtigung für Verbandszellen');
+            }
+
+            // Verbandsschulen
+            if (
+                ALLIANCE_SCHOOL_TYPES.has(typeId) &&
+                d.schoolMode === 'alliance' &&
+                !LSS_MB.state.alliance.canBuildAllianceHospital
+            ) {
+                throw new Error('Keine Berechtigung für Verbandsschulen');
+            }
+
+            // Verbands-Bereitsstellungsraum prüfen
+            if (typeId === 14) {
+                if (typeof LSS_MB.state.userBuildingsTotal !== 'number' || LSS_MB.state.userBuildingsTotal === 0) {
+                    await fetchUserBuildingsCount();
+                }
+                const existingBR = LSS_MB.state.userBuildings[14] || 0;
+                const allowedBR = LSS_MB.state.isPremium ? 8 : 4;
+                if (existingBR >= allowedBR) {
+                    throw new Error(`Bereitstellungsraum nicht erlaubt (erlaubt: ${allowedBR}, vorhanden: ${existingBR}).`);
+                }
+            }
+        }
+
+        if (errors.length) {
+            log('validateRow Fehler für Reihe', rowLabel(rowState), errors);
+            throw new Error(errors.join(', '));
+        }
+    }
+
+    // Hilfsfunktion: logarithmus zur Basis b
+    function log2(x) {
+        return Math.log(x) / Math.log(2);
+    }
+
+    // Berechnungsformel für Kleinwachen
+    function calcLogSmallStationCost(count) {
+        if (count <= 24) return 50_000;
+
+        return Math.round(
+            25_000 + 50_000 * log2(count - 22)
+        );
+    }
+
+    // 🚒 Feuerwehr (Typ 0)
+    function calcFireStationCost(existingCount) {
+        // existingCount = Anzahl NACH dem Bau
+        if (existingCount <= 24) return 100_000;
+
+        return Math.round(
+            50_000 + 100_000 * log2(existingCount - 22)
+        );
+    }
+
+    // 🚒 Feuerwehr Kleinwache (Typ 18)
+    function calcSmallFireStationCost(count) {
+        return Math.min(
+            calcLogSmallStationCost(count),
+            1_000_000
+        );
+    }
+
+    // 🚓 Polizeiwache (Typ 6)
+    function calcPoliceStationCost(existingCount) {
+        // existingCount = Anzahl NACH dem Bau
+        if (existingCount <= 24) return 100_000;
+
+        return Math.round(
+            50_000 + 100_000 * log2(existingCount - 22)
+        );
+    }
+
+    // 🚓 Polizeiwache Kleinwache (Typ 19)
+    function calcSmallPoliceStationCost(count) {
+        return calcLogSmallStationCost(count);
+    }
+
+    // 🛠️ THW (Typ 9)
+    function calcTHWCost(existingCount) {
+        // existingCount = Anzahl NACH dem Bau
+        return Math.round(
+            200_000 + 100_000 * log2(existingCount)
+        );
+    }
+
+    // 🏔️ Bergrettung & 🚤 Seenotrettung
+    function calcRescueSpecialCost(count) {
+        if (count <= 10) return 100_000;
+
+        return Math.round(
+            100_000 + (100_000 * (Math.log(count - 9) / Math.log(5)))
+        );
+    }
+
+    // Hilfsfunktion: Regex-escape
+    function escapeRegex(s) {
+        return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Baukosten vom Server holen
+    async function fetchRealBuildingCost(typeId) {
+        if (BUILD_COST_CACHE[typeId]) return BUILD_COST_CACHE[typeId];
+
+        try {
+            const res = await fetch(`/buildings/new?building_type=${typeId}`, {
+                credentials: 'same-origin'
+            });
+            const html = await res.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+
+            const creditsInput = doc.getElementById(`build_credits_${typeId}`);
+            const coinsInput = doc.querySelector(`#purchase_btns_${typeId} .coins_activate`);
+
+            const credits = creditsInput
+            ? Number(creditsInput.value.match(/([\d\.]+)/)[1].replace(/\./g, ''))
+            : 0;
+
+            const coins = coinsInput
+            ? Number(coinsInput.value.match(/([\d\.]+)/)[1].replace(/\./g, ''))
+            : 0;
+
+            const result = { credits, coins };
+            BUILD_COST_CACHE[typeId] = result;
+            return result;
+
+        } catch (e) {
+            console.error('Fehler beim Laden der Serverkosten für Typ', typeId, e);
+            return { credits: 0, coins: 0 };
+        }
+    }
+
+    // Preis des Gebäude beziehen
+    async function getCostsForBuilding(building) {
+        const caption = (building.caption || '').toLowerCase().trim();
+        const typeId = Number(building.building_type ?? building.id ?? building.buildingType ?? building.type);
+        const userLevel = Number(LSS_MB.state.userInfo?.user_level ?? 0);
+
+        log('getCostsForBuilding -> caption:', caption, 'typeId:', typeId, 'userLevel:', userLevel);
+
+        // ===== Seenotrettungswache (dynamisch) =====
+        if (typeId === 26) { // Seenotrettung
+            if (userLevel < 4) {
+                log('Userlevel zu niedrig für Seenotrettung:', userLevel);
+                return { credits: null, coins: null, locked: true }; // optional Flag "locked"
+            }
+        }
+
+        // ===== Bergrettung (dynamisch) =====
+        if (typeId === 25) {
+            // kein Level-Limit, kann ab Level 0 gebaut werden
+        }
+
+        // ===== Dynamische Gebäude (Serverkosten) =====
+        if (DYNAMIC_COST_TYPES.has(typeId)) {
+            const costs = await fetchRealBuildingCost(typeId);
+
+            // Spezialfall: Kleinwache → Credit-Cap
+            if (
+                typeId === FIRE_STATION_SMALL_TYPE &&
+                costs.credits > FIRE_STATION_SMALL_CREDIT_CAP
+            ) {
+                log(
+                    'Kleinwache Credit-Cap angewendet:',
+                    costs.credits,
+                    '→',
+                    FIRE_STATION_SMALL_CREDIT_CAP
+                );
+
+                costs.credits = FIRE_STATION_SMALL_CREDIT_CAP;
+            }
+
+            log('Dynamische Serverkosten:', costs);
+            return costs;
+        }
+
+        // ===== Leitstelle =====
+        if (typeId === 7 || /\bleitstelle\b/.test(caption)) {
+            return { credits: 0, coins: 0 };
+        }
+
+        // ===== Statische Whitelist =====
+        for (const entry of STATIC_COSTS) {
+            for (const kwRaw of entry.keywords) {
+                const kw = (kwRaw || '').toLowerCase().trim();
+                if (!kw) continue;
+                const re = new RegExp('\\b' + escapeRegex(kw) + '\\b', 'u');
+                if (re.test(caption)) {
+                    return { credits: entry.credits, coins: entry.coins };
+                }
+            }
+        }
+
+        // ===== Fallback =====
+        if (typeof building.credits === 'number' || typeof building.coins === 'number') {
+            return { credits: building.credits ?? 0, coins: building.coins ?? 0 };
+        }
+
+        return null;
+    }
+
+    // Funktion um die Gebäude zu zählen
+    async function fetchUserBuildingsCount() {
+        try {
+            const res = await fetch('/api/buildings');
+            const data = await res.json();
+            const counts = {};
+            let total = 0;
+            data.forEach(b => {
+                total++;
+                if (typeof b.building_type === 'number' && b.building_type >= 0) {
+                    counts[b.building_type] = (counts[b.building_type] || 0) + 1;
+                }
+            });
+            LSS_MB.state.userBuildings = counts;
+            LSS_MB.state.userBuildingsTotal = total;
+            log('User buildings gezählt:', counts, 'total=', total);
+            return { counts, total };
+        } catch (err) {
+            log('Fehler beim Laden der User-Wachen:', err);
+            LSS_MB.state.userBuildings = {};
+            LSS_MB.state.userBuildingsTotal = 0;
+            try { checkBereitsstellungsraumLimits(); } catch (e) { log('checkBereitsstellungsraumLimits Fehler nach fetchUserBuildingsCount', e); }
+            return { counts: {}, total: 0 };
+        }
+
+    }
+
+    // Funktion um Verbands-BSR zu zählen
+    async function fetchExistingAllianceBSRCount() {
+        try {
+            const res = await fetch('/api/alliance_buildings', {
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error('API Fehler: ' + res.status);
+
+            const data = await res.json();
+            if (!Array.isArray(data)) return 0;
+
+            // building_type 14 = Bereitsstellungsraum
+            const count = data.filter(b =>
+                                      String(b.building_type) === '14' && b.enabled
+                                     ).length;
+
+            return count;
+        } catch (e) {
+            log('fetchExistingAllianceBSRCount Fehler', e);
+            return 0;
+        }
+    }
+
+    // Sekündlicher Verbandsgebäude API-Abgleich
+    async function getCachedAllianceBSRCount() {
+        const now = Date.now();
+        const cache = LSS_MB.state._allianceBSRCache || {};
+
+        if (cache.value && cache.ts && (now - cache.ts < 1000)) {
+            return cache.value; // 1s Cache
+        }
+
+        const value = await fetchExistingAllianceBSRCount();
+        LSS_MB.state._allianceBSRCache = { value, ts: now };
+        return value;
+    }
+
+    // Berechnet und aktualisiert die Kostenvorschau für alle aktuell geplanten Gebäude.
+    async function updateCostPreview() {
+        const rows = LSS_MB.state.buildRows;
+
+        const simulatedCounts = { ...LSS_MB.state.userBuildings };
+        simulatedCounts[0] = simulatedCounts[0] || 0;   // Großwache
+        simulatedCounts[18] = simulatedCounts[18] || 0; // Kleinwache
+        simulatedCounts[6] = simulatedCounts[6] || 0;   // Polizeiwache
+        simulatedCounts[19] = simulatedCounts[19] || 0; // Polizeikleinwache
+        simulatedCounts[25] = simulatedCounts[25] || 0; // Bergrettung
+        simulatedCounts[26] = simulatedCounts[26] || 0; // Seenotrettung
+        simulatedCounts[9] = simulatedCounts[9] || 0; // THW
+
+        // ⚠️ Cache optional, damit nicht bei jedem Keypress neu gefetcht wird
+        if (typeof LSS_MB.state._allianceBSRCount !== 'number') {
+            LSS_MB.state._allianceBSRCount = await fetchExistingAllianceBSRCount();
+        }
+
+        const existingServerCounts = { ...simulatedCounts };
+        let preview = document.getElementById('lss_mb_cost_preview');
+
+        if (!preview) {
+            const resDiv = document.getElementById('lss_mb_resources');
+            if (resDiv) {
+                const div = document.createElement('div');
+                div.id = 'lss_mb_cost_preview';
+                div.innerHTML = `💸 <strong>Kostenvorschau</strong><br>💰 Credits: 0<br>🪙 Coins: 0
+                ${LSS_MB.state.alliance.canBuildAllianceHospital ? '<br>🏛️ Verbandscredits: 0' : ''}`;
+                resDiv.appendChild(div);
+                preview = div;
+            } else {
+                return;
+            }
+        }
+
+        let ownCredits = 0;
+        let ownCoins = 0;
+        let allianceCredits = 0;
+
+        // Serverpreise nur einmal abrufen
+        const serverPrices = {};
+
+        // kombinierten Feuerwachen-Zähler (Groß + Klein)
+        let simulatedFireTotal = (simulatedCounts[0] || 0) + (simulatedCounts[18] || 0);
+        const existingServerFireTotal = (existingServerCounts[0] || 0) + (existingServerCounts[18] || 0);
+
+        let simulatedPoliceTotal = (simulatedCounts[6] || 0) + (simulatedCounts[19] || 0);
+        const existingServerPoliceTotal = (existingServerCounts[6] || 0) + (existingServerCounts[19] || 0);
+
+        // Hilfsformatierer
+        const fmt = v => Number(v || 0).toLocaleString('de-DE');
+
+        for (const row of LSS_MB.state.buildRows) {
+            const d = row.data;
+            if (!d.building) {
+                try {
+                    const num = document.getElementById(`lss_mb_number_${row.id}`);
+                    const cl = document.getElementById(`lss_mb_credits_${row.id}`);
+                    const col = document.getElementById(`lss_mb_coins_${row.id}`);
+                    if (num) num.textContent = '#';
+                    if (cl) cl.textContent = '💰 -';
+                    if (col) col.textContent = '🪙 -';
+                } catch (e) {}
+                continue;
+            }
+
+            const typeId = Number(d.building.building_type);
+
+            let credits = null;
+            let coins = null;
+            let label = '';
+            let buildingNumber = 0;
+
+            // 🚒 Großwache (Typ 0)
+            if (typeId === 0) {
+                simulatedFireTotal++;
+                buildingNumber = simulatedFireTotal;
+
+                if (!serverPrices[0]) {
+                    serverPrices[0] = await getCostsForBuilding(d.building);
+                }
+
+                coins = serverPrices[0].coins || 0;
+
+                if (buildingNumber === existingServerFireTotal + 1) {
+                    credits = serverPrices[0].credits;
+                } else {
+                    if (typeof serverPrices.__scale0 === 'undefined') {
+                        const anchorCount = existingServerFireTotal + 1;
+                        const anchorCalc = calcFireStationCost(anchorCount);
+                        serverPrices.__scale0 = (anchorCalc > 0)
+                            ? ((serverPrices[0].credits || 0) / anchorCalc)
+                        : 1;
+                        if (!isFinite(serverPrices.__scale0) || serverPrices.__scale0 <= 0) serverPrices.__scale0 = 1;
+                    }
+                    credits = Math.round(calcFireStationCost(buildingNumber) * (serverPrices.__scale0 || 1));
+                }
+
+                if (typeof serverPrices.__last0 === 'number' && credits < serverPrices.__last0) credits = serverPrices.__last0;
+                serverPrices.__last0 = credits;
+
+                if (d.startVehicle && START_VEHICLE_COSTS[d.startVehicle]) {
+                    credits += START_VEHICLE_COSTS[d.startVehicle];
+                }
+
+                label = `Feuerwache #${buildingNumber}`;
+            }
+
+            // 🚒 Kleinwache (Typ 18)
+            else if (typeId === 18) {
+                simulatedFireTotal++;
+                buildingNumber = simulatedFireTotal;
+
+                if (!serverPrices[18]) {
+                    serverPrices[18] = await getCostsForBuilding(d.building);
+                }
+
+                coins = serverPrices[18].coins || 0;
+
+                if (buildingNumber === existingServerFireTotal + 1) {
+                    credits = serverPrices[18].credits;
+                } else {
+                    if (typeof serverPrices.__scale18 === 'undefined') {
+                        const anchorCount = existingServerFireTotal + 1;
+                        const anchorCalc = calcSmallFireStationCost(anchorCount);
+                        serverPrices.__scale18 = (anchorCalc > 0)
+                            ? ((serverPrices[18].credits || 0) / anchorCalc)
+                        : 1;
+                        if (!isFinite(serverPrices.__scale18) || serverPrices.__scale18 <= 0) serverPrices.__scale18 = 1;
+                    }
+
+                    credits = Math.round(calcSmallFireStationCost(buildingNumber) * (serverPrices.__scale18 || 1));
+                    credits = Math.min(credits, FIRE_STATION_SMALL_CREDIT_CAP);
+                }
+
+                if (typeof serverPrices.__last18 === 'number' && credits < serverPrices.__last18) credits = serverPrices.__last18;
+                serverPrices.__last18 = credits;
+
+                if (d.startVehicle && START_VEHICLE_COSTS[d.startVehicle]) {
+                    credits += START_VEHICLE_COSTS[d.startVehicle];
+                }
+
+                label = `Kleinwache #${buildingNumber}`;
+            }
+
+            // 🚓 Polizeiwache (Typ 6)
+            else if (typeId === 6) {
+                simulatedPoliceTotal++;
+                buildingNumber = simulatedPoliceTotal;
+
+                if (!serverPrices[6]) serverPrices[6] = await getCostsForBuilding(d.building);
+                coins = serverPrices[6].coins || 0;
+
+                if (buildingNumber === existingServerPoliceTotal + 1) {
+                    credits = serverPrices[6].credits;
+                } else {
+                    if (typeof serverPrices.__scale6 === 'undefined') {
+                        const anchorCount = existingServerPoliceTotal + 1;
+                        const anchorCalc = calcPoliceStationCost(anchorCount);
+                        serverPrices.__scale6 =
+                            anchorCalc > 0 ? serverPrices[6].credits / anchorCalc : 1;
+                    }
+                    credits = Math.round(
+                        calcPoliceStationCost(buildingNumber) * serverPrices.__scale6
+                    );
+                }
+
+                label = `Polizeiwache #${buildingNumber}`;
+            }
+
+            // 🚓 Polizeikleinwache (Typ 19)
+            else if (typeId === 19) {
+                simulatedPoliceTotal++;
+                buildingNumber = simulatedPoliceTotal;
+
+                if (!serverPrices[19]) serverPrices[19] = await getCostsForBuilding(d.building);
+                coins = serverPrices[19].coins || 0;
+
+                if (buildingNumber === existingServerPoliceTotal + 1) {
+                    credits = serverPrices[19].credits;
+                } else {
+                    if (typeof serverPrices.__scale19 === 'undefined') {
+                        const anchorCount = existingServerPoliceTotal + 1;
+                        const anchorCalc = calcSmallPoliceStationCost(anchorCount);
+                        serverPrices.__scale19 =
+                            anchorCalc > 0 ? serverPrices[19].credits / anchorCalc : 1;
+                    }
+                    credits = Math.round(
+                        calcSmallPoliceStationCost(buildingNumber) * serverPrices.__scale19
+                    );
+                }
+
+                label = `Polizeiwache (Klein) #${buildingNumber}`;
+            }
+
+            // 🏔️ Bergrettung & 🚤 Seenotrettung
+            else if (typeId === 25 || typeId === 26) {
+                simulatedCounts[typeId]++;
+                buildingNumber = simulatedCounts[typeId];
+
+                if (!serverPrices[typeId]) {
+                    serverPrices[typeId] = await getCostsForBuilding(d.building);
+                }
+
+                coins = serverPrices[typeId].coins || 0;
+                credits = calcRescueSpecialCost(buildingNumber);
+
+                label = `${d.building.caption} #${buildingNumber}`;
+            }
+
+            // 🛠️ THW (Typ 9)
+            else if (typeId === 9) {
+                simulatedCounts[9]++;
+                buildingNumber = simulatedCounts[9];
+
+                if (!serverPrices[9]) {
+                    serverPrices[9] = await getCostsForBuilding(d.building);
+                }
+
+                coins = serverPrices[9].coins || 35;
+                credits = calcTHWCost(buildingNumber);
+
+                label = `THW-Ortsverband #${buildingNumber}`;
+            }
+
+            // andere Gebäude (generische Typen)
+            else {
+                simulatedCounts[typeId] = simulatedCounts[typeId] || 0;
+                simulatedCounts[typeId]++;
+                buildingNumber = simulatedCounts[typeId];
+
+                const base = await getCostsForBuilding(d.building);
+                credits = (base && typeof base.credits !== 'undefined') ? Number(base.credits) : 0;
+                coins = (base && typeof base.coins !== 'undefined') ? Number(base.coins) : 0;
+                label = `${d.building.caption} #${buildingNumber}`;
+            }
+
+            // Verbandslogik (ob die Kosten als Verbandskosten gelten)
+            const isAlliance =
+                  (typeId === 4 && d.hospitalMode === 'alliance') ||
+                  (ALLIANCE_SCHOOL_TYPES.has(typeId) && d.schoolMode === 'alliance') ||
+                  (typeId === 16);
+
+            if (isAlliance) {
+                allianceCredits += credits || 0;
+            } else {
+                ownCredits += credits || 0;
+                ownCoins += coins || 0;
+            }
+
+            // DOM-Update der kleinen Nr.-Anzeige (pro Reihe)
+            try {
+                const numEl = document.getElementById(`lss_mb_number_${row.id}`);
+                if (numEl) {
+                    numEl.textContent = buildingNumber ? `#${buildingNumber}` : '#';
+                }
+            } catch (e) {}
+
+            // Aktualisiere die per-Reihe Labels
+            try {
+                const cl = document.getElementById(`lss_mb_credits_${row.id}`);
+                const col = document.getElementById(`lss_mb_coins_${row.id}`);
+                if (cl) cl.textContent = (credits === null || typeof credits === 'undefined') ? '💰 -' : `💰 ${fmt(credits)}`;
+                if (col) col.textContent = (coins === null || typeof coins === 'undefined') ? '🪙 -' : `🪙 ${fmt(coins)}`;
+            } catch (e) {}
+            //console.info(`[LSS-MB][PREVIEW] ${label} → ${((credits === null || typeof credits === 'undefined') ? '-' : fmt(credits))} Credits | ${((coins === null || typeof coins === 'undefined') ? '-' : fmt(coins))} Coins`);
+        }
+
+        const fmtTotal = v => Number(v || 0).toLocaleString('de-DE');
+
+        let html = `
+        💸 <strong>Kostenvorschau</strong> 💸<br>
+        💰Credits: ${fmtTotal(ownCredits)} | 🪙Coins: ${fmtTotal(ownCoins)}
+    `;
+
+        if (LSS_MB.state.alliance.canBuildAllianceHospital) {
+            html += `<br>🏛️ Verbandscredits: ${fmtTotal(allianceCredits)}`;
+        }
+
+        // Warnungen + Button-Handling (inkl. Verbandskasse)
+        try {
+            const availableCredits = Number(LSS_MB.state.userInfo?.credits_user_current) || 0;
+            const availableCoins = Number(LSS_MB.state.userInfo?.coins_user_current) || 0;
+            const availableAllianceCredits = Number(LSS_MB.state.alliance?.credits) || 0;
+
+            const exceedsCredits = ownCredits > availableCredits;
+            const exceedsCoins = ownCoins > availableCoins;
+            const allianceInsufficient = allianceCredits > availableAllianceCredits;
+
+            // --- NEU: Bereitsstellungsraum-Limit prüfen ---
+            const allowedOwnBR = LSS_MB.state.isPremium ? 8 : 4;
+            const allowedAllianceBR = 4; // Verbandslimit
+
+            const existingOwnBR = Number(LSS_MB.state.userBuildings?.[14] || 0);
+            const existingAllianceBR = await getCachedAllianceBSRCount();
+
+            const plannedBRCounts = countPlannedBereitsstellungsraeume();
+            const plannedOwnBR = Number(plannedBRCounts.own || 0);
+            const plannedAllianceBR = Number(plannedBRCounts.alliance || 0);
+
+            const totalOwnBR = existingOwnBR + plannedOwnBR;
+            const totalAllianceBR = existingAllianceBR + plannedAllianceBR;
+
+            const ownBRExceeded = totalOwnBR > allowedOwnBR;
+            const allianceBRExceeded = totalAllianceBR > allowedAllianceBR;
+
+            // Eigene-Ressourcen-Warnung (nur wenn beides nicht reicht)
+            if (exceedsCredits && exceedsCoins) {
+                html += `
+                <br>
+                <div id="lss_mb_insufficient_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff5f5;color:#a40000;border:1px solid #FF000;">
+                <strong>Hinweiß:</strong> Die benötigten <strong>${fmtTotal(ownCredits)} Credits</strong> oder die benötigten <strong>${fmtTotal(ownCoins)} Coins</strong> überschreiten beide deine verfügbaren Mittel.
+                </div>`;
+            } else {
+                const prev = document.getElementById('lss_mb_insufficient_warning');
+                if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+            }
+
+            // Verbandskassen-Warnung
+            if (allianceInsufficient) {
+                html += `
+                <br><div id="lss_mb_alliance_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff7e6;color:#7a4b00;border:1px solid #f0d9b5;">
+                <strong>Hinweiß (Verband):</strong> Die benötigten <strong>${fmtTotal(allianceCredits)} Verbandscredits</strong> reichen nicht aus, um die als Verband geplanten Gebäude zu kaufen.
+                </div>`;
+            } else {
+                const prevA = document.getElementById('lss_mb_alliance_warning');
+                if (prevA && prevA.parentNode) prevA.parentNode.removeChild(prevA);
+            }
+
+            // Bereitsstellungsraum-Warnung
+            if (ownBRExceeded) {
+                html += `
+                <br><div id="lss_mb_br_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff5f5;color:#a40000;border:1px solid #ffdddd;">
+                <strong>Hinweis:</strong> Es sind maximal ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt. Derzeit vorhanden: ${existingOwnBR}, aktuell geplant: ${plannedOwnBR})
+                </div>`;
+            } else {
+                const prevB = document.getElementById('lss_mb_br_warning');
+                if (prevB && prevB.parentNode) prevB.parentNode.removeChild(prevB);
+            }
+
+            if (allianceBRExceeded) {
+                html += `
+                <br><div id="lss_mb_br_alliance_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff7e6;color:#7a4b00;border:1px solid #f0d9b5;">
+                <strong>Hinweis (Verband):</strong> Es sind maximal ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt. Derzeit vorhanden: ${existingAllianceBR},  aktuell geplant: ${plannedAllianceBR})
+                </div>`;
+            } else {
+                const prevBA = document.getElementById('lss_mb_br_alliance_warning');
+                if (prevBA && prevBA.parentNode) prevBA.parentNode.removeChild(prevBA);
+            }
+
+            // Buttons aktualisieren
             const buildBtn = document.getElementById('lss_mb_build_all_btn');
             const coinsBtn = document.getElementById('lss_mb_build_all_coins_btn');
             const addBtn = document.getElementById('lss_mb_add_row_btn');
             const btn5 = document.getElementById('lss_mb_add_5_rows_btn');
             const btn10 = document.getElementById('lss_mb_add_10_rows_btn');
+            const hasRows = Array.isArray(LSS_MB.state.buildRows) && LSS_MB.state.buildRows.length > 0;
 
-            if (btn5) {
-                btn5.disabled = disabled || btn5.disabled;
-                btn5.style.opacity = disabled ? '0.5' : '';
-            }
-            if (btn10) {
-                btn10.disabled = disabled || btn10.disabled;
-                btn10.style.opacity = disabled ? '0.5' : '';
-            }
+            const shouldDisableForOwn = (exceedsCredits && exceedsCoins);
+            const shouldDisableForAlliance = allianceInsufficient;
+
+            // getrennte BR-Gründe
+            const shouldDisableForOwnBR = ownBRExceeded;
+            const shouldDisableForAllianceBR = allianceBRExceeded;
+            const shouldDisableForBR = shouldDisableForOwnBR || shouldDisableForAllianceBR;
+
+            // Gesamtlösung: Buttons deaktivieren wenn irgendein Grund vorliegt
+            const shouldDisable = !hasRows || shouldDisableForOwn || shouldDisableForAlliance || shouldDisableForBR;
+
+            // Kaufbutton (Credits)
             if (buildBtn) {
-                buildBtn.disabled = disabled || buildBtn.disabled;
-                buildBtn.style.opacity = disabled ? '0.5' : '';
+                const shouldDisableCredits =
+                      !hasRows || exceedsCredits || shouldDisableForAlliance || shouldDisableForBR;
+
+                buildBtn.disabled = shouldDisableCredits;
+                buildBtn.style.opacity = shouldDisableCredits ? '0.5' : '1';
+                buildBtn.style.cursor = shouldDisableCredits ? 'not-allowed' : 'pointer';
+
+                if (!hasRows) {
+                    buildBtn.title = 'Keine Reihen vorhanden.';
+                } else if (exceedsCredits) {
+                    buildBtn.title =
+                        `Deine Credits (${fmtTotal(availableCredits)}) ` +
+                        `reichen nicht für die gewählten Gebäude.`;
+                } else if (shouldDisableForAlliance) {
+                    buildBtn.title =
+                        `Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
+                        `reichen nicht für die geplanten Verbandsgebäude.`;
+                } else if (shouldDisableForOwnBR) {
+                    buildBtn.title =
+                        `Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
+                } else if (shouldDisableForAllianceBR) {
+                    buildBtn.title =
+                        `Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
+                } else {
+                    buildBtn.title = 'Wachen/Gebäude bauen (Credits)';
+                }
             }
+
+            // Kaufbutton (Coins)
             if (coinsBtn) {
-                coinsBtn.disabled = disabled || coinsBtn.disabled;
-                coinsBtn.style.opacity = disabled ? '0.5' : '';
+                const shouldDisableCoins =
+                      !hasRows || exceedsCoins || shouldDisableForAlliance || shouldDisableForBR;
+
+                coinsBtn.disabled = shouldDisableCoins;
+                coinsBtn.style.opacity = shouldDisableCoins ? '0.5' : '1';
+                coinsBtn.style.cursor = shouldDisableCoins ? 'not-allowed' : 'pointer';
+
+                if (!hasRows) {
+                    coinsBtn.title = 'Deaktiviert: Keine Reihen vorhanden.';
+                } else if (exceedsCoins) {
+                    coinsBtn.title =
+                        `Deine Coins (${fmtTotal(availableCoins)}) ` +
+                        `reichen nicht für die gewählten Gebäude.`;
+                } else if (shouldDisableForAlliance) {
+                    coinsBtn.title =
+                        `Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
+                        `reichen nicht für die geplanten Verbandsgebäude.`;
+                } else if (shouldDisableForOwnBR) {
+                    coinsBtn.title =
+                        `Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
+                } else if (shouldDisableForAllianceBR) {
+                    coinsBtn.title =
+                        `Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
+                } else {
+                    coinsBtn.title = 'Wachen/Gebäude bauen (Coins)';
+                }
             }
+
+            // Button zum hinzufügen von Reihen
             if (addBtn) {
-                addBtn.disabled = disabled || addBtn.disabled;
-                addBtn.style.opacity = disabled ? '0.5' : '';
+                const shouldDisableAdd =
+                      shouldDisableForOwn || shouldDisableForAlliance || shouldDisableForBR;
+
+                addBtn.disabled = shouldDisableAdd;
+                addBtn.style.opacity = shouldDisableAdd ? '0.5' : '1';
+                addBtn.style.cursor = shouldDisableAdd ? 'not-allowed' : 'pointer';
+
+                if (shouldDisableForOwn) {
+                    addBtn.title =
+                        `Deaktiviert: Deine eigenen Credits (${fmtTotal(availableCredits)}) ` +
+                        `und Coins (${fmtTotal(availableCoins)}) reichen beide nicht für die gewählten Gebäude.`;
+                } else if (shouldDisableForAlliance) {
+                    addBtn.title =
+                        `Deaktiviert: Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
+                        `reichen nicht für die geplanten Verbandsgebäude.`;
+                } else if (shouldDisableForOwnBR) {
+                    addBtn.title =
+                        `Deaktiviert: Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
+                } else if (shouldDisableForAllianceBR) {
+                    addBtn.title =
+                        `Deaktiviert: Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
+                } else {
+                    addBtn.title = 'Weitere Wache/Gebäude hinzufügen';
+                }
             }
+
+            // +5 Button
+            if (btn5) {
+                const shouldDisable5 =
+                      shouldDisableForOwn || shouldDisableForAlliance || shouldDisableForBR;
+
+                btn5.disabled = shouldDisable5;
+                btn5.style.opacity = shouldDisable5 ? '0.5' : '1';
+                btn5.style.cursor = shouldDisable5 ? 'not-allowed' : 'pointer';
+
+                if (shouldDisableForOwn) {
+                    btn5.title =
+                        `Deaktiviert: Deine eigenen Credits (${fmtTotal(availableCredits)}) ` +
+                        `und Coins (${fmtTotal(availableCoins)}) reichen beide nicht für die gewählten Gebäude.`;
+                } else if (shouldDisableForAlliance) {
+                    btn5.title =
+                        `Deaktiviert: Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
+                        `reichen nicht für die geplanten Verbandsgebäude.`;
+                } else if (shouldDisableForOwnBR) {
+                    btn5.title =
+                        `Deaktiviert: Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
+                } else if (shouldDisableForAllianceBR) {
+                    btn5.title =
+                        `Deaktiviert: Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
+                } else {
+                    btn5.title = '+5 Reihen hinzufügen';
+                }
+            }
+
+            // +10 Button
+            if (btn10) {
+                const shouldDisable10 =
+                      shouldDisableForOwn || shouldDisableForAlliance || shouldDisableForBR;
+
+                btn10.disabled = shouldDisable10;
+                btn10.style.opacity = shouldDisable10 ? '0.5' : '1';
+                btn10.style.cursor = shouldDisable10 ? 'not-allowed' : 'pointer';
+
+                if (shouldDisableForOwn) {
+                    btn10.title =
+                        `Deaktiviert: Deine eigenen Credits (${fmtTotal(availableCredits)}) ` +
+                        `und Coins (${fmtTotal(availableCoins)}) reichen beide nicht für die gewählten Gebäude.`;
+                } else if (shouldDisableForAlliance) {
+                    btn10.title =
+                        `Deaktiviert: Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
+                        `reichen nicht für die geplanten Verbandsgebäude.`;
+                } else if (shouldDisableForOwnBR) {
+                    btn10.title =
+                        `Deaktiviert: Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
+                } else if (shouldDisableForAllianceBR) {
+                    btn10.title =
+                        `Deaktiviert: Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
+                        `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
+                } else {
+                    btn10.title = '+10 Reihen hinzufügen';
+                }
+            }
+
+        } catch (e) {
+            log('Warnungsprüfung / Button-Update konnte nicht durchgeführt werden', e);
         }
 
-        // Funktion um die Wachen zu bauen
-        async function buildAll() {
-            const rows = LSS_MB.state.buildRows;
-            const errorMessages = [];
+        preview.innerHTML = html;
+    }
 
-            log('buildAll gestartet, Reihenanzahl=', rows.length);
-
-            for (const row of rows) {
-                if (row.statusEl) {
-                    row.statusEl.style.display = 'block'; // sichtbar machen
-                    row.statusEl.textContent = '⏳ Wartet';
-                }
+    // Premium-Status erkennen
+    function detectPremium() {
+        try {
+            if (typeof window.user_premium === 'boolean') {
+                return window.user_premium;
             }
-
-            for (const row of rows) {
-                const d = row.data;
-                if (
-                    d.building &&
-                    String(d.building.building_type) !== String(d.buildingType)
-                ) {
-                    console.error(
-                        '[LSS-MB][FATAL] building_type-Mismatch',
-                        d.building.building_type,
-                        d.buildingType
-                    );
-                    row.statusEl && (row.statusEl.textContent = '❌ Fehler');
-                    alert(`❌ Interner Fehler in Reihe ${rowLabel(row)} (Gebäudetyp inkonsistent)`);
-                    return;
-                }
+            const html = document.documentElement?.innerHTML || '';
+            const m = html.match(/var\s+user_premium\s*=\s*(true|false)/);
+            if (m) {
+                return m[1] === 'true';
             }
-
-            for (let row of rows) {
-                try {
-                    row.statusEl && (row.statusEl.textContent = '🔍 Prüfe…');
-                    await validateRow(row);
-                    row.statusEl && (row.statusEl.textContent = '⏳ Bereit');
-                } catch (e) {
-                    row.statusEl && (row.statusEl.textContent = '❌ Fehler');
-                    errorMessages.push(`Reihe ${rowLabel(row)}: ${e.message}`);
-                }
-            }
-
-            if (errorMessages.length > 0) {
-                log('Fehler beim Bau, Abbruch:', errorMessages);
-                alert('❌ Fehler beim Bau:\n' + errorMessages.join('\n'));
-                return;
-            }
-
-            for (let row of rows) {
-                const d = row.data;
-                const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-
-                row.statusEl && (row.statusEl.textContent = '🔨 Baue…');
-
-                const fd = new FormData();
-                // utf8 wie beim Formular-Submit ergänzen (Rails-Forms nutzen das)
-                fd.append('utf8', '✓');
-                fd.append('authenticity_token', csrf);
-                fd.append('building[building_type]', d.buildingType);
-                fd.append('building[name]', d.name);
-                fd.append('building[latitude]', d.lat);
-                fd.append('building[longitude]', d.lng);
-                fd.append('building[address]', '');
-                fd.append('building[leitstelle_building_id]', d.leitstelle || '');
-
-                if (d.startVehicle) {
-                    const key = d.buildingType === '18'
-                    ? 'building[start_vehicle_feuerwache_kleinwache]'
-                    : 'building[start_vehicle_feuerwache]';
-                    fd.append(key, d.startVehicle);
-                }
-
-                const typeId = Number(d.building?.building_type);
-
-                // ===== Krankenhaus =====
-                if (typeId === 4) {
-                    fd.append('commit', 'Bauen 200.000 Credits');
-                    if (d.hospitalMode === 'alliance') {
-                        // richtiges Feld für Verbandsbau
-                        fd.append('build_as_alliance', '1');
-                        console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Verbandskrankenhaus');
-                    } else {
-                        console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Eigenes Krankenhaus');
-                    }
-                }
-
-                // ===== Verbandszellen =====
-                if (typeId === 16) {
-                    fd.append('commit', 'Bauen 200.000 Credits');
-                    fd.append('build_as_alliance', '1');
-                    console.info('[LSS-MB][BUILD]', 'Reihe', row.id, '→ Verbandszellen');
-                }
-
-                // ===== Schulen =====
-                if (ALLIANCE_SCHOOL_TYPES.has(typeId)) {
-                    fd.append('commit', 'Bauen 200.000 Credits');
-                    if (d.schoolMode === 'alliance') {
-                        fd.append('build_as_alliance', '1');
-                        console.info('[LSS-MB][BUILD]', 'Reihe', row.id, '→ Verbandsschule');
-                    }
-                }
-
-                // ===== Bereitsstellungsraum (Typ 14) =====
-                if (typeId === 14) {
-                    fd.append('commit', 'Bauen Bereitsstellungsraum');
-                    if (d.bereitschaftsraumMode === 'alliance') {
-                        fd.append('build_as_alliance', '1');
-                        console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Verbands-Bereitstellungsraum');
-                    } else {
-                        console.info('[LSS-MB][BUILD]', 'Reihe', rowLabel(row), '→ Eigener Bereitsstellungsraum');
-                    }
-                }
-
-                // Debug
-                for (let [k, v] of fd.entries()) {
-                }
-
-                try {
-                    const resp = await fetch('/buildings', {
-                        method: 'POST',
-                        body: fd,
-                        credentials: 'same-origin'
-                    });
-
-                    if (!resp.ok) {
-                        throw new Error(`HTTP ${resp.status}`);
-                    }
-
-                    row.statusEl && (row.statusEl.textContent = '✅ Fertig');
-                    log('POST abgeschlossen für Reihe', row.id, 'Status:', resp.status);
-                } catch (e) {
-                    row.statusEl && (row.statusEl.textContent = '❌ Fehler');
-                    log('Fehler beim POST für Reihe', row.id, e);
-                }
-
-                await new Promise(r => setTimeout(r, 700));
-            }
-
-            log('buildAll fertig');
-            alert(`✅ Fertig: ${rows.length} Gebäude gebaut. Seite wird neugeladen.`);
-            location.reload();
+        } catch (e) {
+            console.warn('detectPremium Fehler', e);
         }
+        // Default: Nicht-Premium
+        return false;
+    }
 
-        // Validierung wie beim Credits-Bau, Bestätigung vor dem Absenden.
-        async function buildAllCoins() {
-            const rows = LSS_MB.state.buildRows;
-            const errorMessages = [];
+    LSS_MB.dialog = (() => {
 
-            log('buildAllCoins gestartet, Reihenanzahl=', rows.length);
+        function showDialog({
+            title = '',
+            text = '',
+            value = '',
+            placeholder = '',
+            mode = 'alert'
+        }) {
 
-            if (!Array.isArray(rows) || rows.length === 0) {
-                alert('Keine Reihen vorhanden.');
-                return;
-            }
+            return new Promise(resolve => {
 
-            // 1) Status auf "Wartet" setzen (sichtbar machen)
-            for (const row of rows) {
-                if (row.statusEl) {
-                    row.statusEl.style.display = 'block';
-                    row.statusEl.textContent = '⏳ Wartet';
-                }
-            }
+                const overlay = document.createElement('div');
+                overlay.className = 'lss-mb-dialog-overlay';
 
-            // 2) Gleiche FATAL-Prüfung wie bei buildAll: building_type mismatch für ALLE Reihen
-            for (const row of rows) {
-                const d = row.data;
-                if (
-                    d.building &&
-                    String(d.building.building_type) !== String(d.buildingType)
-                ) {
-                    console.error(
-                        '[LSS-MB][FATAL][COINS] building_type-Mismatch',
-                        d.building.building_type,
-                        d.buildingType
-                    );
-                    row.statusEl && (row.statusEl.textContent = '❌ Fehler');
-                    alert(`❌ Interner Fehler in Reihe ${rowLabel(row)} (Gebäudetyp inkonsistent)`);
-                    return;
-                }
-            }
-
-            // 3) Verbandsgebäude herausfiltern (können nicht mit Coins gekauft werden)
-            const rowsToBuy = [];
-            let skippedAllianceCount = 0;
-            for (const row of rows) {
-                const d = row.data;
-                if (!d.building) continue;
-
-                const typeId = Number(d.building.building_type);
-                const isAlliance =
-                      (typeId === 4 && d.hospitalMode === 'alliance') ||
-                      (ALLIANCE_SCHOOL_TYPES.has(typeId) && d.schoolMode === 'alliance') ||
-                      (typeId === 16);
-
-                if (isAlliance) {
-                    skippedAllianceCount++;
-                    if (row.statusEl) {
-                        row.statusEl.style.display = 'block';
-                        row.statusEl.textContent = '🔒 Verbandsbau (kein Coins)';
-                    }
-                    continue;
-                }
-                rowsToBuy.push(row);
-            }
-
-            if (rowsToBuy.length === 0) {
-                alert(
-                    skippedAllianceCount > 0
-                    ? 'Alle gewählten Reihen sind Verbandsgebäude und können nicht per Coins gekauft werden.'
-                    : 'Keine gültigen Reihen zum Bauen mit Coins gefunden.'
-                );
-                return;
-            }
-
-            // 4) Validierung nutzt validateRow
-            for (let row of rowsToBuy) {
-                try {
-                    row.statusEl && (row.statusEl.textContent = '🔍 Prüfe…');
-                    await validateRow(row);
-                    row.statusEl && (row.statusEl.textContent = '⏳ Bereit');
-                } catch (e) {
-                    row.statusEl && (row.statusEl.textContent = '❌ Fehler');
-                    errorMessages.push(`Reihe ${rowLabel(row)}: ${e.message}`);
-                }
-            }
-
-            if (errorMessages.length > 0) {
-                log('Fehler beim Bau (Coins), Abbruch:', errorMessages);
-                alert('❌ Fehler beim Bau (Coins):\n' + errorMessages.join('\n'));
-                return;
-            }
-
-            // 5) Sicherstellen, dass Kostenvorschau aktuell ist
-            try { await updateCostPreview(); } catch (e) { log('updateCostPreview fehlgeschlagen vor Coins-Bau', e); }
-
-            // 6) Coins-Gesamtkosten aus der Anzeige summiere
-            let totalCoins = 0;
-            let unknownCoins = false;
-            let buildingCount = 0;
-
-            for (const row of rowsToBuy) {
-                const d = row.data;
-                if (!d.building) continue;
-                buildingCount++;
-
-                const coinEl = document.getElementById(`lss_mb_coins_${row.id}`);
-                const txt = (coinEl?.textContent || '').trim();
-                const match = txt.match(/([\d\.]+)/);
-                if (!match) {
-                    unknownCoins = true;
-                    continue;
-                }
-                const num = Number(match[1].replace(/\./g, ''));
-                if (!Number.isFinite(num)) {
-                    unknownCoins = true;
-                    continue;
-                }
-                totalCoins += num;
-            }
-
-            if (buildingCount === 0) {
-                alert('Keine gültigen Gebäude/Reihen zum Bauen gefunden.');
-                return;
-            }
-
-            // 7) Bestätigungsdialog
-            const totalFormatted = totalCoins.toLocaleString('de-DE');
-            let confirmMsg = '';
-            if (skippedAllianceCount > 0) {
-                confirmMsg += `${skippedAllianceCount} Verbandsgebäude werden ausgeschlossen (können nicht mit Coins gekauft werden).\n\n`;
-            }
-            if (unknownCoins) {
-                confirmMsg += `Für einige ausgewählte Gebäude sind die Coin-Kosten nicht bekannt.\nMöchtest du trotzdem versuchen, ${buildingCount} Gebäude für insgesamt ca. ${totalFormatted} Coins zu kaufen?`;
-            } else {
-                confirmMsg += `Möchtest du wirklich ${buildingCount} Gebäude für insgesamt ${totalFormatted} Coins kaufen?`;
-            }
-
-            if (!window.confirm(confirmMsg)) {
-                log('User hat den Coins-Kauf abgebrochen');
-                for (const row of rowsToBuy) {
-                    if (row.statusEl) {
-                        row.statusEl.style.display = 'block';
-                        row.statusEl.textContent = '⛔ Abgebrochen';
-                    }
-                }
-                return;
-            }
-
-            // 8) POSTs mit build_with_coins (nur rowsToBuy)
-            for (let row of rowsToBuy) {
-                const d = row.data;
-                const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-
-                row.statusEl && (row.statusEl.textContent = '🔨 Baue');
-
-                const fd = new FormData();
-                fd.append('utf8', '✓');
-                fd.append('authenticity_token', csrf);
-                fd.append('building[building_type]', d.buildingType);
-                fd.append('building[name]', d.name);
-                fd.append('building[latitude]', d.lat);
-                fd.append('building[longitude]', d.lng);
-                fd.append('building[address]', d.address || '');
-                fd.append('building[leitstelle_building_id]', d.leitstelle || '');
-                fd.append('build_with_coins', '1');
-
-                if (d.startVehicle) {
-                    const key = d.buildingType === '18'
-                    ? 'building[start_vehicle_feuerwache_kleinwache]'
-                    : 'building[start_vehicle_feuerwache]';
-                    fd.append(key, d.startVehicle);
-                }
-
-                const typeId = Number(d.building?.building_type);
-                if (typeId === 4 || ALLIANCE_SCHOOL_TYPES.has(typeId) || typeId === 16) {
-                    fd.append('commit', 'Bauen (Coins)');
-                    if (typeId === 16) {
-                        fd.append('build_as_alliance', '1');
-                    }
-                }
-
-                // Debug-Ausgabe
-                for (let [k, v] of fd.entries()) {
-                }
-
-                try {
-                    const resp = await fetch('/buildings', {
-                        method: 'POST',
-                        body: fd,
-                        credentials: 'same-origin'
-                    });
-
-                    if (!resp.ok) {
-                        throw new Error(`HTTP ${resp.status}`);
-                    }
-                    row.statusEl && (row.statusEl.textContent = '✅ Fertig');
-                    log('POST (Coins) abgeschlossen für Reihe', row.id, 'Status:', resp.status);
-                } catch (e) {
-                    row.statusEl && (row.statusEl.textContent = '❌ Fehler');
-                    log('Fehler beim POST (Coins) für Reihe', row.id, e);
-                }
-                await new Promise(r => setTimeout(r, 700));
-            }
-            log('buildAllCoins fertig');
-            alert(`✅ Fertig: ${rowsToBuy.length} Gebäude gebaut. ${skippedAllianceCount > 0 ? skippedAllianceCount + ' Verbandsgebäude wurden ausgeschlossen.' : ''} Seite wird neugeladen.`);
-            location.reload();
-        }
-
-        // Funktion um die Kosten zu berechnen
-        async function validateRow(rowState) {
-            const d = rowState.data;
-
-            const rowEl = rowState.el;
-            const selects = rowEl?.querySelectorAll('select');
-            const typeSelect = selects ? selects[0] : null;
-            const addressInput = rowEl?.querySelector('input[placeholder="Adresse (optional)"]');
-            const nameInput = rowEl?.querySelector('input[placeholder="Name (max 40 Zeichen)"]');
-
-            [typeSelect, addressInput, nameInput].forEach(f => highlightField(f, false));
-
-            const errors = [];
-            if (!d.buildingType) { errors.push('Kein Wachentyp gewählt'); highlightField(typeSelect, true); }
-            if (!d.name) { errors.push('Kein Wachenname angegeben'); highlightField(nameInput, true); }
-            if (!Number.isFinite(d.lat) || !Number.isFinite(d.lng)) { errors.push('Keine Position gewählt (Marker fehlt)'); }
-            if (!d.name || typeof d.name !== 'string' || d.name.trim().length === 0) {
-                errors.push('Kein Wachenname angegeben');
-                highlightField(nameInput, true);
-            } else {
-                const nameLen = d.name.trim().length;
-                if (nameLen < 2) {
-                    errors.push('Wachenname muss mindestens 2 Zeichen lang sein');
-                    highlightField(nameInput, true);
-                } else if (nameLen > 40) {
-                    errors.push('Wachenname darf maximal 40 Zeichen haben');
-                    highlightField(nameInput, true);
-                }
-            }
-
-            if (d.building) {
-                const caption = (d.building.caption || '').toLowerCase();
-                const isLeitstelle = caption.includes('leitstelle') || Number(d.building.building_type) === 7;
-                if (isLeitstelle) {
-                    if (typeof LSS_MB.state.userBuildingsTotal !== 'number' || LSS_MB.state.userBuildingsTotal === 0) {
-                        await fetchUserBuildingsCount();
-                    }
-                    const total = LSS_MB.state.userBuildingsTotal || 0;
-                    const existingLeitstellen = LSS_MB.state.userBuildings[7] || 0;
-
-                    // PREMIUM: 10 Gebäude pro Leitstelle, NON-PREMIUM: 15 Gebäude pro Leitstelle
-                    const per = LSS_MB.state.isPremium ? 10 : 15;
-                    const allowed = Math.floor(total / per);
-                    if (existingLeitstellen >= allowed) {
-                        errors.push(`Leitstelle nicht erlaubt (erlaubt: ${allowed}, vorhanden: ${existingLeitstellen}). Pro ${per} Gebäude maximal 1 Leitstelle.`);
-                        highlightField(typeSelect, true);
-                    }
-                }
-            }
-
-            if (d.building) {
-                const typeId = Number(d.building.building_type);
-
-                // Verbandskrankenhaus
-                if (
-                    typeId === 4 &&
-                    d.hospitalMode === 'alliance' &&
-                    !LSS_MB.state.alliance.canBuildAllianceHospital
-                ) {
-                    throw new Error('Keine Berechtigung für Verbandskrankenhaus');
-                }
-
-                // Verbandszellen
-                if (
-                    typeId === 16 &&
-                    !LSS_MB.state.alliance.canBuildAllianceHospital
-                ) {
-                    throw new Error('Keine Berechtigung für Verbandszellen');
-                }
-
-                // Verbandsschulen
-                if (
-                    ALLIANCE_SCHOOL_TYPES.has(typeId) &&
-                    d.schoolMode === 'alliance' &&
-                    !LSS_MB.state.alliance.canBuildAllianceHospital
-                ) {
-                    throw new Error('Keine Berechtigung für Verbandsschulen');
-                }
-
-                // Verbands-Bereitsstellungsraum prüfen
-                if (typeId === 14) {
-                    if (typeof LSS_MB.state.userBuildingsTotal !== 'number' || LSS_MB.state.userBuildingsTotal === 0) {
-                        await fetchUserBuildingsCount();
-                    }
-                    const existingBR = LSS_MB.state.userBuildings[14] || 0;
-                    const allowedBR = LSS_MB.state.isPremium ? 8 : 4;
-                    if (existingBR >= allowedBR) {
-                        throw new Error(`Bereitstellungsraum nicht erlaubt (erlaubt: ${allowedBR}, vorhanden: ${existingBR}).`);
-                    }
-                }
-            }
-
-            if (errors.length) {
-                log('validateRow Fehler für Reihe', rowLabel(rowState), errors);
-                throw new Error(errors.join(', '));
-            }
-        }
-
-        // Hilfsfunktion: logarithmus zur Basis b
-        function log2(x) {
-            return Math.log(x) / Math.log(2);
-        }
-
-        // Berechnungsformel für Kleinwachen
-        function calcLogSmallStationCost(count) {
-            if (count <= 24) return 50_000;
-
-            return Math.round(
-                25_000 + 50_000 * log2(count - 22)
-            );
-        }
-
-        // 🚒 Feuerwehr (Typ 0)
-        function calcFireStationCost(existingCount) {
-            // existingCount = Anzahl NACH dem Bau
-            if (existingCount <= 24) return 100_000;
-
-            return Math.round(
-                50_000 + 100_000 * log2(existingCount - 22)
-            );
-        }
-
-        // 🚒 Feuerwehr Kleinwache (Typ 18)
-        function calcSmallFireStationCost(count) {
-            return Math.min(
-                calcLogSmallStationCost(count),
-                1_000_000
-            );
-        }
-
-        // 🚓 Polizeiwache (Typ 6)
-        function calcPoliceStationCost(existingCount) {
-            // existingCount = Anzahl NACH dem Bau
-            if (existingCount <= 24) return 100_000;
-
-            return Math.round(
-                50_000 + 100_000 * log2(existingCount - 22)
-            );
-        }
-
-        // 🚓 Polizeiwache Kleinwache (Typ 19)
-        function calcSmallPoliceStationCost(count) {
-            return calcLogSmallStationCost(count);
-        }
-
-        // 🛠️ THW (Typ 9)
-        function calcTHWCost(existingCount) {
-            // existingCount = Anzahl NACH dem Bau
-            return Math.round(
-                200_000 + 100_000 * log2(existingCount)
-            );
-        }
-
-        // 🏔️ Bergrettung & 🚤 Seenotrettung
-        function calcRescueSpecialCost(count) {
-            if (count <= 10) return 100_000;
-
-            return Math.round(
-                100_000 + (100_000 * (Math.log(count - 9) / Math.log(5)))
-            );
-        }
-
-        // Hilfsfunktion: Regex-escape
-        function escapeRegex(s) {
-            return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        }
-
-        // Baukosten vom Server holen
-        async function fetchRealBuildingCost(typeId) {
-            if (BUILD_COST_CACHE[typeId]) return BUILD_COST_CACHE[typeId];
-
-            try {
-                const res = await fetch(`/buildings/new?building_type=${typeId}`, {
-                    credentials: 'same-origin'
+                Object.assign(overlay.style, {
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0,0,0,.45)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 999999
                 });
-                const html = await res.text();
-                const doc = new DOMParser().parseFromString(html, 'text/html');
 
-                const creditsInput = doc.getElementById(`build_credits_${typeId}`);
-                const coinsInput = doc.querySelector(`#purchase_btns_${typeId} .coins_activate`);
+                const box = document.createElement('div');
 
-                const credits = creditsInput
-                ? Number(creditsInput.value.match(/([\d\.]+)/)[1].replace(/\./g, ''))
-                : 0;
-
-                const coins = coinsInput
-                ? Number(coinsInput.value.match(/([\d\.]+)/)[1].replace(/\./g, ''))
-                : 0;
-
-                const result = { credits, coins };
-                BUILD_COST_CACHE[typeId] = result;
-                return result;
-
-            } catch (e) {
-                console.error('Fehler beim Laden der Serverkosten für Typ', typeId, e);
-                return { credits: 0, coins: 0 };
-            }
-        }
-
-        // Preis des Gebäude beziehen
-        async function getCostsForBuilding(building) {
-            const caption = (building.caption || '').toLowerCase().trim();
-            const typeId = Number(building.building_type ?? building.id ?? building.buildingType ?? building.type);
-            const userLevel = Number(LSS_MB.state.userInfo?.user_level ?? 0);
-
-            log('getCostsForBuilding -> caption:', caption, 'typeId:', typeId, 'userLevel:', userLevel);
-
-            // ===== Seenotrettungswache (dynamisch) =====
-            if (typeId === 26) { // Seenotrettung
-                if (userLevel < 4) {
-                    log('Userlevel zu niedrig für Seenotrettung:', userLevel);
-                    return { credits: null, coins: null, locked: true }; // optional Flag "locked"
-                }
-            }
-
-            // ===== Bergrettung (dynamisch) =====
-            if (typeId === 25) {
-                // kein Level-Limit, kann ab Level 0 gebaut werden
-            }
-
-            // ===== Dynamische Gebäude (Serverkosten) =====
-            if (DYNAMIC_COST_TYPES.has(typeId)) {
-                const costs = await fetchRealBuildingCost(typeId);
-
-                // Spezialfall: Kleinwache → Credit-Cap
-                if (
-                    typeId === FIRE_STATION_SMALL_TYPE &&
-                    costs.credits > FIRE_STATION_SMALL_CREDIT_CAP
-                ) {
-                    log(
-                        'Kleinwache Credit-Cap angewendet:',
-                        costs.credits,
-                        '→',
-                        FIRE_STATION_SMALL_CREDIT_CAP
-                    );
-
-                    costs.credits = FIRE_STATION_SMALL_CREDIT_CAP;
-                }
-
-                log('Dynamische Serverkosten:', costs);
-                return costs;
-            }
-
-            // ===== Leitstelle =====
-            if (typeId === 7 || /\bleitstelle\b/.test(caption)) {
-                return { credits: 0, coins: 0 };
-            }
-
-            // ===== Statische Whitelist =====
-            for (const entry of STATIC_COSTS) {
-                for (const kwRaw of entry.keywords) {
-                    const kw = (kwRaw || '').toLowerCase().trim();
-                    if (!kw) continue;
-                    const re = new RegExp('\\b' + escapeRegex(kw) + '\\b', 'u');
-                    if (re.test(caption)) {
-                        return { credits: entry.credits, coins: entry.coins };
-                    }
-                }
-            }
-
-            // ===== Fallback =====
-            if (typeof building.credits === 'number' || typeof building.coins === 'number') {
-                return { credits: building.credits ?? 0, coins: building.coins ?? 0 };
-            }
-
-            return null;
-        }
-
-        // Funktion um die Gebäude zu zählen
-        async function fetchUserBuildingsCount() {
-            try {
-                const res = await fetch('/api/buildings');
-                const data = await res.json();
-                const counts = {};
-                let total = 0;
-                data.forEach(b => {
-                    total++;
-                    if (typeof b.building_type === 'number' && b.building_type >= 0) {
-                        counts[b.building_type] = (counts[b.building_type] || 0) + 1;
-                    }
+                Object.assign(box.style, {
+                    minWidth: '420px',
+                    maxWidth: '500px',
+                    background: document.body.classList.contains('dark') ? '#2f2f2f' : '#fff',
+                    color: document.body.classList.contains('dark') ? '#fff' : '#000',
+                    borderRadius: '8px',
+                    padding: '15px',
+                    boxShadow: '0 0 20px rgba(0,0,0,.4)'
                 });
-                LSS_MB.state.userBuildings = counts;
-                LSS_MB.state.userBuildingsTotal = total;
-                log('User buildings gezählt:', counts, 'total=', total);
-                return { counts, total };
-            } catch (err) {
-                log('Fehler beim Laden der User-Wachen:', err);
-                LSS_MB.state.userBuildings = {};
-                LSS_MB.state.userBuildingsTotal = 0;
-                try { checkBereitsstellungsraumLimits(); } catch (e) { log('checkBereitsstellungsraumLimits Fehler nach fetchUserBuildingsCount', e); }
-                return { counts: {}, total: 0 };
-            }
 
-        }
+                const h = document.createElement('h4');
+                h.textContent = title;
+                h.style.marginTop = '0';
 
-        // Funktion um Verbands-BSR zu zählen
-        async function fetchExistingAllianceBSRCount() {
-            try {
-                const res = await fetch('/api/alliance_buildings', {
-                    credentials: 'include'
+                box.appendChild(h);
+
+                if (text) {
+                    const p = document.createElement('div');
+                    p.style.marginBottom = '12px';
+                    p.textContent = text;
+                    box.appendChild(p);
+                }
+
+                let input = null;
+
+                if (mode === 'prompt') {
+
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = value;
+                    input.placeholder = placeholder;
+
+                    Object.assign(input.style, {
+                        width: '100%',
+                        marginBottom: '15px',
+                        padding: '6px'
+                    });
+
+                    box.appendChild(input);
+                }
+
+                const footer = document.createElement('div');
+
+                Object.assign(footer.style, {
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '8px'
                 });
-                if (!res.ok) throw new Error('API Fehler: ' + res.status);
 
-                const data = await res.json();
-                if (!Array.isArray(data)) return 0;
-
-                // building_type 14 = Bereitsstellungsraum
-                const count = data.filter(b =>
-                                          String(b.building_type) === '14' && b.enabled
-                                         ).length;
-
-                return count;
-            } catch (e) {
-                log('fetchExistingAllianceBSRCount Fehler', e);
-                return 0;
-            }
-        }
-
-        // Sekündlicher Verbandsgebäude API-Abgleich
-        async function getCachedAllianceBSRCount() {
-            const now = Date.now();
-            const cache = LSS_MB.state._allianceBSRCache || {};
-
-            if (cache.value && cache.ts && (now - cache.ts < 1000)) {
-                return cache.value; // 1s Cache
-            }
-
-            const value = await fetchExistingAllianceBSRCount();
-            LSS_MB.state._allianceBSRCache = { value, ts: now };
-            return value;
-        }
-
-        // Berechnet und aktualisiert die Kostenvorschau für alle aktuell geplanten Gebäude.
-        async function updateCostPreview() {
-            const rows = LSS_MB.state.buildRows;
-
-            const simulatedCounts = { ...LSS_MB.state.userBuildings };
-            simulatedCounts[0] = simulatedCounts[0] || 0;   // Großwache
-            simulatedCounts[18] = simulatedCounts[18] || 0; // Kleinwache
-            simulatedCounts[6] = simulatedCounts[6] || 0;   // Polizeiwache
-            simulatedCounts[19] = simulatedCounts[19] || 0; // Polizeikleinwache
-            simulatedCounts[25] = simulatedCounts[25] || 0; // Bergrettung
-            simulatedCounts[26] = simulatedCounts[26] || 0; // Seenotrettung
-            simulatedCounts[9] = simulatedCounts[9] || 0; // THW
-
-            // ⚠️ Cache optional, damit nicht bei jedem Keypress neu gefetcht wird
-            if (typeof LSS_MB.state._allianceBSRCount !== 'number') {
-                LSS_MB.state._allianceBSRCount = await fetchExistingAllianceBSRCount();
-            }
-
-            const existingServerCounts = { ...simulatedCounts };
-            let preview = document.getElementById('lss_mb_cost_preview');
-
-            if (!preview) {
-                const resDiv = document.getElementById('lss_mb_resources');
-                if (resDiv) {
-                    const div = document.createElement('div');
-                    div.id = 'lss_mb_cost_preview';
-                    div.innerHTML = `💸 <strong>Kostenvorschau</strong><br>💰 Credits: 0<br>🪙 Coins: 0
-                ${LSS_MB.state.alliance.canBuildAllianceHospital ? '<br>🏛️ Verbandscredits: 0' : ''}`;
-                    resDiv.appendChild(div);
-                    preview = div;
-                } else {
-                    return;
-                }
-            }
-
-            let ownCredits = 0;
-            let ownCoins = 0;
-            let allianceCredits = 0;
-
-            // Serverpreise nur einmal abrufen
-            const serverPrices = {};
-
-            // kombinierten Feuerwachen-Zähler (Groß + Klein)
-            let simulatedFireTotal = (simulatedCounts[0] || 0) + (simulatedCounts[18] || 0);
-            const existingServerFireTotal = (existingServerCounts[0] || 0) + (existingServerCounts[18] || 0);
-
-            let simulatedPoliceTotal = (simulatedCounts[6] || 0) + (simulatedCounts[19] || 0);
-            const existingServerPoliceTotal = (existingServerCounts[6] || 0) + (existingServerCounts[19] || 0);
-
-            // Hilfsformatierer
-            const fmt = v => Number(v || 0).toLocaleString('de-DE');
-
-            for (const row of LSS_MB.state.buildRows) {
-                const d = row.data;
-                if (!d.building) {
-                    try {
-                        const num = document.getElementById(`lss_mb_number_${row.id}`);
-                        const cl = document.getElementById(`lss_mb_credits_${row.id}`);
-                        const col = document.getElementById(`lss_mb_coins_${row.id}`);
-                        if (num) num.textContent = '#';
-                        if (cl) cl.textContent = '💰 -';
-                        if (col) col.textContent = '🪙 -';
-                    } catch (e) {}
-                    continue;
+                function close(result) {
+                    document.removeEventListener('keydown', keyHandler);
+                    overlay.remove();
+                    resolve(result);
                 }
 
-                const typeId = Number(d.building.building_type);
+                function keyHandler(e) {
 
-                let credits = null;
-                let coins = null;
-                let label = '';
-                let buildingNumber = 0;
+                    if (e.key === 'Escape')
+                        close(mode === 'confirm' ? false : null);
 
-                // 🚒 Großwache (Typ 0)
-                if (typeId === 0) {
-                    simulatedFireTotal++;
-                    buildingNumber = simulatedFireTotal;
-
-                    if (!serverPrices[0]) {
-                        serverPrices[0] = await getCostsForBuilding(d.building);
-                    }
-
-                    coins = serverPrices[0].coins || 0;
-
-                    if (buildingNumber === existingServerFireTotal + 1) {
-                        credits = serverPrices[0].credits;
-                    } else {
-                        if (typeof serverPrices.__scale0 === 'undefined') {
-                            const anchorCount = existingServerFireTotal + 1;
-                            const anchorCalc = calcFireStationCost(anchorCount);
-                            serverPrices.__scale0 = (anchorCalc > 0)
-                                ? ((serverPrices[0].credits || 0) / anchorCalc)
-                            : 1;
-                            if (!isFinite(serverPrices.__scale0) || serverPrices.__scale0 <= 0) serverPrices.__scale0 = 1;
-                        }
-                        credits = Math.round(calcFireStationCost(buildingNumber) * (serverPrices.__scale0 || 1));
-                    }
-
-                    if (typeof serverPrices.__last0 === 'number' && credits < serverPrices.__last0) credits = serverPrices.__last0;
-                    serverPrices.__last0 = credits;
-
-                    if (d.startVehicle && START_VEHICLE_COSTS[d.startVehicle]) {
-                        credits += START_VEHICLE_COSTS[d.startVehicle];
-                    }
-
-                    label = `Feuerwache #${buildingNumber}`;
-                }
-
-                // 🚒 Kleinwache (Typ 18)
-                else if (typeId === 18) {
-                    simulatedFireTotal++;
-                    buildingNumber = simulatedFireTotal;
-
-                    if (!serverPrices[18]) {
-                        serverPrices[18] = await getCostsForBuilding(d.building);
-                    }
-
-                    coins = serverPrices[18].coins || 0;
-
-                    if (buildingNumber === existingServerFireTotal + 1) {
-                        credits = serverPrices[18].credits;
-                    } else {
-                        if (typeof serverPrices.__scale18 === 'undefined') {
-                            const anchorCount = existingServerFireTotal + 1;
-                            const anchorCalc = calcSmallFireStationCost(anchorCount);
-                            serverPrices.__scale18 = (anchorCalc > 0)
-                                ? ((serverPrices[18].credits || 0) / anchorCalc)
-                            : 1;
-                            if (!isFinite(serverPrices.__scale18) || serverPrices.__scale18 <= 0) serverPrices.__scale18 = 1;
-                        }
-
-                        credits = Math.round(calcSmallFireStationCost(buildingNumber) * (serverPrices.__scale18 || 1));
-                        credits = Math.min(credits, FIRE_STATION_SMALL_CREDIT_CAP);
-                    }
-
-                    if (typeof serverPrices.__last18 === 'number' && credits < serverPrices.__last18) credits = serverPrices.__last18;
-                    serverPrices.__last18 = credits;
-
-                    if (d.startVehicle && START_VEHICLE_COSTS[d.startVehicle]) {
-                        credits += START_VEHICLE_COSTS[d.startVehicle];
-                    }
-
-                    label = `Kleinwache #${buildingNumber}`;
-                }
-
-                // 🚓 Polizeiwache (Typ 6)
-                else if (typeId === 6) {
-                    simulatedPoliceTotal++;
-                    buildingNumber = simulatedPoliceTotal;
-
-                    if (!serverPrices[6]) serverPrices[6] = await getCostsForBuilding(d.building);
-                    coins = serverPrices[6].coins || 0;
-
-                    if (buildingNumber === existingServerPoliceTotal + 1) {
-                        credits = serverPrices[6].credits;
-                    } else {
-                        if (typeof serverPrices.__scale6 === 'undefined') {
-                            const anchorCount = existingServerPoliceTotal + 1;
-                            const anchorCalc = calcPoliceStationCost(anchorCount);
-                            serverPrices.__scale6 =
-                                anchorCalc > 0 ? serverPrices[6].credits / anchorCalc : 1;
-                        }
-                        credits = Math.round(
-                            calcPoliceStationCost(buildingNumber) * serverPrices.__scale6
-                        );
-                    }
-
-                    label = `Polizeiwache #${buildingNumber}`;
-                }
-
-                // 🚓 Polizeikleinwache (Typ 19)
-                else if (typeId === 19) {
-                    simulatedPoliceTotal++;
-                    buildingNumber = simulatedPoliceTotal;
-
-                    if (!serverPrices[19]) serverPrices[19] = await getCostsForBuilding(d.building);
-                    coins = serverPrices[19].coins || 0;
-
-                    if (buildingNumber === existingServerPoliceTotal + 1) {
-                        credits = serverPrices[19].credits;
-                    } else {
-                        if (typeof serverPrices.__scale19 === 'undefined') {
-                            const anchorCount = existingServerPoliceTotal + 1;
-                            const anchorCalc = calcSmallPoliceStationCost(anchorCount);
-                            serverPrices.__scale19 =
-                                anchorCalc > 0 ? serverPrices[19].credits / anchorCalc : 1;
-                        }
-                        credits = Math.round(
-                            calcSmallPoliceStationCost(buildingNumber) * serverPrices.__scale19
-                        );
-                    }
-
-                    label = `Polizeiwache (Klein) #${buildingNumber}`;
-                }
-
-                // 🏔️ Bergrettung & 🚤 Seenotrettung
-                else if (typeId === 25 || typeId === 26) {
-                    simulatedCounts[typeId]++;
-                    buildingNumber = simulatedCounts[typeId];
-
-                    if (!serverPrices[typeId]) {
-                        serverPrices[typeId] = await getCostsForBuilding(d.building);
-                    }
-
-                    coins = serverPrices[typeId].coins || 0;
-                    credits = calcRescueSpecialCost(buildingNumber);
-
-                    label = `${d.building.caption} #${buildingNumber}`;
-                }
-
-                // 🛠️ THW (Typ 9)
-                else if (typeId === 9) {
-                    simulatedCounts[9]++;
-                    buildingNumber = simulatedCounts[9];
-
-                    if (!serverPrices[9]) {
-                        serverPrices[9] = await getCostsForBuilding(d.building);
-                    }
-
-                    coins = serverPrices[9].coins || 35;
-                    credits = calcTHWCost(buildingNumber);
-
-                    label = `THW-Ortsverband #${buildingNumber}`;
-                }
-
-                // andere Gebäude (generische Typen)
-                else {
-                    simulatedCounts[typeId] = simulatedCounts[typeId] || 0;
-                    simulatedCounts[typeId]++;
-                    buildingNumber = simulatedCounts[typeId];
-
-                    const base = await getCostsForBuilding(d.building);
-                    credits = (base && typeof base.credits !== 'undefined') ? Number(base.credits) : 0;
-                    coins = (base && typeof base.coins !== 'undefined') ? Number(base.coins) : 0;
-                    label = `${d.building.caption} #${buildingNumber}`;
-                }
-
-                // Verbandslogik (ob die Kosten als Verbandskosten gelten)
-                const isAlliance =
-                      (typeId === 4 && d.hospitalMode === 'alliance') ||
-                      (ALLIANCE_SCHOOL_TYPES.has(typeId) && d.schoolMode === 'alliance') ||
-                      (typeId === 16);
-
-                if (isAlliance) {
-                    allianceCredits += credits || 0;
-                } else {
-                    ownCredits += credits || 0;
-                    ownCoins += coins || 0;
-                }
-
-                // DOM-Update der kleinen Nr.-Anzeige (pro Reihe)
-                try {
-                    const numEl = document.getElementById(`lss_mb_number_${row.id}`);
-                    if (numEl) {
-                        numEl.textContent = buildingNumber ? `#${buildingNumber}` : '#';
-                    }
-                } catch (e) {}
-
-                // Aktualisiere die per-Reihe Labels
-                try {
-                    const cl = document.getElementById(`lss_mb_credits_${row.id}`);
-                    const col = document.getElementById(`lss_mb_coins_${row.id}`);
-                    if (cl) cl.textContent = (credits === null || typeof credits === 'undefined') ? '💰 -' : `💰 ${fmt(credits)}`;
-                    if (col) col.textContent = (coins === null || typeof coins === 'undefined') ? '🪙 -' : `🪙 ${fmt(coins)}`;
-                } catch (e) {}
-                //console.info(`[LSS-MB][PREVIEW] ${label} → ${((credits === null || typeof credits === 'undefined') ? '-' : fmt(credits))} Credits | ${((coins === null || typeof coins === 'undefined') ? '-' : fmt(coins))} Coins`);
-            }
-
-            const fmtTotal = v => Number(v || 0).toLocaleString('de-DE');
-
-            let html = `
-        💸 <strong>Kostenvorschau</strong> 💸<br>
-        💰Credits: ${fmtTotal(ownCredits)} | 🪙Coins: ${fmtTotal(ownCoins)}
-    `;
-
-            if (LSS_MB.state.alliance.canBuildAllianceHospital) {
-                html += `<br>🏛️ Verbandscredits: ${fmtTotal(allianceCredits)}`;
-            }
-
-            // Warnungen + Button-Handling (inkl. Verbandskasse)
-            try {
-                const availableCredits = Number(LSS_MB.state.userInfo?.credits_user_current) || 0;
-                const availableCoins = Number(LSS_MB.state.userInfo?.coins_user_current) || 0;
-                const availableAllianceCredits = Number(LSS_MB.state.alliance?.credits) || 0;
-
-                const exceedsCredits = ownCredits > availableCredits;
-                const exceedsCoins = ownCoins > availableCoins;
-                const allianceInsufficient = allianceCredits > availableAllianceCredits;
-
-                // --- NEU: Bereitsstellungsraum-Limit prüfen ---
-                const allowedOwnBR = LSS_MB.state.isPremium ? 8 : 4;
-                const allowedAllianceBR = 4; // Verbandslimit
-
-                const existingOwnBR = Number(LSS_MB.state.userBuildings?.[14] || 0);
-                const existingAllianceBR = await getCachedAllianceBSRCount();
-
-                const plannedBRCounts = countPlannedBereitsstellungsraeume();
-                const plannedOwnBR = Number(plannedBRCounts.own || 0);
-                const plannedAllianceBR = Number(plannedBRCounts.alliance || 0);
-
-                const totalOwnBR = existingOwnBR + plannedOwnBR;
-                const totalAllianceBR = existingAllianceBR + plannedAllianceBR;
-
-                const ownBRExceeded = totalOwnBR > allowedOwnBR;
-                const allianceBRExceeded = totalAllianceBR > allowedAllianceBR;
-
-                // Eigene-Ressourcen-Warnung (nur wenn beides nicht reicht)
-                if (exceedsCredits && exceedsCoins) {
-                    html += `
-                <br>
-                <div id="lss_mb_insufficient_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff5f5;color:#a40000;border:1px solid #FF000;">
-                <strong>Hinweiß:</strong> Die benötigten <strong>${fmtTotal(ownCredits)} Credits</strong> oder die benötigten <strong>${fmtTotal(ownCoins)} Coins</strong> überschreiten beide deine verfügbaren Mittel.
-                </div>`;
-                } else {
-                    const prev = document.getElementById('lss_mb_insufficient_warning');
-                    if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
-                }
-
-                // Verbandskassen-Warnung
-                if (allianceInsufficient) {
-                    html += `
-                <br><div id="lss_mb_alliance_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff7e6;color:#7a4b00;border:1px solid #f0d9b5;">
-                <strong>Hinweiß (Verband):</strong> Die benötigten <strong>${fmtTotal(allianceCredits)} Verbandscredits</strong> reichen nicht aus, um die als Verband geplanten Gebäude zu kaufen.
-                </div>`;
-                } else {
-                    const prevA = document.getElementById('lss_mb_alliance_warning');
-                    if (prevA && prevA.parentNode) prevA.parentNode.removeChild(prevA);
-                }
-
-                // Bereitsstellungsraum-Warnung
-                if (ownBRExceeded) {
-                    html += `
-                <br><div id="lss_mb_br_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff5f5;color:#a40000;border:1px solid #ffdddd;">
-                <strong>Hinweis:</strong> Es sind maximal ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt. Derzeit vorhanden: ${existingOwnBR}, aktuell geplant: ${plannedOwnBR})
-                </div>`;
-                } else {
-                    const prevB = document.getElementById('lss_mb_br_warning');
-                    if (prevB && prevB.parentNode) prevB.parentNode.removeChild(prevB);
-                }
-
-                if (allianceBRExceeded) {
-                    html += `
-                <br><div id="lss_mb_br_alliance_warning" style="margin-top:6px;padding:6px;border-radius:4px;background:#fff7e6;color:#7a4b00;border:1px solid #f0d9b5;">
-                <strong>Hinweis (Verband):</strong> Es sind maximal ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt. Derzeit vorhanden: ${existingAllianceBR},  aktuell geplant: ${plannedAllianceBR})
-                </div>`;
-                } else {
-                    const prevBA = document.getElementById('lss_mb_br_alliance_warning');
-                    if (prevBA && prevBA.parentNode) prevBA.parentNode.removeChild(prevBA);
-                }
-
-                // Buttons aktualisieren
-                const buildBtn = document.getElementById('lss_mb_build_all_btn');
-                const coinsBtn = document.getElementById('lss_mb_build_all_coins_btn');
-                const addBtn = document.getElementById('lss_mb_add_row_btn');
-                const btn5 = document.getElementById('lss_mb_add_5_rows_btn');
-                const btn10 = document.getElementById('lss_mb_add_10_rows_btn');
-                const hasRows = Array.isArray(LSS_MB.state.buildRows) && LSS_MB.state.buildRows.length > 0;
-
-                const shouldDisableForOwn = (exceedsCredits && exceedsCoins);
-                const shouldDisableForAlliance = allianceInsufficient;
-
-                // getrennte BR-Gründe
-                const shouldDisableForOwnBR = ownBRExceeded;
-                const shouldDisableForAllianceBR = allianceBRExceeded;
-                const shouldDisableForBR = shouldDisableForOwnBR || shouldDisableForAllianceBR;
-
-                // Gesamtlösung: Buttons deaktivieren wenn irgendein Grund vorliegt
-                const shouldDisable = !hasRows || shouldDisableForOwn || shouldDisableForAlliance || shouldDisableForBR;
-
-                // Kaufbutton (Credits)
-                if (buildBtn) {
-                    const shouldDisableCredits =
-                          !hasRows || exceedsCredits || shouldDisableForAlliance || shouldDisableForBR;
-
-                    buildBtn.disabled = shouldDisableCredits;
-                    buildBtn.style.opacity = shouldDisableCredits ? '0.5' : '1';
-                    buildBtn.style.cursor = shouldDisableCredits ? 'not-allowed' : 'pointer';
-
-                    if (!hasRows) {
-                        buildBtn.title = 'Keine Reihen vorhanden.';
-                    } else if (exceedsCredits) {
-                        buildBtn.title =
-                            `Deine Credits (${fmtTotal(availableCredits)}) ` +
-                            `reichen nicht für die gewählten Gebäude.`;
-                    } else if (shouldDisableForAlliance) {
-                        buildBtn.title =
-                            `Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
-                            `reichen nicht für die geplanten Verbandsgebäude.`;
-                    } else if (shouldDisableForOwnBR) {
-                        buildBtn.title =
-                            `Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
-                    } else if (shouldDisableForAllianceBR) {
-                        buildBtn.title =
-                            `Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
-                    } else {
-                        buildBtn.title = 'Wachen/Gebäude bauen (Credits)';
-                    }
-                }
-
-                // Kaufbutton (Coins)
-                if (coinsBtn) {
-                    const shouldDisableCoins =
-                          !hasRows || exceedsCoins || shouldDisableForAlliance || shouldDisableForBR;
-
-                    coinsBtn.disabled = shouldDisableCoins;
-                    coinsBtn.style.opacity = shouldDisableCoins ? '0.5' : '1';
-                    coinsBtn.style.cursor = shouldDisableCoins ? 'not-allowed' : 'pointer';
-
-                    if (!hasRows) {
-                        coinsBtn.title = 'Deaktiviert: Keine Reihen vorhanden.';
-                    } else if (exceedsCoins) {
-                        coinsBtn.title =
-                            `Deine Coins (${fmtTotal(availableCoins)}) ` +
-                            `reichen nicht für die gewählten Gebäude.`;
-                    } else if (shouldDisableForAlliance) {
-                        coinsBtn.title =
-                            `Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
-                            `reichen nicht für die geplanten Verbandsgebäude.`;
-                    } else if (shouldDisableForOwnBR) {
-                        coinsBtn.title =
-                            `Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
-                    } else if (shouldDisableForAllianceBR) {
-                        coinsBtn.title =
-                            `Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
-                    } else {
-                        coinsBtn.title = 'Wachen/Gebäude bauen (Coins)';
-                    }
-                }
-
-                // Button zum hinzufügen von Reihen
-                if (addBtn) {
-                    const shouldDisableAdd =
-                          shouldDisableForOwn || shouldDisableForAlliance || shouldDisableForBR;
-
-                    addBtn.disabled = shouldDisableAdd;
-                    addBtn.style.opacity = shouldDisableAdd ? '0.5' : '1';
-                    addBtn.style.cursor = shouldDisableAdd ? 'not-allowed' : 'pointer';
-
-                    if (shouldDisableForOwn) {
-                        addBtn.title =
-                            `Deaktiviert: Deine eigenen Credits (${fmtTotal(availableCredits)}) ` +
-                            `und Coins (${fmtTotal(availableCoins)}) reichen beide nicht für die gewählten Gebäude.`;
-                    } else if (shouldDisableForAlliance) {
-                        addBtn.title =
-                            `Deaktiviert: Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
-                            `reichen nicht für die geplanten Verbandsgebäude.`;
-                    } else if (shouldDisableForOwnBR) {
-                        addBtn.title =
-                            `Deaktiviert: Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
-                    } else if (shouldDisableForAllianceBR) {
-                        addBtn.title =
-                            `Deaktiviert: Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
-                    } else {
-                        addBtn.title = 'Weitere Wache/Gebäude hinzufügen';
-                    }
-                }
-
-                // +5 Button
-                if (btn5) {
-                    const shouldDisable5 =
-                          shouldDisableForOwn || shouldDisableForAlliance || shouldDisableForBR;
-
-                    btn5.disabled = shouldDisable5;
-                    btn5.style.opacity = shouldDisable5 ? '0.5' : '1';
-                    btn5.style.cursor = shouldDisable5 ? 'not-allowed' : 'pointer';
-
-                    if (shouldDisableForOwn) {
-                        btn5.title =
-                            `Deaktiviert: Deine eigenen Credits (${fmtTotal(availableCredits)}) ` +
-                            `und Coins (${fmtTotal(availableCoins)}) reichen beide nicht für die gewählten Gebäude.`;
-                    } else if (shouldDisableForAlliance) {
-                        btn5.title =
-                            `Deaktiviert: Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
-                            `reichen nicht für die geplanten Verbandsgebäude.`;
-                    } else if (shouldDisableForOwnBR) {
-                        btn5.title =
-                            `Deaktiviert: Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
-                    } else if (shouldDisableForAllianceBR) {
-                        btn5.title =
-                            `Deaktiviert: Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
-                    } else {
-                        btn5.title = '+5 Reihen hinzufügen';
-                    }
-                }
-
-                // +10 Button
-                if (btn10) {
-                    const shouldDisable10 =
-                          shouldDisableForOwn || shouldDisableForAlliance || shouldDisableForBR;
-
-                    btn10.disabled = shouldDisable10;
-                    btn10.style.opacity = shouldDisable10 ? '0.5' : '1';
-                    btn10.style.cursor = shouldDisable10 ? 'not-allowed' : 'pointer';
-
-                    if (shouldDisableForOwn) {
-                        btn10.title =
-                            `Deaktiviert: Deine eigenen Credits (${fmtTotal(availableCredits)}) ` +
-                            `und Coins (${fmtTotal(availableCoins)}) reichen beide nicht für die gewählten Gebäude.`;
-                    } else if (shouldDisableForAlliance) {
-                        btn10.title =
-                            `Deaktiviert: Verbandscredits (${fmtTotal(availableAllianceCredits)}) ` +
-                            `reichen nicht für die geplanten Verbandsgebäude.`;
-                    } else if (shouldDisableForOwnBR) {
-                        btn10.title =
-                            `Deaktiviert: Max. ${allowedOwnBR} eigene Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingOwnBR}, geplant: ${plannedOwnBR}).`;
-                    } else if (shouldDisableForAllianceBR) {
-                        btn10.title =
-                            `Deaktiviert: Max. ${allowedAllianceBR} Verbands-Bereitsstellungsräume erlaubt ` +
-                            `(vorhanden: ${existingAllianceBR}, geplant: ${plannedAllianceBR}).`;
-                    } else {
-                        btn10.title = '+10 Reihen hinzufügen';
-                    }
-                }
-
-            } catch (e) {
-                log('Warnungsprüfung / Button-Update konnte nicht durchgeführt werden', e);
-            }
-
-            preview.innerHTML = html;
-        }
-
-        // Premium-Status erkennen
-        function detectPremium() {
-            try {
-                if (typeof window.user_premium === 'boolean') {
-                    return window.user_premium;
-                }
-                const html = document.documentElement?.innerHTML || '';
-                const m = html.match(/var\s+user_premium\s*=\s*(true|false)/);
-                if (m) {
-                    return m[1] === 'true';
-                }
-            } catch (e) {
-                console.warn('detectPremium Fehler', e);
-            }
-            // Default: Nicht-Premium
-            return false;
-        }
-
-        LSS_MB.dialog = (() => {
-
-            function showDialog({
-                title = '',
-                text = '',
-                value = '',
-                placeholder = '',
-                mode = 'alert'
-            }) {
-
-                return new Promise(resolve => {
-
-                    const overlay = document.createElement('div');
-                    overlay.className = 'lss-mb-dialog-overlay';
-
-                    Object.assign(overlay.style, {
-                        position: 'fixed',
-                        inset: 0,
-                        background: 'rgba(0,0,0,.45)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 999999
-                    });
-
-                    const box = document.createElement('div');
-
-                    Object.assign(box.style, {
-                        minWidth: '420px',
-                        maxWidth: '500px',
-                        background: document.body.classList.contains('dark') ? '#2f2f2f' : '#fff',
-                        color: document.body.classList.contains('dark') ? '#fff' : '#000',
-                        borderRadius: '8px',
-                        padding: '15px',
-                        boxShadow: '0 0 20px rgba(0,0,0,.4)'
-                    });
-
-                    const h = document.createElement('h4');
-                    h.textContent = title;
-                    h.style.marginTop = '0';
-
-                    box.appendChild(h);
-
-                    if (text) {
-                        const p = document.createElement('div');
-                        p.style.marginBottom = '12px';
-                        p.textContent = text;
-                        box.appendChild(p);
-                    }
-
-                    let input = null;
-
-                    if (mode === 'prompt') {
-
-                        input = document.createElement('input');
-                        input.type = 'text';
-                        input.value = value;
-                        input.placeholder = placeholder;
-
-                        Object.assign(input.style, {
-                            width: '100%',
-                            marginBottom: '15px',
-                            padding: '6px'
-                        });
-
-                        box.appendChild(input);
-                    }
-
-                    const footer = document.createElement('div');
-
-                    Object.assign(footer.style, {
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        gap: '8px'
-                    });
-
-                    function close(result) {
-                        document.removeEventListener('keydown', keyHandler);
-                        overlay.remove();
-                        resolve(result);
-                    }
-
-                    function keyHandler(e) {
-
-                        if (e.key === 'Escape')
-                            close(mode === 'confirm' ? false : null);
-
-                        if (e.key === 'Enter') {
-
-                            if (mode === 'prompt')
-                                close(input.value.trim());
-                            else if (mode === 'confirm')
-                                close(true);
-                            else
-                                close();
-                        }
-                    }
-
-                    document.addEventListener('keydown', keyHandler);
-
-                    if (mode !== 'alert') {
-
-                        const cancel = document.createElement('button');
-                        cancel.className = BUTTON_CLASSES.danger;
-                        cancel.textContent = 'Abbrechen';
-                        cancel.onclick = () => close(mode === 'confirm' ? false : null);
-                        footer.appendChild(cancel);
-                    }
-                    const ok = document.createElement('button');
-                    ok.className = BUTTON_CLASSES.success;
-                    ok.textContent =
-                        mode === 'confirm'
-                        ? 'Ja'
-                    : mode === 'prompt'
-                        ? 'Speichern'
-                    : 'OK';
-                    ok.onclick = () => {
+                    if (e.key === 'Enter') {
 
                         if (mode === 'prompt')
                             close(input.value.trim());
@@ -3719,398 +3894,427 @@
                             close(true);
                         else
                             close();
-
-                    };
-
-                    footer.appendChild(ok);
-
-                    box.appendChild(footer);
-                    overlay.appendChild(box);
-                    document.body.appendChild(overlay);
-
-                    if (input)
-                        setTimeout(() => input.focus(), 0);
-
-                });
-
-            }
-
-            async function alert(options) {
-                return showDialog({
-                    ...options,
-                    mode: 'alert'
-                });
-            }
-
-            async function confirm(options) {
-                return showDialog({
-                    ...options,
-                    mode: 'confirm'
-                });
-            }
-
-            async function prompt(options) {
-                return showDialog({
-                    ...options,
-                    mode: 'prompt'
-                });
-            }
-
-            return {
-                prompt,
-                confirm,
-                alert
-            };
-
-        })();
-        LSS_MB.blueprints = (() => {
-            const DB_NAME = 'LSS_MB_DB';
-            const STORE = 'blueprints';
-            const VERSION = 1;
-            let db = null;
-
-            async function openDB() {
-                if (db) return db;
-
-                return new Promise((resolve, reject) => {
-                    const req = indexedDB.open(DB_NAME, VERSION);
-
-                    req.onupgradeneeded = e => {
-                        const d = e.target.result;
-
-                        if (!d.objectStoreNames.contains(STORE)) {
-                            const store = d.createObjectStore(STORE, {
-                                keyPath: 'id'
-                            });
-
-                            store.createIndex('name', 'name', { unique: true });
-                        }
-                    };
-
-                    req.onsuccess = () => {
-                        db = req.result;
-                        resolve(db);
-                    };
-
-                    req.onerror = () => reject(req.error);
-                });
-            }
-
-            function tx(mode) {
-                return db.transaction(STORE, mode).objectStore(STORE);
-            }
-
-            async function getAll() {
-                await openDB();
-
-                return new Promise((resolve, reject) => {
-                    const req = tx('readonly').getAll();
-
-                    req.onsuccess = () => {
-                        const arr = req.result || [];
-                        arr.sort((a,b) =>
-                                 a.name.localeCompare(b.name, 'de', {
-                            sensitivity:'base'
-                        })
-                                );
-                        resolve(arr);
-                    };
-
-                    req.onerror = () => reject(req.error);
-                });
-            }
-
-            async function get(id) {
-                await openDB();
-
-                return new Promise((resolve, reject) => {
-                    const req = tx('readonly').get(id);
-
-                    req.onsuccess = () => resolve(req.result || null);
-                    req.onerror = () => reject(req.error);
-                });
-            }
-
-            async function save(name) {
-                name = name?.trim();
-
-                if (!name) {
-                    await LSS_MB.dialog.alert({
-                        title: 'Fehler',
-                        text: 'Bitte einen Namen eingeben.'
-                    });
-                    return null;
+                    }
                 }
 
-                await openDB();
+                document.addEventListener('keydown', keyHandler);
 
-                const exists = await new Promise((resolve, reject) => {
-                    const index = tx('readonly').index('name');
-                    const req = index.get(name);
-                    req.onsuccess = () => resolve(req.result || null);
-                    req.onerror = () => reject(req.error);
-                });
+                if (mode !== 'alert') {
 
-                if (exists) {
-                    await LSS_MB.dialog.alert({
-                        title: 'Bauplan vorhanden',
-                        text: `Der Bauplan "${name}" existiert bereits.\nBitte wähle einen anderen Namen.`
-                    });
-                    return null;
+                    const cancel = document.createElement('button');
+                    cancel.className = BUTTON_CLASSES.danger;
+                    cancel.textContent = 'Abbrechen';
+                    cancel.onclick = () => close(mode === 'confirm' ? false : null);
+                    footer.appendChild(cancel);
                 }
+                const ok = document.createElement('button');
+                ok.className = BUTTON_CLASSES.success;
+                ok.textContent =
+                    mode === 'confirm'
+                    ? 'Ja'
+                : mode === 'prompt'
+                    ? 'Speichern'
+                : 'OK';
+                ok.onclick = () => {
 
-                const blueprint = {
-                    id: crypto.randomUUID(),
-                    name,
-                    created: Date.now(),
-                    updated: Date.now(),
-                    rows: LSS_MB.state.buildRows.map(r => ({ ...r.data }))
+                    if (mode === 'prompt')
+                        close(input.value.trim());
+                    else if (mode === 'confirm')
+                        close(true);
+                    else
+                        close();
+
                 };
 
-                return new Promise((resolve, reject) => {
-                    const req = tx('readwrite').add(blueprint);
-                    req.onsuccess = () => resolve(blueprint);
-                    req.onerror = () => reject(req.error);
-                });
-            }
+                footer.appendChild(ok);
 
-            async function remove(id) {
-                await openDB();
+                box.appendChild(footer);
+                overlay.appendChild(box);
+                document.body.appendChild(overlay);
 
-                return new Promise((resolve, reject) => {
-                    const req = tx('readwrite').delete(id);
+                if (input)
+                    setTimeout(() => input.focus(), 0);
 
-                    req.onsuccess = () => resolve();
-                    req.onerror = () => reject(req.error);
-                });
-            }
+            });
 
-            async function rename(id, newName) {
-                newName = newName?.trim();
+        }
 
-                if (!newName)
-                    return null;
+        async function alert(options) {
+            return showDialog({
+                ...options,
+                mode: 'alert'
+            });
+        }
 
-                const bp = await get(id);
-                if (!bp)
-                    return null;
+        async function confirm(options) {
+            return showDialog({
+                ...options,
+                mode: 'confirm'
+            });
+        }
 
-                const all = await getAll();
+        async function prompt(options) {
+            return showDialog({
+                ...options,
+                mode: 'prompt'
+            });
+        }
 
-                if (all.some(x => x.id !== id && x.name === newName)) {
-                    await LSS_MB.dialog.alert({
-                        title: 'Name bereits vergeben',
-                        text: `Der Name "${newName}" wird bereits verwendet.`
-                    });
-                    return null;
-                }
+        return {
+            prompt,
+            confirm,
+            alert
+        };
 
-                bp.name = newName;
-                bp.updated = Date.now();
+    })();
+    LSS_MB.blueprints = (() => {
+        const DB_NAME = 'LSS_MB_DB';
+        const STORE = 'blueprints';
+        const VERSION = 1;
+        let db = null;
 
-                return new Promise((resolve, reject) => {
-                    const req = tx('readwrite').put(bp);
-                    req.onsuccess = () => resolve(bp);
-                    req.onerror = () => reject(req.error);
-                });
-            }
+        async function openDB() {
+            if (db) return db;
 
-            async function clearCurrentRows() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, VERSION);
 
-                for (const row of [...LSS_MB.state.buildRows]) {
+                req.onupgradeneeded = e => {
+                    const d = e.target.result;
 
-                    if (row.marker) {
-                        try {
-                            LSS_MB.state.map.removeLayer(row.marker);
-                        } catch {}
+                    if (!d.objectStoreNames.contains(STORE)) {
+                        const store = d.createObjectStore(STORE, {
+                            keyPath: 'id'
+                        });
+
+                        store.createIndex('name', 'name', { unique: true });
                     }
+                };
 
-                    row.el?.remove();
-                }
+                req.onsuccess = () => {
+                    db = req.result;
+                    resolve(db);
+                };
 
-                LSS_MB.state.buildRows = [];
-                LSS_MB.state.markers = [];
+                req.onerror = () => reject(req.error);
+            });
+        }
 
-                renumberBuildRows();
-                updateRowCountDisplay();
-            }
+        function tx(mode) {
+            return db.transaction(STORE, mode).objectStore(STORE);
+        }
 
-            async function load(id) {
+        async function getAll() {
+            await openDB();
 
-                const bp = await get(id);
-                if (!bp) return;
+            return new Promise((resolve, reject) => {
+                const req = tx('readonly').getAll();
 
-                await clearCurrentRows();
+                req.onsuccess = () => {
+                    const arr = req.result || [];
+                    arr.sort((a,b) =>
+                             a.name.localeCompare(b.name, 'de', {
+                        sensitivity:'base'
+                    })
+                            );
+                    resolve(arr);
+                };
 
-                for (const rowData of bp.rows) {
+                req.onerror = () => reject(req.error);
+            });
+        }
 
-                    LSS_MB.ui.createBuildRow();
+        async function get(id) {
+            await openDB();
 
-                    const row = LSS_MB.state.buildRows.at(-1);
-                    if (!row) continue;
+            return new Promise((resolve, reject) => {
+                const req = tx('readonly').get(id);
 
-                    Object.assign(row.data, rowData);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = () => reject(req.error);
+            });
+        }
 
-                    const s = row.selects;
+        async function save(name) {
+            name = name?.trim();
 
-                    // Gebäudetyp
-                    if (rowData.buildingType) {
-
-                        s.building.value = rowData.buildingType;
-
-                        s.building.dispatchEvent(
-                            new Event('change', { bubbles:true })
-                        );
-
-                        await new Promise(r => setTimeout(r, 0));
-                    }
-
-                    // Krankenhausmodus
-                    if (rowData.hospitalMode && s.hospitalMode) {
-                        s.hospitalMode.value = rowData.hospitalMode;
-
-                        s.hospitalMode.dispatchEvent(
-                            new Event('change', { bubbles:true })
-                        );
-                    }
-
-                    // Schulmodus
-                    if (rowData.schoolMode && s.schoolMode) {
-                        s.schoolMode.value = rowData.schoolMode;
-
-                        s.schoolMode.dispatchEvent(
-                            new Event('change', { bubbles:true })
-                        );
-                    }
-
-                    // Bereitstellungsraum
-                    if (rowData.bereitschaftsraumMode && s.bereitstellungsraum) {
-                        s.bereitstellungsraum.value =
-                            rowData.bereitschaftsraumMode;
-
-                        s.bereitstellungsraum.dispatchEvent(
-                            new Event('change', { bubbles:true })
-                        );
-                    }
-
-                    // Leitstelle
-                    if (rowData.leitstelle) {
-
-                        let tries = 0;
-
-                        while (!row.lstSelectLoaded() && tries < 50) {
-                            await new Promise(r => setTimeout(r, 100));
-                            tries++;
-                        }
-
-                        s.leitstelle.value = rowData.leitstelle;
-                    }
-
-                    // Fahrzeug
-                    if (rowData.startVehicle && s.vehicle) {
-                        s.vehicle.value = rowData.startVehicle;
-
-                        s.vehicle.dispatchEvent(
-                            new Event('change', { bubbles:true })
-                        );
-                    }
-
-                    // Inputs setzen
-                    const inputs = row.el.querySelectorAll('input');
-
-                    if (inputs[0]) inputs[0].value = rowData.address || '';
-                    if (inputs[1]) inputs[1].value = rowData.name || '';
-
-                    // Marker wiederherstellen
-                    if (
-                        rowData.lat != null &&
-                        rowData.lng != null &&
-                        LSS_MB.state.map
-                    ) {
-
-                        LSS_MB.mapApi.addMarker(rowData.lat, rowData.lng);
-
-                        const marker = LSS_MB.state.markers.at(-1);
-
-                        if (marker) {
-
-                            row.marker = marker;
-                            marker._lssMbRow = row;
-
-                            updateMarkerLabel(row);
-
-                            marker.on('dragend', () => {
-                                const p = marker.getLatLng();
-                                row.data.lat = p.lat;
-                                row.data.lng = p.lng;
-                            });
-                        }
-                    }
-                }
-
-                renumberBuildRows();
-                updateRowCountDisplay();
-                updateBuildAllButtonState();
-                updateCostPreview();
-
-                log('Bauplan geladen:', bp.name);
+            if (!name) {
                 await LSS_MB.dialog.alert({
-                    title: 'Bauplan geladen',
-                    text: `"${bp.name}" wurde erfolgreich geladen.`
+                    title: 'Fehler',
+                    text: 'Bitte einen Namen eingeben.'
                 });
+                return null;
             }
 
-            async function exportBlueprint(id) {
+            await openDB();
 
-                const bp = await get(id);
-                if (!bp) return;
+            const exists = await new Promise((resolve, reject) => {
+                const index = tx('readonly').index('name');
+                const req = index.get(name);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = () => reject(req.error);
+            });
 
-                const blob = new Blob(
-                    [JSON.stringify(bp, null, 2)],
-                    { type:'application/json' }
-                );
-
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = `${bp.name}.json`;
-                a.click();
-
-                URL.revokeObjectURL(a.href);
-            }
-
-            async function importBlueprint(file) {
-                const text = await file.text();
-                const bp = JSON.parse(text);
-
-                await openDB();
-
-                const all = await getAll();
-
-                if (all.some(x => x.name === bp.name))
-                    bp.name += ' (Import)';
-
-                bp.id = crypto.randomUUID();
-                bp.created = Date.now();
-                bp.updated = Date.now();
-
-                return new Promise((resolve, reject) => {
-                    const req = tx('readwrite').add(bp);
-                    req.onsuccess = () => resolve(bp);
-                    req.onerror = () => reject(req.error);
+            if (exists) {
+                await LSS_MB.dialog.alert({
+                    title: 'Bauplan vorhanden',
+                    text: `Der Bauplan "${name}" existiert bereits.\nBitte wähle einen anderen Namen.`
                 });
+                return null;
             }
 
-            return {
-                getAll,
-                get,
-                save,
-                remove,
-                rename,
-                load,
-                exportBlueprint,
-                importBlueprint
+            const blueprint = {
+                id: crypto.randomUUID(),
+                name,
+                created: Date.now(),
+                updated: Date.now(),
+                rows: LSS_MB.state.buildRows.map(r => ({ ...r.data }))
             };
 
-        })();
-        LSS_MB.init();
+            return new Promise((resolve, reject) => {
+                const req = tx('readwrite').add(blueprint);
+                req.onsuccess = () => resolve(blueprint);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function remove(id) {
+            await openDB();
+
+            return new Promise((resolve, reject) => {
+                const req = tx('readwrite').delete(id);
+
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function rename(id, newName) {
+            newName = newName?.trim();
+
+            if (!newName)
+                return null;
+
+            const bp = await get(id);
+            if (!bp)
+                return null;
+
+            const all = await getAll();
+
+            if (all.some(x => x.id !== id && x.name === newName)) {
+                await LSS_MB.dialog.alert({
+                    title: 'Name bereits vergeben',
+                    text: `Der Name "${newName}" wird bereits verwendet.`
+                });
+                return null;
+            }
+
+            bp.name = newName;
+            bp.updated = Date.now();
+
+            return new Promise((resolve, reject) => {
+                const req = tx('readwrite').put(bp);
+                req.onsuccess = () => resolve(bp);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function clearCurrentRows() {
+
+            for (const row of [...LSS_MB.state.buildRows]) {
+
+                if (row.marker) {
+                    try {
+                        LSS_MB.state.map.removeLayer(row.marker);
+                    } catch {}
+                }
+
+                row.el?.remove();
+            }
+
+            LSS_MB.state.buildRows = [];
+            LSS_MB.state.markers = [];
+
+            renumberBuildRows();
+            updateRowCountDisplay();
+        }
+
+        async function load(id) {
+
+            const bp = await get(id);
+            if (!bp) return;
+
+            await clearCurrentRows();
+
+            for (const rowData of bp.rows) {
+
+                LSS_MB.ui.createBuildRow();
+
+                const row = LSS_MB.state.buildRows.at(-1);
+                if (!row) continue;
+
+                Object.assign(row.data, rowData);
+
+                const s = row.selects;
+
+                // Gebäudetyp
+                if (rowData.buildingType) {
+
+                    s.building.value = rowData.buildingType;
+
+                    s.building.dispatchEvent(
+                        new Event('change', { bubbles:true })
+                    );
+
+                    await new Promise(r => setTimeout(r, 0));
+                }
+
+                // Krankenhausmodus
+                if (rowData.hospitalMode && s.hospitalMode) {
+                    s.hospitalMode.value = rowData.hospitalMode;
+
+                    s.hospitalMode.dispatchEvent(
+                        new Event('change', { bubbles:true })
+                    );
+                }
+
+                // Schulmodus
+                if (rowData.schoolMode && s.schoolMode) {
+                    s.schoolMode.value = rowData.schoolMode;
+
+                    s.schoolMode.dispatchEvent(
+                        new Event('change', { bubbles:true })
+                    );
+                }
+
+                // Bereitstellungsraum
+                if (rowData.bereitschaftsraumMode && s.bereitstellungsraum) {
+                    s.bereitstellungsraum.value =
+                        rowData.bereitschaftsraumMode;
+
+                    s.bereitstellungsraum.dispatchEvent(
+                        new Event('change', { bubbles:true })
+                    );
+                }
+
+                // Leitstelle
+                if (rowData.leitstelle) {
+
+                    let tries = 0;
+
+                    while (!row.lstSelectLoaded() && tries < 50) {
+                        await new Promise(r => setTimeout(r, 100));
+                        tries++;
+                    }
+
+                    s.leitstelle.value = rowData.leitstelle;
+                }
+
+                // Fahrzeug
+                if (rowData.startVehicle && s.vehicle) {
+                    s.vehicle.value = rowData.startVehicle;
+
+                    s.vehicle.dispatchEvent(
+                        new Event('change', { bubbles:true })
+                    );
+                }
+
+                // Inputs setzen
+                const inputs = row.el.querySelectorAll('input');
+
+                if (inputs[0]) inputs[0].value = rowData.address || '';
+                if (inputs[1]) inputs[1].value = rowData.name || '';
+
+                // Marker wiederherstellen
+                if (
+                    rowData.lat != null &&
+                    rowData.lng != null &&
+                    LSS_MB.state.map
+                ) {
+
+                    LSS_MB.mapApi.addMarker(rowData.lat, rowData.lng);
+
+                    const marker = LSS_MB.state.markers.at(-1);
+
+                    if (marker) {
+
+                        row.marker = marker;
+                        marker._lssMbRow = row;
+
+                        updateMarkerLabel(row);
+
+                        marker.on('dragend', () => {
+                            const p = marker.getLatLng();
+                            row.data.lat = p.lat;
+                            row.data.lng = p.lng;
+                        });
+                    }
+                }
+            }
+
+            renumberBuildRows();
+            updateRowCountDisplay();
+            updateBuildAllButtonState();
+            updateCostPreview();
+
+            log('Bauplan geladen:', bp.name);
+            await LSS_MB.dialog.alert({
+                title: 'Bauplan geladen',
+                text: `"${bp.name}" wurde erfolgreich geladen.`
+            });
+        }
+
+        async function exportBlueprint(id) {
+
+            const bp = await get(id);
+            if (!bp) return;
+
+            const blob = new Blob(
+                [JSON.stringify(bp, null, 2)],
+                { type:'application/json' }
+            );
+
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${bp.name}.json`;
+            a.click();
+
+            URL.revokeObjectURL(a.href);
+        }
+
+        async function importBlueprint(file) {
+            const text = await file.text();
+            const bp = JSON.parse(text);
+
+            await openDB();
+
+            const all = await getAll();
+
+            if (all.some(x => x.name === bp.name))
+                bp.name += ' (Import)';
+
+            bp.id = crypto.randomUUID();
+            bp.created = Date.now();
+            bp.updated = Date.now();
+
+            return new Promise((resolve, reject) => {
+                const req = tx('readwrite').add(bp);
+                req.onsuccess = () => resolve(bp);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        return {
+            getAll,
+            get,
+            save,
+            remove,
+            rename,
+            load,
+            exportBlueprint,
+            importBlueprint
+        };
+
     })();
+    LSS_MB.init();
+})();
