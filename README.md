@@ -114,4 +114,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Anhänger-Manager (Beta)
     - Gebäudelöschbutton
     - Leitstellensortierer
+    - Parkplätze ausblenden
 </details>
