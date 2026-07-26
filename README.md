@@ -115,4 +115,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Gebäudelöschbutton
     - Leitstellensortierer
     - Parkplätze ausblenden
+    - Icon-Manager
 </details>
