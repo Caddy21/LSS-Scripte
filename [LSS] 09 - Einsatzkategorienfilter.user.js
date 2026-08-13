@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Einsatzkategorienfilter
 // @namespace    http://tampermonkey.net/
-// @version      1.8.4
+// @version      1.8.5
 // @description  Filtert die Einsatzliste nach Kategorien
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -27,7 +27,7 @@
         "WF": ['factory_fire_brigade'],
         "SEG": ['seg', 'seg_medical_service'],
         "Stromausfälle": ['energy_supply', 'energy_supply_2'],
-
+        "Tierrettung": ['animal_rescue'],
     }; // Beschriftung und Zusammenstellung der Gruppen -> Hier könnt Ihr euch die Button beschriften und die Gruppen zuordnen
     const defaultEventMissionIds = [];
     const specialMissionIds = [41, 43, 59, 75, 99, 207, 221, 222, 256, 350]; // Spezielle Einsatz-IDs (VGSL)
@@ -49,8 +49,8 @@
         'seg_medical_service': 'SEG-Sanitätsdiensteinsätze',
         'energy_supply': 'NEA 50',
         'energy_supply_2': 'NEA 200',
-        'event': 'Eventeinsätze',
-    }; // Mapping der Kategorien zu den benutzerdefinierten Beschriftungen
+        'animal_rescue': 'Tierrettung',
+        'event': 'Eventeinsätze',}; // Mapping der Kategorien zu den benutzerdefinierten Beschriftungen
     const customTooltips = {
         'fire': 'Zeigt alle Einsätze der Feuerwehr',
         'police': 'Zeigt alle Einsätze der Polizei',
@@ -68,6 +68,7 @@
         'energy_supply': 'Zeigt alle Einsätze der NEA50 an',
         'energy_supply_2': 'Zeigt alle Einsätze der NEA200 an',
         'highway_police': 'Zeigt alle Einsätze der Autobahnpolizei an',
+        'animal_rescue': 'Zeigt alle Einsätze der Tierrettung an',
 
     }; // Tooltipps der Kategoriebutton
     const missionListIds = [
@@ -82,13 +83,13 @@
         'fire', 'police', 'ambulance', 'thw', 'criminal_investigation',
         'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport',
         'airport_specialization', 'factory_fire_brigade', 'seg', 'seg_medical_service',
-        'energy_supply', 'energy_supply_2', 'highway_police',
+        'energy_supply', 'energy_supply_2', 'highway_police', 'animale_rescue',
     ]; // Globale Konstanten für Kategorien & Labels
     const apiUrl = "https://v3.lss-manager.de/modules/lss-missionHelper/missions/de_DE.json"; // API zum Abrufen der Einsätze
     const settingsApiUrl = "https://www.leitstellenspiel.de/api/settings"; // API zum Abrufen der Einstellungen
     const storageKey = "lssMissionsData"; // Globale Konstanze für LocalStore
     const storageTimestampKey = "lssMissionsDataTimestamp"; // Zeitpunkt der letzten Speicherung
-    const updateInterval = 6 * 60 * 60 * 1000; // 12 Stunden in Millisekunden
+    const updateInterval = 6 * 60 * 60 * 1000; // 6 Stunden in Millisekunden
 
     let missions = {};
     let categories = new Set();
@@ -239,7 +240,7 @@
         buttonContainer.style.marginBottom = '10px';
 
         const desiredOrder = [
-            'fire', 'police', 'highway_police', 'ambulance', 'thw', 'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport', 'factory_fire_brigade', 'criminal_investigation', 'seg', 'seg_medical_service', 'energy_supply', 'energy_supply_2', 'event'
+            'fire', 'police', 'highway_police', 'ambulance', 'thw', 'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport', 'factory_fire_brigade', 'criminal_investigation', 'seg', 'seg_medical_service', 'energy_supply', 'energy_supply_2', 'animal_rescue', 'event'
         ];
 
         // Kategorie-Buttons erzeugen
@@ -310,7 +311,7 @@
 
         // Eventeinsätze Button
         const eventButton = document.createElement('button');
-        eventButton.textContent = `Eventeinsätze (${summary['event'] || 0})`;
+        eventButton.textContent = `Eventeinsätze (${summary['Event'] || 0})`;
         eventButton.classList.add('btn', 'btn-xs');
         eventButton.style.margin = '2px';
         styleButtonForCurrentTheme(eventButton);
@@ -326,7 +327,7 @@
         });
 
         buttonContainer.appendChild(eventButton);
-        categoryButtonsMap.set('event', eventButton);
+        categoryButtonsMap.set('Event', eventButton);
 
         // "Alle anzeigen" Button
         const resetButton = document.createElement('button');
@@ -651,7 +652,7 @@
             'fire', 'police', 'ambulance', 'thw', 'criminal_investigation',
             'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport',
             'airport_specialization', 'factory_fire_brigade', 'seg', 'seg_medical_service',
-            'energy_supply', 'energy_supply_2', 'highway_police',
+            'energy_supply', 'energy_supply_2', 'highway_police', 'animal_rescue',
         ];
 
         const customCategoryLabels = {
@@ -672,15 +673,16 @@
             'energy_supply': 'NEA 50',
             'energy_supply_2': 'NEA 200',
             'highway_police': 'Autobahnpolizei',
+            'animal_rescue': 'Tierrettung',
         };
 
         const eventMissions = {
             "Winter": [53, 428, 581, 665, 787, 788, 789, 793, 794, 795, 831, 861, 862],
             "Tag des Europäischen Notrufes": [704, 705, 706, 707, 708],
             "Karneval / Fasching": [710, 711, 712, 713, 714, 715, 716, 717, 718, 719],
-            "Valentin": [597, 598, 599, 600, 601, 602, 603, 604, 605, 790, 791, 792, 833, 834, 917, 918, 919, 920, 962, 965],
+            "Valentinstag": [597, 598, 599, 600, 601, 602, 603, 604, 605, 790, 791, 792, 833, 834, 917, 918, 919, 920, 962, 963],
             "Frühling": [722, 723, 724, 725, 726, 727, 728, 729, 730],
-            "Ostern": [284, 285, 286, 287, 288, 289, 290, 291, 442, 443, 444, 445, 446, 618, 732, 733, 734, 735, 736, 737, 739, 927, 928, 929],
+            "Ostern": [284, 285, 286, 287, 288, 289, 290, 291, 442, 443, 444, 445, 446, 618, 732, 733, 734, 735, 736, 737, 739, 927, 928, 929, 965],
             "Vatertag": [88, 626, 627, 628, 629, 630, 844, 845, 846],
             "Muttertag": [360, 742, 743, 744, 745, 746, 747, 748, 847],
             "Sommer": [183, 184, 185, 461, 546, 547, 548, 646, 647, 648, 754],
