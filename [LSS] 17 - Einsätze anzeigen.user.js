@@ -1,77 +1,27 @@
 // ==UserScript==
 // @name         [LSS] Einsätze anzeigen
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @author       Caddy21
-// @description  Blendet Einsätze basierend auf individuellen Kategorien und Einsatzarten aus.
+// @description  Blendet Einsätze basierend auf individuellen Einstellungen der Kategorien und/oder der Einsatzarten aus.
 // @match        https://www.leitstellenspiel.de/einsaetze*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        GM_getValue
 // @grant        GM_setValue
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
-    // Grün hinterlegte Einsätze
+    // Da lasst Ihr lieber die Finger von
     let hideSuccess = loadSettings('einsatzHideSuccess', true);
+    let initialGameFilterTriggered = false;
+    let activeSection = 'requirements';
+    let themeObserver = null;
 
-    // --- Moduserkennung ---
-    function getCurrentThemeMode() {
-        // Prüft, ob body oder html die Klasse 'dark' enthält
-        return (document.body.classList.contains('dark') || document.documentElement.classList.contains('dark')) ? 'dark' : 'light';
-    }
-    function getThemeColors() {
-        const mode = getCurrentThemeMode();
-        if (mode === 'dark') {
-            return {
-                background: '#1e1e1e',
-                text: '#ffffff',
-                border: '#555',
-                shadow: '#000',
-                buttonBackground: '#333',
-                buttonText: '#fff',
-                checkboxBorder: '#ccc'
-            };
-        } else {
-            return {
-                background: '#ffffff',
-                text: '#000000',
-                border: '#ccc',
-                shadow: '#999',
-                buttonBackground: '#f0f0f0',
-                buttonText: '#000',
-                checkboxBorder: '#555'
-            };
-        }
-    }
-
-    // --- Speicherung mit GM Storage (Fallback auf localStorage falls nicht vorhanden) ---
-    function saveSettings(key, value) {
-        if (typeof GM_setValue === 'function') {
-            GM_setValue(key, value);
-        } else {
-            localStorage.setItem(key, JSON.stringify(value));
-        }
-    }
-    function loadSettings(key, defaultValue) {
-        if (typeof GM_getValue === 'function') {
-            return GM_getValue(key, defaultValue);
-        } else {
-            const val = localStorage.getItem(key);
-            if (val === null) return defaultValue;
-            try {
-                return JSON.parse(val);
-            } catch(e) {
-                return defaultValue;
-            }
-        }
-    }
-
-    // --- Filterdaten ---
-
-    // Voraussetzungen (Schlagwörter -> Optionen)
+    // Hier macht was ihr wollt gebt mir nur nicht die Schuld für Fehler. :D
     const keywordMap = {
+        "Autobahnpolizeiwache": false,
         "Bahnrettungs-Erweiterung": false,
         "Bereitschaftspolizeiwache": false,
         "Bergrettungswache": false,
@@ -105,10 +55,9 @@
         "Werkfeuerwehr": false,
         "Windenrettungs-Erweiterungen": false,
         "Züge der 1. Hundertschaft": false
-    };
-
-    // Einsatzarten (Filteroptionen)
+    }; // Vorraussetzungen
     const missionTypes = {
+        "Autobahnpolizei-Einsätze": false,
         "Bergrettungseinsätze": false,
         "Bereitschaftspolizei-Einsätze": false,
         "Feuerwehreinsätze": false,
@@ -123,282 +72,1295 @@
         "SEG-Sanitätsdienst-Einsätze": false,
         "Seenotrettungseinsätze": false,
         "THW-Einsätze": false,
+        "Tierrettungs-Einsätze": false,
         "Wasserrettungs-Einsätze": false,
         "Werkfeuerwehr-Einsätze": false
+    }; // Einsatzarten
+
+    let filterOptions = {
+        ...keywordMap,
+        ...loadSettings('einsatzFilterOptions', {})
+    };
+    let missionTypeOptions = {
+        ...missionTypes,
+        ...loadSettings('einsatzMissionTypeOptions', {})
     };
 
-    // Einstellungen laden
-    let filterOptions = loadSettings('einsatzFilterOptions', keywordMap);
-    let missionTypeOptions = loadSettings('einsatzMissionTypeOptions', missionTypes);
+    // Hier überwache ich eure Einstellungen
+    function saveSettings(key, value) {
+        if (typeof GM_setValue === 'function') {
+            GM_setValue(key, value);
+        } else {
+            localStorage.setItem(key, JSON.stringify(value));
+        }
+    }
+    function loadSettings(key, defaultValue) {
+        if (typeof GM_getValue === 'function') {
+            return GM_getValue(key, defaultValue);
+        }
 
-    // --- Helfer zum Speichern nach UI-Änderung ---
+        const value = localStorage.getItem(key);
+
+        if (value === null) {
+            return defaultValue;
+        }
+
+        try {
+            return JSON.parse(value);
+        } catch (e) {
+            return defaultValue;
+        }
+    }
     function saveAllSettings() {
         saveSettings('einsatzFilterOptions', filterOptions);
         saveSettings('einsatzMissionTypeOptions', missionTypeOptions);
+        saveSettings('einsatzHideSuccess', hideSuccess);
+
         hideMissions();
+        updateModalCounters();
     }
 
-    // --- Einsätze ausblenden / anzeigen ---
+    // Darkside of Cookies bzw let the Sun shine
+    function getCurrentThemeMode() {
+        return (
+            document.body.classList.contains('dark') ||
+            document.documentElement.classList.contains('dark')
+        ) ? 'dark' : 'light';
+    }
+
+    // Einsätze verschwindiebus
     function hideMissions() {
-    const searchInput = document.getElementById('search_input_field_possible_mission');
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        const searchInput = document.getElementById(
+            'search_input_field_possible_mission'
+        );
 
-    document.querySelectorAll('.mission_type_index_searchable').forEach(el => {
-        let text = el.textContent || el.innerText;
-        let textLower = text.toLowerCase();
+        const searchTerm = searchInput
+            ? searchInput.value.toLowerCase()
+            : '';
 
-        // Standard: anzeigen
-        let visible = true;
+        document.querySelectorAll('.mission_type_index_searchable').forEach(el => {
+            const text = el.textContent || el.innerText || '';
+            const textLower = text.toLowerCase();
 
-        // Erfolgreiche Einsätze ausblenden
-        if (hideSuccess && el.classList.contains('success')) {
-            visible = false;
-        }
+            let visible = true;
 
-        // Voraussetzungsfilter
-        for (const [keyword, shouldHide] of Object.entries(filterOptions)) {
-            if (shouldHide && text.includes(keyword)) {
+            // Erfolgreiche Einsätze ausblenden
+            if (hideSuccess && el.classList.contains('success')) {
                 visible = false;
-                break;
             }
-        }
 
-        // Einsatzartenfilter
-        if (visible) {
-            for (const [typ, shouldHide] of Object.entries(missionTypeOptions)) {
-                if (shouldHide && text.includes(typ)) {
-                    visible = false;
-                    break;
+            // Voraussetzungen prüfen
+            if (visible) {
+                for (const [keyword, shouldHide] of Object.entries(filterOptions)) {
+                    if (shouldHide && text.includes(keyword)) {
+                        visible = false;
+                        break;
+                    }
                 }
             }
+
+            // Einsatzarten prüfen
+            if (visible) {
+                for (const [type, shouldHide] of Object.entries(missionTypeOptions)) {
+                    if (shouldHide && text.includes(type)) {
+                        visible = false;
+                        break;
+                    }
+                }
+            }
+
+            // Spielinterne Suche berücksichtigen
+            if (visible && searchTerm !== '' && !textLower.includes(searchTerm)) {
+                visible = false;
+            }
+
+            el.style.display = visible ? '' : 'none';
+        });
+
+        // Spoiler-Überschriften ausblenden, wenn kein Einsatz sichtbar ist
+        document.querySelectorAll('.mission-group-header').forEach(header => {
+            const onclick = header.getAttribute('onclick');
+
+            if (!onclick) {
+                return;
+            }
+
+            const match = onclick.match(
+                /toggleRow\(['"][^'"]+['"],\s*['"]([^'"]+)['"]\)/
+            );
+
+            if (!match) {
+                return;
+            }
+
+            const children = document.querySelectorAll(match[1]);
+
+            const hasVisibleChild = Array.from(children).some(
+                child => child.style.display !== 'none'
+            );
+
+            header.style.display = hasVisibleChild ? '' : 'none';
+        });
+    }
+
+    // Irgendwas läuft hier automagisch
+    function triggerInitialGameFilter() {
+        if (initialGameFilterTriggered) {
+            return;
         }
 
-        // Suchfilter anwenden (nur wenn vorher noch sichtbar)
-        if (visible && searchTerm !== '' && !textLower.includes(searchTerm)) {
-            visible = false;
+        const checkbox = document.getElementById(
+            'requirements_checkbox_possible_mission'
+        );
+
+        if (!checkbox) {
+            return;
         }
 
-        // Anzeigen oder verstecken
-        el.style.display = visible ? '' : 'none';
-    });
-}
+        initialGameFilterTriggered = true;
 
+        console.log(
+            '[LSS-EinsatzFilter] Starte initiale Anforderungsprüfung...'
+        );
 
-    // --- Modal UI erzeugen ---
+        // Anforderungen prüfen aktivieren
+        if (!checkbox.checked) {
+            checkbox.checked = true;
+        }
+
+        checkbox.dispatchEvent(new Event('change', {
+            bubbles: true
+        }));
+
+        // Kurz warten, damit LSS die Änderung verarbeiten kann
+        setTimeout(() => {
+            const buttons = Array.from(
+                document.querySelectorAll(
+                    'button, input[type="button"], input[type="submit"]'
+                )
+            );
+
+            const applyButton = buttons.find(button => {
+                const text = (
+                    button.innerText ||
+                    button.value ||
+                    button.textContent ||
+                    ''
+                ).trim().toLowerCase();
+
+                return text.includes('filter anwenden');
+            });
+
+            if (applyButton) {
+                console.log(
+                    '[LSS-EinsatzFilter] "Filter anwenden" wird automatisch ausgeführt.'
+                );
+
+                applyButton.click();
+            } else {
+                console.warn(
+                    '[LSS-EinsatzFilter] Button "Filter anwenden" wurde nicht gefunden.'
+                );
+
+                initialGameFilterTriggered = false;
+            }
+        }, 100);
+    }
+
+    // Sobols bester Freund
     function showModal() {
-        if(document.getElementById('einsatzFilterModal')) return;
+        if (document.getElementById('einsatzFilterModal')) {
+            return;
+        }
 
-        const theme = getThemeColors();
+        injectStyles();
 
         const modal = document.createElement('div');
         modal.id = 'einsatzFilterModal';
-        modal.style.position = 'fixed';
-        modal.style.top = '50%';
-        modal.style.left = '50%';
-        modal.style.transform = 'translate(-50%, -50%)';
-        modal.style.backgroundColor = theme.background;
-        modal.style.color = theme.text;
-        modal.style.border = `1px solid ${theme.border}`;
-        modal.style.boxShadow = `0 0 20px ${theme.shadow}`;
-        modal.style.padding = '16px';
-        modal.style.borderRadius = '8px';
-        modal.style.zIndex = '9999';
-        modal.style.maxHeight = '80vh';
-        modal.style.overflowY = 'auto';
-        modal.style.minWidth = '320px';
 
-        // Überschrift
-        const title = document.createElement('h3');
-        title.innerText = 'Einsätze filtern';
-        modal.appendChild(title);
+        const overlay = document.createElement('div');
+        overlay.className = 'einsatz-filter-overlay';
 
-        // 🟩 Erfolgreiche Einsätze ausblenden Checkbox
-        const hideSuccessLabel = document.createElement('label');
-        hideSuccessLabel.style.display = 'block';
-        hideSuccessLabel.style.margin = '12px 0';
-        hideSuccessLabel.style.cursor = 'pointer';
-
-        const hideSuccessCheckbox = document.createElement('input');
-        hideSuccessCheckbox.type = 'checkbox';
-        hideSuccessCheckbox.checked = hideSuccess;
-        hideSuccessCheckbox.style.marginRight = '8px';
-        hideSuccessCheckbox.style.cursor = 'pointer';
-        hideSuccessCheckbox.style.accentColor = theme.text;
-        hideSuccessCheckbox.style.border = `1px solid ${theme.checkboxBorder}`;
-        hideSuccessCheckbox.onchange = () => {
-            hideSuccess = hideSuccessCheckbox.checked;
-            saveAllSettings();
+        overlay.onclick = event => {
+            if (event.target === overlay) {
+                closeModal();
+            }
         };
 
-        hideSuccessLabel.appendChild(hideSuccessCheckbox);
-        hideSuccessLabel.appendChild(document.createTextNode('Grün hinterlegte Einsätze ausblenden'));
-        modal.appendChild(hideSuccessLabel);
+        const app = document.createElement('div');
+        app.className = 'einsatz-filter-app';
 
-        // Container für die beiden Filter
-        const filterContainer = document.createElement('div');
-        filterContainer.style.display = 'flex';
-        filterContainer.style.gap = '24px';
-        filterContainer.style.flexWrap = 'wrap';
-        filterContainer.style.justifyContent = 'space-between';
+        // Header
+        const header = document.createElement('div');
+        header.className = 'einsatz-filter-header';
 
-        const voraussetzungenSection = createFilterSection('Voraussetzungen', filterOptions, (key, checked) => {
-            filterOptions[key] = checked;
-            saveAllSettings();
-        });
-        voraussetzungenSection.style.flex = '1 1 45%';
+        const headerLeft = document.createElement('div');
+        headerLeft.className = 'einsatz-filter-header-left';
 
-        const einsatzartenSection = createFilterSection('Einsatzarten', missionTypeOptions, (key, checked) => {
-            missionTypeOptions[key] = checked;
-            saveAllSettings();
-        });
-        einsatzartenSection.style.flex = '1 1 45%';
+        const icon = document.createElement('div');
+        icon.className = 'einsatz-filter-main-icon';
+        icon.innerHTML = '🚒';
 
-        filterContainer.appendChild(voraussetzungenSection);
-        filterContainer.appendChild(einsatzartenSection);
-        modal.appendChild(filterContainer);
+        const headerText = document.createElement('div');
 
-        // Footer mit Schließen Button
+        const title = document.createElement('div');
+        title.className = 'einsatz-filter-title';
+        title.textContent = 'Einsätze filtern';
+
+        const subtitle = document.createElement('div');
+        subtitle.className = 'einsatz-filter-subtitle';
+        subtitle.textContent =
+            'Passe die Anzeige deiner Einsätze individuell an.';
+
+        headerText.appendChild(title);
+        headerText.appendChild(subtitle);
+
+        headerLeft.appendChild(icon);
+        headerLeft.appendChild(headerText);
+
+        const closeButton = document.createElement('button');
+        closeButton.className = 'einsatz-filter-close';
+        closeButton.innerHTML = '&times;';
+        closeButton.title = 'Schließen';
+        closeButton.onclick = closeModal;
+
+        header.appendChild(headerLeft);
+        header.appendChild(closeButton);
+
+        app.appendChild(header);
+
+        // Status
+        const statusBar = document.createElement('div');
+        statusBar.className = 'einsatz-filter-status';
+
+        const statusIcon = document.createElement('span');
+        statusIcon.textContent = '✓';
+
+        const statusText = document.createElement('span');
+        statusText.id = 'einsatzFilterStatusText';
+
+        statusBar.appendChild(statusIcon);
+        statusBar.appendChild(statusText);
+
+        app.appendChild(statusBar);
+
+        // Navigation
+        const navigation = document.createElement('div');
+        navigation.className = 'einsatz-filter-navigation';
+
+        const requirementsCard = createNavigationCard(
+            'requirements',
+            '⚙️',
+            'Voraussetzungen'
+        );
+
+        const missionCard = createNavigationCard(
+            'missions',
+            '🚨',
+            'Einsatzkategorien'
+        );
+
+        navigation.appendChild(requirementsCard);
+        navigation.appendChild(missionCard);
+
+        app.appendChild(navigation);
+
+        // Content
+        const content = document.createElement('div');
+        content.id = 'einsatzFilterContent';
+        content.className = 'einsatz-filter-content';
+
+        app.appendChild(content);
+
+        // Footer
         const footer = document.createElement('div');
-        footer.style.textAlign = 'right';
-        footer.style.marginTop = '12px';
+        footer.className = 'einsatz-filter-footer';
 
-        const closeBtn = document.createElement('button');
-        closeBtn.innerText = 'Schließen';
-        closeBtn.className = 'btn btn-danger';
-        closeBtn.style.border = 'none';
-        closeBtn.style.padding = '6px 12px';
-        closeBtn.style.borderRadius = '4px';
-        closeBtn.style.cursor = 'pointer';
-        closeBtn.onclick = () => {
-            modal.remove();
-            themeObserver.disconnect();
+        const successWrapper = document.createElement('label');
+        successWrapper.className = 'einsatz-filter-success-toggle';
+
+        const successCheckbox = document.createElement('input');
+        successCheckbox.type = 'checkbox';
+        successCheckbox.checked = hideSuccess;
+
+        successCheckbox.onchange = () => {
+            hideSuccess = successCheckbox.checked;
+            saveAllSettings();
         };
-        footer.appendChild(closeBtn);
 
-        modal.appendChild(footer);
+        const successText = document.createElement('span');
+        successText.innerHTML =
+            '<strong>Grüne Einsätze ausblenden</strong>' +
+            '<small>Bereits erfolgreich bearbeitete Einsätze</small>';
+
+        successWrapper.appendChild(successCheckbox);
+        successWrapper.appendChild(successText);
+
+        const closeFooterButton = document.createElement('button');
+        closeFooterButton.className = 'einsatz-filter-footer-close';
+        closeFooterButton.textContent = 'Schließen';
+        closeFooterButton.onclick = closeModal;
+
+        footer.appendChild(successWrapper);
+        footer.appendChild(closeFooterButton);
+
+        app.appendChild(footer);
+
+        overlay.appendChild(app);
+        modal.appendChild(overlay);
+
         document.body.appendChild(modal);
 
-        // Live Theme Observer für Modal
-        themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        renderActiveSection();
+
+        document.addEventListener('keydown', modalEscHandler);
+
+        themeObserver = new MutationObserver(() => {
+            updateTheme();
+        });
+
+        themeObserver.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        updateTheme();
     }
 
-    // Hilfsfunktion: Einen Filterbereich mit Checkboxen erzeugen
-    function createFilterSection(titleText, optionsObj, onChangeCallback) {
-        const theme = getThemeColors();
+    // Wechsel zwischen Dingen
+    function createNavigationCard(section, icon, title) {
+        const card = document.createElement('button');
+        card.className = 'einsatz-filter-nav-card';
+        card.dataset.section = section;
 
-        const section = document.createElement('section');
-        section.style.marginBottom = '12px';
+        const iconElement = document.createElement('div');
+        iconElement.className = 'einsatz-filter-nav-icon';
+        iconElement.textContent = icon;
 
-        const title = document.createElement('h4');
-        title.innerText = titleText;
-        title.style.marginBottom = '6px';
-        section.appendChild(title);
+        const text = document.createElement('div');
+        text.className = 'einsatz-filter-nav-text';
 
-        for (const [key, checked] of Object.entries(optionsObj).sort((a, b) => a[0].localeCompare(b[0]))) {
-            const label = document.createElement('label');
-            label.style.display = 'block';
-            label.style.marginBottom = '4px';
-            label.style.cursor = 'pointer';
+        const titleElement = document.createElement('strong');
+        titleElement.textContent = title;
+
+        const counter = document.createElement('span');
+        counter.id = section === 'requirements'
+            ? 'requirementsCounter'
+            : 'missionsCounter';
+
+        text.appendChild(titleElement);
+        text.appendChild(counter);
+
+        const arrow = document.createElement('div');
+        arrow.className = 'einsatz-filter-nav-arrow';
+        arrow.textContent = '›';
+
+        card.appendChild(iconElement);
+        card.appendChild(text);
+        card.appendChild(arrow);
+
+        card.onclick = () => {
+            activeSection = section;
+            renderActiveSection();
+        };
+
+        return card;
+    }
+
+    // Ausgewählten Bereich angucken
+    function renderActiveSection() {
+        const content = document.getElementById('einsatzFilterContent');
+
+        if (!content) {
+            return;
+        }
+
+        content.innerHTML = '';
+
+        document.querySelectorAll('.einsatz-filter-nav-card').forEach(card => {
+            card.classList.toggle(
+                'active',
+                card.dataset.section === activeSection
+            );
+        });
+
+        if (activeSection === 'requirements') {
+            content.appendChild(
+                createFilterPanel(
+                    'Voraussetzungen',
+                    '⚙️',
+                    filterOptions,
+                    'requirements'
+                )
+            );
+        } else {
+            content.appendChild(
+                createFilterPanel(
+                    'Einsatzkategorien',
+                    '🚨',
+                    missionTypeOptions,
+                    'missions'
+                )
+            );
+        }
+
+        updateModalCounters();
+        updateStatus();
+    }
+
+    // Such Such Such
+    function createFilterPanel(titleText, icon, options, type) {
+        const panel = document.createElement('div');
+        panel.className = 'einsatz-filter-panel';
+
+        const panelHeader = document.createElement('div');
+        panelHeader.className = 'einsatz-filter-panel-header';
+
+        const panelTitle = document.createElement('div');
+        panelTitle.className = 'einsatz-filter-panel-title';
+
+        panelTitle.innerHTML =
+            `<span>${icon}</span>` +
+            `<div>` +
+            `<strong>${titleText}</strong>` +
+            `<small>Wähle aus, was ausgeblendet werden soll.</small>` +
+            `</div>`;
+
+        const actions = document.createElement('div');
+        actions.className = 'einsatz-filter-actions';
+
+        const allOn = document.createElement('button');
+        allOn.textContent = 'Alle an';
+
+        allOn.onclick = () => {
+            Object.keys(options).forEach(key => {
+                options[key] = true;
+            });
+
+            saveAllSettings();
+            renderActiveSection();
+        };
+
+        const allOff = document.createElement('button');
+        allOff.textContent = 'Alle aus';
+
+        allOff.onclick = () => {
+            Object.keys(options).forEach(key => {
+                options[key] = false;
+            });
+
+            saveAllSettings();
+            renderActiveSection();
+        };
+
+        actions.appendChild(allOn);
+        actions.appendChild(allOff);
+
+        panelHeader.appendChild(panelTitle);
+        panelHeader.appendChild(actions);
+
+        panel.appendChild(panelHeader);
+
+        // Suche
+        const searchWrapper = document.createElement('div');
+        searchWrapper.className = 'einsatz-filter-search';
+        searchWrapper.innerHTML = '🔍';
+
+        const search = document.createElement('input');
+        search.type = 'search';
+        search.placeholder = type === 'requirements'
+            ? 'Voraussetzung suchen...'
+            : 'Einsatzkategorie suchen...';
+
+        searchWrapper.appendChild(search);
+        panel.appendChild(searchWrapper);
+
+        // Liste
+        const list = document.createElement('div');
+        list.className = 'einsatz-filter-list';
+
+        const entries = Object.entries(options).sort((a, b) =>
+            a[0].localeCompare(b[0], 'de')
+        );
+
+        entries.forEach(([key, checked]) => {
+            const item = document.createElement('label');
+            item.className = 'einsatz-filter-item';
+            item.dataset.search = key.toLowerCase();
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = checked;
-            checkbox.style.marginRight = '8px';
-            checkbox.style.cursor = 'pointer';
-            checkbox.style.accentColor = theme.text; // modernes Farbthema
-            checkbox.style.outline = 'none';
-            checkbox.style.border = `1px solid ${theme.checkboxBorder}`;
+
+            const checkmark = document.createElement('span');
+            checkmark.className = 'einsatz-filter-checkmark';
+
+            const labelText = document.createElement('span');
+            labelText.className = 'einsatz-filter-item-text';
+            labelText.textContent = key;
 
             checkbox.onchange = () => {
-                onChangeCallback(key, checkbox.checked);
+                options[key] = checkbox.checked;
+
+                saveAllSettings();
+
+                item.classList.toggle(
+                    'checked',
+                    checkbox.checked
+                );
             };
 
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(key));
-            section.appendChild(label);
-        }
+            if (checked) {
+                item.classList.add('checked');
+            }
 
-        return section;
+            item.appendChild(checkbox);
+            item.appendChild(checkmark);
+            item.appendChild(labelText);
+
+            list.appendChild(item);
+        });
+
+        search.addEventListener('input', () => {
+            const term = search.value.toLowerCase().trim();
+
+            list.querySelectorAll('.einsatz-filter-item').forEach(item => {
+                item.style.display = item.dataset.search.includes(term)
+                    ? ''
+                    : 'none';
+            });
+        });
+
+        panel.appendChild(list);
+
+        return panel;
     }
 
-    // --- Button im Formular neben dem vorhandenen Button einfügen ---
+    // Zahlen/Daten/Fakten
+    function updateModalCounters() {
+        const requirementsCounter = document.getElementById(
+            'requirementsCounter'
+        );
+
+        const missionsCounter = document.getElementById(
+            'missionsCounter'
+        );
+
+        const requirementActive = Object.values(filterOptions)
+            .filter(Boolean)
+            .length;
+
+        const missionActive = Object.values(missionTypeOptions)
+            .filter(Boolean)
+            .length;
+
+        if (requirementsCounter) {
+            requirementsCounter.textContent =
+                `${requirementActive} von ${Object.keys(filterOptions).length} aktiv`;
+        }
+
+        if (missionsCounter) {
+            missionsCounter.textContent =
+                `${missionActive} von ${Object.keys(missionTypeOptions).length} aktiv`;
+        }
+
+        updateStatus();
+    }
+
+    // Status aktualisieren
+    function updateStatus() {
+        const status = document.getElementById(
+            'einsatzFilterStatusText'
+        );
+
+        if (!status) {
+            return;
+        }
+
+        const requirementActive = Object.values(filterOptions)
+            .filter(Boolean)
+            .length;
+
+        const missionActive = Object.values(missionTypeOptions)
+            .filter(Boolean)
+            .length;
+
+        const total = requirementActive + missionActive;
+
+        status.textContent = total === 0
+            ? 'Keine Filter aktiv'
+            : `${total} Filter aktiv`;
+    }
+
+    // Modal mit Escape schließen (Warum? Weil ich es kann)
+    function modalEscHandler(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    }
+
+    // Sobols Freund entfernen
+    function closeModal() {
+        const modal = document.getElementById(
+            'einsatzFilterModal'
+        );
+
+        if (modal) {
+            modal.remove();
+        }
+
+        document.removeEventListener(
+            'keydown',
+            modalEscHandler
+        );
+
+        if (themeObserver) {
+            themeObserver.disconnect();
+            themeObserver = null;
+        }
+    }
+
+    // Hier wirds bunt
+    function updateTheme() {
+        const modal = document.getElementById(
+            'einsatzFilterModal'
+        );
+
+        if (!modal) {
+            return;
+        }
+
+        modal.dataset.theme = getCurrentThemeMode();
+    }
+
+    // CSS (Nicht Counterstrike Source sondern Desing!) einfügen
+    function injectStyles() {
+        if (document.getElementById('einsatzFilterModernStyles')) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = 'einsatzFilterModernStyles';
+
+        style.textContent = `
+            .einsatz-filter-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 99999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                background: rgba(0, 0, 0, .55);
+                backdrop-filter: blur(7px);
+                -webkit-backdrop-filter: blur(7px);
+                animation: einsatzFadeIn .18s ease;
+            }
+
+            .einsatz-filter-app {
+                width: min(900px, 100%);
+                max-height: 90vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                border-radius: 18px;
+                background: #ffffff;
+                color: #1f2937;
+                box-shadow: 0 25px 70px rgba(0, 0, .35);
+                animation: einsatzModalIn .22s ease;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-app {
+                background: #17191d;
+                color: #f3f4f6;
+            }
+
+            .einsatz-filter-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 22px 24px;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-header {
+                border-color: #30343b;
+            }
+
+            .einsatz-filter-header-left {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+
+            .einsatz-filter-main-icon {
+                width: 48px;
+                height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 14px;
+                font-size: 25px;
+                background: linear-gradient(135deg, #ef4444, #f97316);
+                box-shadow: 0 5px 15px rgba(239, 68, 68, .25);
+            }
+
+            .einsatz-filter-title {
+                font-size: 20px;
+                font-weight: 700;
+            }
+
+            .einsatz-filter-subtitle {
+                margin-top: 3px;
+                font-size: 13px;
+                color: #6b7280;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-subtitle {
+                color: #9ca3af;
+            }
+
+            .einsatz-filter-close {
+                width: 38px;
+                height: 38px;
+                border: 0;
+                border-radius: 10px;
+                background: transparent;
+                color: #6b7280;
+                font-size: 27px;
+                line-height: 1;
+                cursor: pointer;
+                transition: background .15s, color .15s;
+            }
+
+            .einsatz-filter-close:hover {
+                background: #f3f4f6;
+                color: #111827;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-close:hover {
+                background: #292d34;
+                color: white;
+            }
+
+            .einsatz-filter-status {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 18px 24px 4px;
+                padding: 9px 12px;
+                border-radius: 9px;
+                font-size: 12px;
+                font-weight: 600;
+                background: #f0fdf4;
+                color: #15803d;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-status {
+                background: #14261a;
+                color: #86efac;
+            }
+
+            .einsatz-filter-navigation {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding: 12px 24px 18px;
+            }
+
+            .einsatz-filter-nav-card {
+                position: relative;
+                display: flex;
+                align-items: center;
+                gap: 13px;
+                padding: 14px;
+                border: 1px solid #e5e7eb;
+                border-radius: 13px;
+                background: #fafafa;
+                color: inherit;
+                text-align: left;
+                cursor: pointer;
+                transition: transform .15s, border .15s, background .15s, box-shadow .15s;
+            }
+
+            .einsatz-filter-nav-card:hover {
+                transform: translateY(-1px);
+                border-color: #d1d5db;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, .06);
+            }
+
+            .einsatz-filter-nav-card.active {
+                border-color: #ef4444;
+                background: linear-gradient(135deg, #fff7f7, #fff);
+                box-shadow: 0 4px 16px rgba(239, 68, 68, .12);
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-nav-card {
+                border-color: #30343b;
+                background: #202329;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-nav-card.active {
+                border-color: #ef4444;
+                background: linear-gradient(135deg, #291b1d, #202329);
+            }
+
+            .einsatz-filter-nav-icon {
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                border-radius: 11px;
+                background: #f3f4f6;
+                font-size: 20px;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-nav-icon {
+                background: #2b2f36;
+            }
+
+            .einsatz-filter-nav-text {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+                min-width: 0;
+            }
+
+            .einsatz-filter-nav-text strong {
+                font-size: 14px;
+            }
+
+            .einsatz-filter-nav-text span {
+                font-size: 11px;
+                color: #6b7280;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-nav-text span {
+                color: #9ca3af;
+            }
+
+            .einsatz-filter-nav-arrow {
+                margin-left: auto;
+                font-size: 25px;
+                color: #9ca3af;
+            }
+
+            .einsatz-filter-content {
+                min-height: 0;
+                flex: 1;
+                overflow-y: auto;
+                padding: 0 24px 18px;
+            }
+
+            .einsatz-filter-panel {
+                animation: einsatzContentIn .18s ease;
+            }
+
+            .einsatz-filter-panel-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 15px;
+                margin-bottom: 12px;
+            }
+
+            .einsatz-filter-panel-title {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .einsatz-filter-panel-title > span {
+                font-size: 20px;
+            }
+
+            .einsatz-filter-panel-title > div {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            .einsatz-filter-panel-title strong {
+                font-size: 15px;
+            }
+
+            .einsatz-filter-panel-title small {
+                font-size: 11px;
+                color: #6b7280;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-panel-title small {
+                color: #9ca3af;
+            }
+
+            .einsatz-filter-actions {
+                display: flex;
+                gap: 6px;
+            }
+
+            .einsatz-filter-actions button {
+                padding: 6px 10px;
+                border: 1px solid #d1d5db;
+                border-radius: 7px;
+                background: #fff;
+                color: #374151;
+                font-size: 11px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background .15s, border .15s;
+            }
+
+            .einsatz-filter-actions button:hover {
+                background: #f3f4f6;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-actions button {
+                border-color: #3b4048;
+                background: #252930;
+                color: #e5e7eb;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-actions button:hover {
+                background: #30343c;
+            }
+
+            .einsatz-filter-search {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                height: 40px;
+                margin-bottom: 10px;
+                padding: 0 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: 9px;
+                background: #f9fafb;
+                color: #9ca3af;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-search {
+                border-color: #30343b;
+                background: #202329;
+            }
+
+            .einsatz-filter-search input {
+                width: 100%;
+                border: 0;
+                outline: 0;
+                background: transparent;
+                color: inherit;
+                font-size: 13px;
+            }
+
+            .einsatz-filter-list {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 5px;
+                padding-right: 3px;
+            }
+
+            .einsatz-filter-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-height: 42px;
+                padding: 7px 10px;
+                border: 1px solid transparent;
+                border-radius: 9px;
+                cursor: pointer;
+                transition: background .12s, border .12s;
+            }
+
+            .einsatz-filter-item:hover {
+                background: #f3f4f6;
+            }
+
+            .einsatz-filter-item.checked {
+                border-color: #fecaca;
+                background: #fff5f5;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-item:hover {
+                background: #24282e;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-item.checked {
+                border-color: #59282b;
+                background: #291b1d;
+            }
+
+            .einsatz-filter-item input {
+                position: absolute;
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .einsatz-filter-checkmark {
+                width: 19px;
+                height: 19px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                border: 2px solid #cbd5e1;
+                border-radius: 6px;
+                background: white;
+                transition: background .15s, border .15s;
+            }
+
+            .einsatz-filter-item.checked .einsatz-filter-checkmark {
+                border-color: #ef4444;
+                background: #ef4444;
+            }
+
+            .einsatz-filter-item.checked .einsatz-filter-checkmark::after {
+                content: '✓';
+                color: white;
+                font-size: 13px;
+                font-weight: 800;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-checkmark {
+                border-color: #4b5563;
+                background: #1f2329;
+            }
+
+            .einsatz-filter-item-text {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-size: 12px;
+            }
+
+            .einsatz-filter-footer {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 15px;
+                padding: 14px 24px;
+                border-top: 1px solid #e5e7eb;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-footer {
+                border-color: #30343b;
+            }
+
+            .einsatz-filter-success-toggle {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                cursor: pointer;
+            }
+
+            .einsatz-filter-success-toggle input {
+                width: 18px;
+                height: 18px;
+                accent-color: #ef4444;
+                cursor: pointer;
+            }
+
+            .einsatz-filter-success-toggle span {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            .einsatz-filter-success-toggle strong {
+                font-size: 12px;
+            }
+
+            .einsatz-filter-success-toggle small {
+                font-size: 10px;
+                color: #6b7280;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-success-toggle small {
+                color: #9ca3af;
+            }
+
+            .einsatz-filter-footer-close {
+                padding: 9px 16px;
+                border: 0;
+                border-radius: 8px;
+                background: #ef4444;
+                color: white;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background .15s, transform .15s;
+            }
+
+            .einsatz-filter-footer-close:hover {
+                background: #dc2626;
+                transform: translateY(-1px);
+            }
+
+            @keyframes einsatzFadeIn {
+                from {
+                    opacity: 0;
+                }
+
+                to {
+                    opacity: 1;
+                }
+            }
+
+            @keyframes einsatzModalIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(12px) scale(.98);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
+            @keyframes einsatzContentIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(5px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+
+            @media (max-width: 650px) {
+                .einsatz-filter-overlay {
+                    padding: 8px;
+                }
+
+                .einsatz-filter-app {
+                    max-height: 96vh;
+                    border-radius: 14px;
+                }
+
+                .einsatz-filter-navigation {
+                    grid-template-columns: 1fr;
+                }
+
+                .einsatz-filter-list {
+                    grid-template-columns: 1fr;
+                }
+
+                .einsatz-filter-panel-header {
+                    align-items: flex-start;
+                    flex-direction: column;
+                }
+
+                .einsatz-filter-footer {
+                    align-items: stretch;
+                    flex-direction: column;
+                }
+
+                .einsatz-filter-footer-close {
+                    width: 100%;
+                }
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    // Button des Glücks erzeugen
     function insertButton() {
-        // Button nur einmal einfügen
-        if(document.getElementById('einsatzFilterOpenButton')) return;
-
-        // Suche Formular (action="/einsaetze")
-        const form = document.querySelector('form[action="/einsaetze"]');
-        if(!form) {
-            console.log('[LSS-EinsatzFilter] Formular nicht gefunden!');
+        if (document.getElementById('einsatzFilterOpenButton')) {
             return;
         }
 
-        // Suche existierenden Button mit class btn-group bootstrap-select als Bezug
-        const btnGroup = form.querySelector('.btn-group.bootstrap-select');
-        if(!btnGroup) {
-            console.log('[LSS-EinsatzFilter] Bezug-Button nicht gefunden!');
+        const header = document.getElementById('filter_panel_header');
+
+        if (!header) {
             return;
         }
 
-        // Erzeuge neuen Button
+        const buttonContainer = header.querySelector(
+            '.flex.flex-row.flex-wrap'
+        );
+
+        if (!buttonContainer) {
+            return;
+        }
+
+        const selectContainer = buttonContainer.querySelector('.select');
+
+        if (!selectContainer) {
+            return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'select';
+        wrapper.style.marginRight = '10px';
+
         const button = document.createElement('button');
         button.type = 'button';
         button.id = 'einsatzFilterOpenButton';
         button.innerText = 'Einsätze filtern';
+        button.title = 'Einsatzfilter von Caddy21';
         button.className = 'btn btn-default';
-        button.style.marginLeft = '8px';
         button.onclick = showModal;
 
-        // Button neben den Bezug-Button einfügen
-        btnGroup.parentNode.insertBefore(button, btnGroup.nextSibling);
+        wrapper.appendChild(button);
+
+        buttonContainer.insertBefore(
+            wrapper,
+            selectContainer
+        );
     }
 
-    // --- Theme Observer für Live-Update des Modal ---
-    const themeObserver = new MutationObserver(() => {
-        const modal = document.getElementById('einsatzFilterModal');
-        if(!modal) return;
-        const theme = getThemeColors();
-        modal.style.backgroundColor = theme.background;
-        modal.style.color = theme.text;
-        modal.style.border = `1px solid ${theme.border}`;
-        modal.style.boxShadow = `0 0 20px ${theme.shadow}`;
-
-        modal.querySelectorAll('button').forEach(btn => {
-            btn.style.backgroundColor = theme.buttonBackground;
-            btn.style.color = theme.buttonText;
-        });
-
-        modal.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            cb.style.border = `1px solid ${theme.checkboxBorder}`;
-            cb.style.accentColor = theme.text;
-        });
-    });
-
-    // --- Haupt-Logik ---
-  function init() {
-    insertButton();
-
-    // 🟢 Hauptbeobachter: prüft auf DOM-Änderungen (z. B. neue Einsätze oder Filter neu geladen)
-    const mainObserver = new MutationObserver(() => {
+    // Starte den Bums!
+    function init() {
         insertButton();
-        hideMissions();
-    });
-    mainObserver.observe(document.body, { childList: true, subtree: true });
 
-    // 🔎 Sucheingabe überwachen (z. B. bei "Auto" etc.)
-    const searchInput = document.getElementById('search_input_field_possible_mission');
-    if (searchInput) {
-        searchInput.addEventListener('input', () => {
-            // Kurze Verzögerung, damit die Spielinterne Suche fertig ist
-            setTimeout(hideMissions, 50);
+        // LSS-Filter beobachten, bis der Filter vorhanden ist
+        const initialFilterObserver = new MutationObserver(() => {
+            triggerInitialGameFilter();
+
+            if (initialGameFilterTriggered) {
+                initialFilterObserver.disconnect();
+            }
         });
+
+        initialFilterObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Falls der Filter beim Scriptstart bereits vorhanden ist
+        triggerInitialGameFilter();
+
+        // Hauptbeobachter für neue/geänderte Einsätze
+        const mainObserver = new MutationObserver(() => {
+            insertButton();
+            hideMissions();
+        });
+
+        mainObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Spielinterne Suche überwachen
+        const searchInput = document.getElementById(
+            'search_input_field_possible_mission'
+        );
+
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                setTimeout(hideMissions, 50);
+            });
+        }
+
+        // Initial filtern
+        hideMissions();
     }
-
-    // 🧠 Direkt beim Start filtern
-    hideMissions();
-}
-
-    // Starte Script
+    //3
+    //2
+    //1
     init();
-
 })();
