@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         [LSS] Einsätze anzeigen
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @author       Caddy21
-// @description  Blendet Einsätze basierend auf individuellen Einstellungen der Kategorien und/oder der Einsatzarten aus.
+// @description  Blendet Einsätze basierend auf individuellen Einstellungen aus.
 // @match        https://www.leitstellenspiel.de/einsaetze*
+// @match        https://polizei.leitstellenspiel.de/einsaetze*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -13,8 +14,8 @@
 (function () {
     'use strict';
 
-    // Da lasst Ihr lieber die Finger von
-    let hideSuccess = loadSettings('einsatzHideSuccess', true);
+    // Da lasst ihr lieber die Finger von
+    let successFilterMode = loadSettings('einsatzSuccessFilterMode', loadSettings('einsatzHideSuccess', true) ? 'hide' : 'none');
     let initialGameFilterTriggered = false;
     let activeSection = 'requirements';
     let themeObserver = null;
@@ -55,7 +56,7 @@
         "Werkfeuerwehr": false,
         "Windenrettungs-Erweiterungen": false,
         "Züge der 1. Hundertschaft": false
-    }; // Vorraussetzungen
+    }; // Voraussetzungen
     const missionTypes = {
         "Autobahnpolizei-Einsätze": false,
         "Bergrettungseinsätze": false,
@@ -114,7 +115,7 @@
     function saveAllSettings() {
         saveSettings('einsatzFilterOptions', filterOptions);
         saveSettings('einsatzMissionTypeOptions', missionTypeOptions);
-        saveSettings('einsatzHideSuccess', hideSuccess);
+        saveSettings('einsatzSuccessFilterMode', successFilterMode);
 
         hideMissions();
         updateModalCounters();
@@ -128,7 +129,7 @@
         ) ? 'dark' : 'light';
     }
 
-    // Einsätze verschwindiebus
+    // Einsätze verschwindebus
     function hideMissions() {
         const searchInput = document.getElementById(
             'search_input_field_possible_mission'
@@ -143,9 +144,14 @@
             const textLower = text.toLowerCase();
 
             let visible = true;
+            const isSuccess = el.classList.contains('success');
 
-            // Erfolgreiche Einsätze ausblenden
-            if (hideSuccess && el.classList.contains('success')) {
+            // Erfolgsstatus filtern
+            if (successFilterMode === 'hide' && isSuccess) {
+                visible = false;
+            }
+
+            if (successFilterMode === 'only' && !isSuccess) {
                 visible = false;
             }
 
@@ -193,13 +199,30 @@
                 return;
             }
 
-            const children = document.querySelectorAll(match[1]);
+            const childSelector = match[1];
+            const children = document.querySelectorAll(childSelector);
 
-            const hasVisibleChild = Array.from(children).some(
-                child => child.style.display !== 'none'
-            );
+            const hasVisibleChild = Array.from(children).some(child => {
+                return child.style.display !== 'none';
+            });
 
             header.style.display = hasVisibleChild ? '' : 'none';
+
+            if (!hasVisibleChild) {
+                return;
+            }
+
+            const arrow = header.querySelector('.expand-arrow');
+
+            if (!arrow) {
+                return;
+            }
+
+            const isExpanded = arrow.getAttribute('aria-expanded') === 'true';
+
+            if (!isExpanded) {
+                arrow.click();
+            }
         });
     }
 
@@ -267,7 +290,7 @@
         }, 100);
     }
 
-    // Sobols bester Freund
+    // Freund von Sobol
     function showModal() {
         if (document.getElementById('einsatzFilterModal')) {
             return;
@@ -376,25 +399,46 @@
         const footer = document.createElement('div');
         footer.className = 'einsatz-filter-footer';
 
-        const successWrapper = document.createElement('label');
+        const successWrapper = document.createElement('div');
         successWrapper.className = 'einsatz-filter-success-toggle';
 
-        const successCheckbox = document.createElement('input');
-        successCheckbox.type = 'checkbox';
-        successCheckbox.checked = hideSuccess;
+        const successText = document.createElement('span');
 
-        successCheckbox.onchange = () => {
-            hideSuccess = successCheckbox.checked;
+        const successStrong = document.createElement('strong');
+        successStrong.textContent = 'Grüne Einsätze';
+
+        const successSmall = document.createElement('small');
+        successSmall.textContent =
+            'Anzeige bereits erfolgreich bearbeiteter Einsätze';
+
+        successText.appendChild(successStrong);
+        successText.appendChild(successSmall);
+
+        const successSelect = document.createElement('select');
+        successSelect.className = 'einsatz-filter-success-select';
+
+        const successOptions = [
+            ['none', 'Normal anzeigen'],
+            ['hide', 'Grüne ausblenden'],
+            ['only', 'Nur grüne anzeigen']
+        ];
+
+        successOptions.forEach(([value, text]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = text;
+            successSelect.appendChild(option);
+        });
+
+        successSelect.value = successFilterMode;
+
+        successSelect.onchange = () => {
+            successFilterMode = successSelect.value;
             saveAllSettings();
         };
 
-        const successText = document.createElement('span');
-        successText.innerHTML =
-            '<strong>Grüne Einsätze ausblenden</strong>' +
-            '<small>Bereits erfolgreich bearbeitete Einsätze</small>';
-
-        successWrapper.appendChild(successCheckbox);
         successWrapper.appendChild(successText);
+        successWrapper.appendChild(successSelect);
 
         const closeFooterButton = document.createElement('button');
         closeFooterButton.className = 'einsatz-filter-footer-close';
@@ -427,7 +471,7 @@
         updateTheme();
     }
 
-    // Wechsel zwischen Dingen
+    // Wechsel zwischen Bereichen
     function createNavigationCard(section, icon, title) {
         const card = document.createElement('button');
         card.className = 'einsatz-filter-nav-card';
@@ -467,7 +511,7 @@
         return card;
     }
 
-    // Ausgewählten Bereich angucken
+    // Ausgewählten Bereich anzeigen
     function renderActiveSection() {
         const content = document.getElementById('einsatzFilterContent');
 
@@ -508,7 +552,7 @@
         updateStatus();
     }
 
-    // Such Such Such
+    // Filterpanel erstellen
     function createFilterPanel(titleText, icon, options, type) {
         const panel = document.createElement('div');
         panel.className = 'einsatz-filter-panel';
@@ -687,19 +731,27 @@
 
         const total = requirementActive + missionActive;
 
+        let statusMode = '';
+
+        if (successFilterMode === 'hide') {
+            statusMode = ' · Grüne ausgeblendet';
+        } else if (successFilterMode === 'only') {
+            statusMode = ' · Nur grüne';
+        }
+
         status.textContent = total === 0
-            ? 'Keine Filter aktiv'
-            : `${total} Filter aktiv`;
+            ? `Keine Filter aktiv${statusMode}`
+            : `${total} Filter aktiv${statusMode}`;
     }
 
-    // Modal mit Escape schließen (Warum? Weil ich es kann)
+    // Modal mit Escape schließen
     function modalEscHandler(event) {
         if (event.key === 'Escape') {
             closeModal();
         }
     }
 
-    // Sobols Freund entfernen
+    // Modal entfernen
     function closeModal() {
         const modal = document.getElementById(
             'einsatzFilterModal'
@@ -720,7 +772,7 @@
         }
     }
 
-    // Hier wirds bunt
+    // Theme
     function updateTheme() {
         const modal = document.getElementById(
             'einsatzFilterModal'
@@ -733,7 +785,7 @@
         modal.dataset.theme = getCurrentThemeMode();
     }
 
-    // CSS (Nicht Counterstrike Source sondern Desing!) einfügen
+    // CSS (Nicht Counterstrike Source falls ihr das denkt)
     function injectStyles() {
         if (document.getElementById('einsatzFilterModernStyles')) {
             return;
@@ -1149,15 +1201,7 @@
             .einsatz-filter-success-toggle {
                 display: flex;
                 align-items: center;
-                gap: 10px;
-                cursor: pointer;
-            }
-
-            .einsatz-filter-success-toggle input {
-                width: 18px;
-                height: 18px;
-                accent-color: #ef4444;
-                cursor: pointer;
+                gap: 12px;
             }
 
             .einsatz-filter-success-toggle span {
@@ -1177,6 +1221,34 @@
 
             #einsatzFilterModal[data-theme="dark"] .einsatz-filter-success-toggle small {
                 color: #9ca3af;
+            }
+
+            .einsatz-filter-success-select {
+                min-width: 170px;
+                padding: 7px 30px 7px 10px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                background: #fff;
+                color: #374151;
+                font-size: 11px;
+                font-weight: 600;
+                cursor: pointer;
+                outline: none;
+            }
+
+            .einsatz-filter-success-select:focus {
+                border-color: #ef4444;
+                box-shadow: 0 0 0 2px rgba(239, 68, 68, .12);
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-success-select {
+                border-color: #3b4048;
+                background: #252930;
+                color: #e5e7eb;
+            }
+
+            #einsatzFilterModal[data-theme="dark"] .einsatz-filter-success-select:focus {
+                border-color: #ef4444;
             }
 
             .einsatz-filter-footer-close {
@@ -1256,6 +1328,15 @@
                 .einsatz-filter-footer {
                     align-items: stretch;
                     flex-direction: column;
+                }
+
+                .einsatz-filter-success-toggle {
+                    align-items: stretch;
+                    flex-direction: column;
+                }
+
+                .einsatz-filter-success-select {
+                    width: 100%;
                 }
 
                 .einsatz-filter-footer-close {
@@ -1359,8 +1440,6 @@
         // Initial filtern
         hideMissions();
     }
-    //3
-    //2
-    //1
+
     init();
 })();
