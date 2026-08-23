@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         [LSS] Erweiterungs-Manager
+// @name         [LSS] 02 - Erweiterungs-Manager + Verband
 // @namespace    http://tampermonkey.net/
-// @version      1.4.7
-// @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude.
+// @version      1.5
+// @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude und den Verbandsgebäuden
 // @author       Caddy21
-// @match        https://www.leitstellenspiel.de/*
-// @match        https://polizei.leitstellenspiel.de/*
+// @match        https://www.leitstellenspiel.de/
+// @match        https://polizei.leitstellenspiel.de/
 // @grant        GM_xmlhttpRequest
 // @connect      api.lss-manager.de
 // @connect      leitstellenspiel.de
@@ -239,6 +239,8 @@
         filter: brightness(90%);
         }
 
+        #open-alliance-buildings { background-color: deeppink; color: #fff; }
+        #open-alliance-buildings:hover { filter:brightness(0.9); }
         `;
 
     // Wende den Modus an, wenn das DOM bereit ist
@@ -260,6 +262,7 @@
         <div id="extension-lightbox-modal">
           <div id="extension-lightbox-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px;">
             <div id="user-balance" style="display:flex; gap:20px; text-align:left;">
+             <div id="alliance-balance" style="display:flex; gap:20px; text-align:left;">
               <div>
                 <div>Aktuelle Credits: <span id="current-credits" style="color: var(--credits-color); font-weight:bold;">...</span></div>
                 <div>Aktuelle Coins: <span id="current-coins" style="color: var(--coins-color); font-weight:bold;">...</span></div>
@@ -269,9 +272,17 @@
                 <div>Ausgewählte Coins: <span id="selected-coins" style="color: var(--coins-color); font-weight:bold;">0</span></div>
               </div>
             </div>
+            <div id="alliance-info" style="display:none;">
+               <div>Aktuelle Verbands-Credits: <span id="current-alliance-credits" style="color: deeppink; font-weight:bold;">...</span><br>
+               Ausgewählte Verbands-Credits: <span id="selected-alliance-credits" style="color: deeppink; font-weight:bold;">0</span></div>
+             </div>
+            </div>
             <div style="display:flex; gap:10px;">
               <button id="under-construction" style="background-color:#17a2b8; color:white; border:none; border-radius:4px; padding:5px 10px;">
                 Aktuell Im Bau oder Fertiggestellt
+              </button>
+              <button id="open-alliance-buildings" style="background-color: deeppink; color:white; border:none; border-radius:4px; padding:5px 10px; display:none;">
+                Verbandsgebäude
               </button>
               <button id="close-extension-helper" style="padding:5px 10px;">Schließen</button>
             </div>
@@ -324,6 +335,55 @@
 
     document.body.appendChild(lightbox);
 
+    // Update: Alliance info anzeigen & Button ggf. sichtbar machen (nur bei Berechtigung)
+    getAllianceInfo().then(info => {
+        allianceInfo = info;
+
+        const allianceBtn = document.getElementById('open-alliance-buildings');
+        const allianceInfoDiv = document.getElementById('alliance-info');
+        const allianceCreditsSpan = document.getElementById('current-alliance-credits');
+
+        if (!info) {
+            if (allianceBtn) allianceBtn.style.display = 'none';
+            if (allianceInfoDiv) allianceInfoDiv.style.display = 'none';
+            return;
+        }
+
+        const hasRights = Boolean(info.admin) || Boolean(info.coadmin) || Boolean(info.finance);
+
+        if (hasRights) {
+            // Verbandscredits anzeigen
+            if (allianceCreditsSpan) allianceCreditsSpan.textContent = (info.credits_current || 0).toLocaleString();
+            if (allianceInfoDiv) allianceInfoDiv.style.display = 'flex';
+
+            // Button sichtbar machen und Handler anhängen
+            if (allianceBtn) {
+                allianceBtn.style.display = 'inline-block';
+                allianceBtn.textContent = 'Verbandsgebäude';
+                allianceBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (currentView === 'alliance') {
+                        currentView = 'personal';
+                        allianceBtn.textContent = 'Verbandsgebäude';
+                        setLightboxTitleForView();
+                        await fetchBuildingsAndRender();
+                    } else {
+                        currentView = 'alliance';
+                        allianceBtn.textContent = 'Eigene Wachen';
+                        setLightboxTitleForView();
+                        await fetchAllianceBuildingsAndRender();
+                    }
+                });
+            }
+        } else {
+            // Keine Rechte: verstecken
+            if (allianceBtn) allianceBtn.style.display = 'none';
+            if (allianceInfoDiv) allianceInfoDiv.style.display = 'none';
+        }
+    }).catch(err => {
+        console.warn('Allianzinfo konnte nicht geladen werden', err);
+    });
+
     const openBtn = document.getElementById('open-extension-settings');
     const lightboxContent = lightbox.querySelector('#extension-lightbox-content');
 
@@ -344,366 +404,41 @@
     let buildingGroups = {};
     let currentCredits = 0;
     let currentCoins = 0;
+    // Verbands-Daten
+    let allianceInfo = null;
+    let allianceBuildingsData = [];
+    let currentView = 'personal'; // 'personal' oder 'alliance'
     const storageGroups = {};
     const selectedLevels = {};
     const storageBuildQueue = {};
-    const manualExtensions = {
-        '0_normal': [
-            { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
-            { id: 1, name: '1te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 2, name: '2te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 3, name: '3te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 4, name: '4te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 5, name: '5te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 6, name: 'Wasserrettung', cost: 400000, coins: 25 },
-            { id: 7, name: '6te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 8, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
-            { id: 9, name: 'Großwache', cost: 1000000, coins: 50 },
-            { id: 10, name: '7te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 11, name: '8te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 12, name: '9te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 13, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
-            { id: 14, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
-            { id: 15, name: 'Netzersatzanlage 200', cost: 100000, coins: 20 },
-            { id: 16, name: 'Großlüfter', cost: 75000, coins: 15 },
-            { id: 17, name: '10te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 18, name: 'Drohneneinheit', cost: 150000, coins: 25 },
-            { id: 19, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
-            { id: 20, name: '1te Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 21, name: '2te Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 22, name: '3te Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 23, name: '4te Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 24, name: '5te Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
-            { id: 26, name: '11te Ab-Stellplatz', cost: 150000, coins: 20 },
-            { id: 27, name: '12te Ab-Stellplatz', cost: 150000, coins: 20 },
-        ], // Feuerwache (normal)
-        '1_normal': [
-            { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-        ], // Feuerwehrschule
-        '2_normal': [
-            { id: 0, name: 'Großwache', cost: 1000000, coins: 50 },
-        ], // Rettungswache
-        '3_normal': [
-            { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-        ], // Rettungsschule
-        '4_normal': [
-            { id: 0, name: 'Allgemeine Innere', cost: 10000, coins: 10 },
-            { id: 1, name: 'Allgemeine Chirugie', cost: 10000, coins: 10 },
-            { id: 2, name: 'Gynäkologie', cost: 70000, coins: 15 },
-            { id: 3, name: 'Urologie', cost: 70000, coins: 15 },
-            { id: 4, name: 'Unfallchirugie', cost: 70000, coins: 15 },
-            { id: 5, name: 'Neurologie', cost: 70000, coins: 15 },
-            { id: 6, name: 'Neurochirugie', cost: 70000, coins: 15 },
-            { id: 7, name: 'Kardiologie', cost: 70000, coins: 15 },
-            { id: 8, name: 'Kardiochirugie', cost: 70000, coins: 15 },
-            { id: 9, name: 'Großkrankenhaus', cost: 200000, coins: 50 },
-        ], // Krankenhaus
-        '5_normal': [
-            { id: 0, name: 'Windenrettung', cost: 200000, coins: 15 },
-        ], // Rettungshubschrauber-Station
-        '6_normal': [
-            { id: 0, name: '1te Zelle', cost: 25000, coins: 5 },
-            { id: 1, name: '2te Zelle', cost: 25000, coins: 5 },
-            { id: 2, name: '3te Zelle', cost: 25000, coins: 5 },
-            { id: 3, name: '4te Zelle', cost: 25000, coins: 5 },
-            { id: 4, name: '5te Zelle', cost: 25000, coins: 5 },
-            { id: 5, name: '6te Zelle', cost: 25000, coins: 5 },
-            { id: 6, name: '7te Zelle', cost: 25000, coins: 5 },
-            { id: 7, name: '8te Zelle', cost: 25000, coins: 5 },
-            { id: 8, name: '9te Zelle', cost: 25000, coins: 5 },
-            { id: 9, name: '10te Zelle', cost: 25000, coins: 5 },
-            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
-            { id: 14, name: 'Großwache', cost: 1000000, coins: 50 },
-            { id: 15, name: 'Großgewahrsam', cost: 200000, coins: 50 },
-            { id: 16, name: 'Autobahnpolizei', cost: 75000, coins: 15 },
-        ], // Polizeiwache
-        '8_normal': [
-            { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-        ], // Polizeischule
-        '9_normal': [
-            { id: 0, name: '1. Technischer Zug: Fachgruppe Notversorgung/Notinstandsetzung', cost: 25000, coins: 5 },
-            { id: 1, name: '1. Technischer Zug: Zugtrupp', cost: 25000, coins: 5 },
-            { id: 2, name: 'Fachgruppe Räumen', cost: 25000, coins: 5 },
-            { id: 3, name: 'Fachgruppe Wassergefahren', cost: 500000, coins: 15 },
-            { id: 4, name: '2. Technischer Zug - Bergungsgruppe', cost: 25000, coins: 5 },
-            { id: 5, name: '2. Technischer Zug: Notversorgung/Notinstandsetzung', cost: 25000, coins: 5 },
-            { id: 6, name: '2. Technischer Zug: Zugtrupp', cost: 25000, coins: 5 },
-            { id: 7, name: 'Fachgruppe Ortung', cost: 450000, coins: 25 },
-            { id: 8, name: 'Fachgruppe Wasserschaden/Pumpen', cost: 200000, coins: 25 },
-            { id: 9, name: 'Fachruppe Schwere Bergung', cost: 200000, coins: 25 },
-            { id: 10, name: 'Fachgruppe Elektroversorgung', cost: 200000, coins: 25 },
-            { id: 11, name: 'Ortsverband-Mannschaftstransportwagen', cost: 50000, coins: 15 },
-            { id: 12, name: 'Trupp Unbemannte Luftfahrtsysteme', cost: 50000, coins: 15 },
-            { id: 13, name: 'Fachzug Führung und Kommunikation', cost: 300000, coins: 25 },
-            { id: 14, name: 'Fachgruppe Logistik-Verpflegung', cost: 50000, coins: 15 },
-            { id: 15, name: 'Fachgruppe Brückenbau', cost: 50000, coins: 15 },
-        ], // THW
-        '10_normal': [
-            { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-        ], // THW-Bundesschule
-        '11_normal': [
-            { id: 0, name: '2. Zug der 1. Hundertschaft', cost: 25000, coins: 5 },
-            { id: 1, name: '3. Zug der 1. Hundertschaft', cost: 25000, coins: 5 },
-            { id: 2, name: 'Sonderfahrzeug: Gefangenenkraftwagen', cost: 25000, coins: 5 },
-            { id: 3, name: 'Technischer Zug: Wasserwerfer', cost: 25000, coins: 5 },
-            { id: 4, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
-            { id: 5, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
-            { id: 6, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
-            { id: 7, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
-            { id: 8, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            { id: 9, name: 'Reiterstaffel', cost: 300000, coins: 25},
-            { id: 10, name: 'Lautsprecherkraftwagen', cost: 100000, coins: 10},
-        ], // Bereitschaftspolizei
-        '12_normal': [
-            { id: 0, name: 'Führung', cost: 25000, coins: 5 },
-            { id: 1, name: 'Sanitätsdienst', cost: 25000, coins: 5 },
-            { id: 2, name: 'Wasserrettung', cost: 500000, coins: 25 },
-            { id: 3, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
-            { id: 4, name: 'SEG-Drohne', cost: 50000, coins: 15 },
-            { id: 5, name: 'Betreuungs- und Verpflegungsdienst', cost: 200000, coins: 25 },
-            { id: 6, name: 'Technik und Sicherheit', cost: 200000, coins: 25 },
-        ], // SEG
-        '13_normal': [
-            { id: 0, name: 'Außenlastbehälter', cost: 200000, coins: 15 },
-            { id: 1, name: 'Windenrettung', cost: 200000, coins: 15 },
-        ], // Polizeihubschrauberstation
-        '17_normal': [
-            { id: 0, name: 'SEK: 1. Zug', cost: 100000, coins: 10 },
-            { id: 1, name: 'SEK: 2. Zug', cost: 100000, coins: 10 },
-            { id: 2, name: 'MEK: 1. Zug', cost: 100000, coins: 10 },
-            { id: 3, name: 'MEK: 2. Zug', cost: 100000, coins: 10 },
-            { id: 4, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-        ], // Polizeisondereinheit
-        '0_small': [
-            { id: 0, name: 'Rettungsdienst', cost: 100000, coins: 20 },
-            { id: 1, name: '1te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 2, name: '2te AB-Stellplatz', cost: 100000, coins: 20 },
-            { id: 6, name: 'Wasserrettung', cost: 400000, coins: 25 },
-            { id: 8, name: 'Flughafenfeuerwehr', cost: 300000, coins: 25 },
-            { id: 13, name: 'Werkfeuerwehr', cost: 100000, coins: 20 },
-            { id: 14, name: 'Netzersatzanlage 50', cost: 100000, coins: 20 },
-            { id: 16, name: 'Großlüfter', cost: 75000, coins: 25 },
-            { id: 18, name: 'Drohneneinheit', cost: 150000, coins: 25 },
-            { id: 19, name: 'Verpflegungsdienst', cost: 200000, coins: 25 },
-            { id: 20, name: '1te Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 21, name: '2te Anhänger Stellplatz', cost: 75000, coins: 15 },
-            { id: 25, name: 'Bahnrettung', cost: 125000, coins: 25 },
-        ], // Feuerwehr (Kleinwache)
-        '6_small': [
-            { id: 0, name: '1te Zelle', cost: 25000, coins: 5 },
-            { id: 1, name: '2te Zelle', cost: 25000, coins: 5 },
-            { id: 10, name: 'Diensthundestaffel', cost: 100000, coins: 10 },
-            { id: 11, name: 'Kriminalpolizei', cost: 100000, coins: 20 },
-            { id: 12, name: 'Dienstgruppenleitung', cost: 200000, coins: 25 },
-            { id: 13, name: 'Motorradstaffel', cost: 75000, coins: 15 },
-            { id: 16, name: 'Autobahnpolizei', cost: 75000, coins: 15 },
-        ], // Polizei (Kleinwache)
-        '24_normal': [
-            { id: 0, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            { id: 1, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            { id: 2, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            { id: 3, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            { id: 4, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-            { id: 5, name: 'Reiterstaffel', cost: 300000, coins: 25 },
-        ], // Reiterstaffel
-        '25_normal': [
-            { id: 0, name: 'Höhenrettung', cost: 50000, coins: 25 },
-            { id: 1, name: 'Drohneneinheit', cost: 75000, coins: 25 },
-            { id: 2, name: 'Rettungshundestaffel', cost: 350000, coins: 25 },
-            { id: 3, name: 'Rettungsdienst', cost: 100000, coins: 20 },
-        ], // Bergrettungswache
-        '27_normal': [
-            { id: 0, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 1, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-            { id: 2, name: 'Weiterer Klassenraum', cost: 400000, coins: 40 },
-        ], // Schule für Seefahrt und Seenotrettung
-        '29_normal': [
-            { id: 0, name: '1te Zelle', cost: 25000, coins: 5 },
-            { id: 1, name: '2te Zelle', cost: 25000, coins: 5 },
-            { id: 2, name: '3te Zelle', cost: 25000, coins: 5 },
-            { id: 3, name: '4te Zelle', cost: 25000, coins: 5 },
-            { id: 4, name: '5te Zelle', cost: 25000, coins: 5 },
-            { id: 5, name: '6te Zelle', cost: 25000, coins: 5 },
-            { id: 6, name: '7te Zelle', cost: 25000, coins: 5 },
-            { id: 7, name: '8te Zelle', cost: 25000, coins: 5 },
-            { id: 8, name: '9te Zelle', cost: 25000, coins: 5 },
-            { id: 9, name: '10te Zelle', cost: 25000, coins: 5 },
-        ], // Autobahnpolizei
-    };
-    const manualStorageRooms = {
-        '0_normal': [
-            { id: 'initial_containers', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
-            { id: 'additional_containers_1', name: '1te Zusätzlicher Lagerraum', cost: 50000, coins: 12, additionalStorage: 30 },
-            { id: 'additional_containers_2', name: '2te Zusätzlicher Lagerraum', cost: 50000, coins: 12, additionalStorage: 30 },
-            { id: 'additional_containers_3', name: '3te Zusätzlicher Lagerraum', cost: 100000, coins: 15, additionalStorage: 30 },
-            { id: 'additional_containers_4', name: '4te Zusätzlicher Lagerraum', cost: 100000, coins: 15, additionalStorage: 30 },
-            { id: 'additional_containers_5', name: '5te Zusätzlicher Lagerraum', cost: 100000, coins: 15, additionalStorage: 30 },
-            { id: 'additional_containers_6', name: '6te Zusätzlicher Lagerraum', cost: 100000, coins: 15, additionalStorage: 30 },
-            { id: 'additional_containers_7', name: '7te Zusätzlicher Lagerraum', cost: 100000, coins: 15, additionalStorage: 30 },
-        ], // Feuerwache (Normal)
-        '0_small': [
-            { id: 'initial_containers', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
-            { id: 'additional_containers_1', name: '1te Zusätzlicher Lagerraum', cost: 50000, coins: 10, additionalStorage: 30 },
-            { id: 'additional_containers_2', name: '2te Zusätzlicher Lagerraum', cost: 50000, coins: 10, additionalStorage: 30 },
-        ], // Feuerwache (Kleinwache)
-        '5_normal': [
-            { id: 'initial_helicopter_equipment', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
-        ], // Rettungshubschrauber-Station
-        '13_normal': [
-            { id: 'initial_helicopter_equipment', name: 'Lagerraum', cost: 25000, coins: 10, additionalStorage: 40 },
-        ], // Polizeihubschrauberstation
-    };
-    const manualLevels = {
-        '0_normal': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-            { id: 5, name: '6', cost: 100000, coins: 20 },
-            { id: 6, name: '7', cost: 100000, coins: 20 },
-            { id: 7, name: '8', cost: 100000, coins: 20 },
-            { id: 8, name: '9', cost: 100000, coins: 20 },
-            { id: 9, name: '10', cost: 100000, coins: 20 },
-            { id: 10, name: '11', cost: 100000, coins: 20 },
-            { id: 11, name: '12', cost: 100000, coins: 20 },
-            { id: 12, name: '13', cost: 100000, coins: 20 },
-            { id: 13, name: '14', cost: 100000, coins: 20 },
-            { id: 14, name: '15', cost: 100000, coins: 20 },
-            { id: 15, name: '16', cost: 100000, coins: 20 },
-            { id: 16, name: '17', cost: 100000, coins: 20 },
-            { id: 17, name: '18', cost: 100000, coins: 20 },
-            { id: 18, name: '19', cost: 100000, coins: 20 },
-        ], // Feuerwache (Normal)
-        '0_small': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-        ], // Feuerwache (Kleinwache)
-        '2_normal': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-            { id: 5, name: '6', cost: 100000, coins: 20 },
-            { id: 6, name: '7', cost: 100000, coins: 20 },
-            { id: 7, name: '8', cost: 100000, coins: 20 },
-            { id: 8, name: '9', cost: 100000, coins: 20 },
-            { id: 9, name: '10', cost: 100000, coins: 20 },
-            { id: 10, name: '11', cost: 100000, coins: 20 },
-            { id: 11, name: '12', cost: 100000, coins: 20 },
-            { id: 12, name: '13', cost: 100000, coins: 20 },
-            { id: 13, name: '14', cost: 100000, coins: 20 },
-        ], // Rettungswache (Normal)
-        '2_small': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-        ], // Rettungswache (Kleinwache)
-        '4_normal': [
-            { id: 0, name: '1', cost: 19000, coins: 11 },
-            { id: 1, name: '2', cost: 19000, coins: 11 },
-            { id: 2, name: '3', cost: 19000, coins: 11 },
-            { id: 3, name: '4', cost: 19000, coins: 11 },
-            { id: 4, name: '5', cost: 19000, coins: 11 },
-            { id: 5, name: '6', cost: 19000, coins: 11 },
-            { id: 6, name: '7', cost: 19000, coins: 11 },
-            { id: 7, name: '8', cost: 19000, coins: 11 },
-            { id: 8, name: '9', cost: 19000, coins: 11 },
-            { id: 9, name: '10', cost: 19000, coins: 11 },
-            { id: 10, name: '11', cost: 19000, coins: 11 },
-            { id: 11, name: '12', cost: 19000, coins: 11 },
-            { id: 12, name: '13', cost: 19000, coins: 11 },
-            { id: 13, name: '14', cost: 19000, coins: 11 },
-            { id: 14, name: '15', cost: 19000, coins: 11 },
-            { id: 15, name: '16', cost: 19000, coins: 11 },
-            { id: 16, name: '17', cost: 19000, coins: 11 },
-            { id: 17, name: '18', cost: 19000, coins: 11 },
-            { id: 18, name: '19', cost: 19000, coins: 11 },
-            { id: 19, name: '20', cost: 19000, coins: 11 },
-        ], // Krankenhaus
-        '6_normal': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-            { id: 5, name: '6', cost: 100000, coins: 20 },
-            { id: 6, name: '7', cost: 100000, coins: 20 },
-            { id: 7, name: '8', cost: 100000, coins: 20 },
-            { id: 8, name: '9', cost: 100000, coins: 20 },
-            { id: 9, name: '10', cost: 100000, coins: 20 },
-            { id: 10, name: '11', cost: 100000, coins: 20 },
-            { id: 11, name: '12', cost: 100000, coins: 20 },
-            { id: 12, name: '13', cost: 100000, coins: 20 },
-            { id: 13, name: '14', cost: 100000, coins: 20 },
-        ], // Polizeiwache (Normal)
-        '6_small': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-        ], // Polizeiwache (Kleinwache)
-        '15_normal': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-        ], // Wasserrettung
-        '25_normal': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-            { id: 5, name: '6', cost: 100000, coins: 20 },
-            { id: 6, name: '7', cost: 100000, coins: 20 },
-            { id: 7, name: '8', cost: 100000, coins: 20 },
-            { id: 8, name: '9', cost: 100000, coins: 20 },
-            { id: 9, name: '10', cost: 100000, coins: 20 },
-            { id: 10, name: '11', cost: 100000, coins: 20 },
-            { id: 11, name: '12', cost: 100000, coins: 20 },
-            { id: 12, name: '13', cost: 100000, coins: 20 },
-            { id: 13, name: '14', cost: 100000, coins: 20 },
-        ], // Bergrettungswache
-        '26_normal': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-        ], // Seenotrettungswache
-        '29_normal': [
-            { id: 0, name: '1', cost: 10000, coins: 10 },
-            { id: 1, name: '2', cost: 50000, coins: 15 },
-            { id: 2, name: '3', cost: 100000, coins: 20 },
-            { id: 3, name: '4', cost: 100000, coins: 20 },
-            { id: 4, name: '5', cost: 100000, coins: 20 },
-            { id: 5, name: '6', cost: 100000, coins: 20 },
-            { id: 6, name: '7', cost: 100000, coins: 20 },
-            { id: 7, name: '8', cost: 100000, coins: 20 },
-            { id: 8, name: '9', cost: 100000, coins: 20 },
-        ], // Autobahnpolizei
-
+    const manualExtensions = {};
+    const manualStorageRooms = {};
+    const manualLevels = {};
+    const buildingTypeApiMapping = {
+        '0_normal': 0,
+        '0_small': 18,
+        '1_normal': 1,
+        '2_normal': 2,
+        '2_small': 20,
+        '3_normal': 3,
+        '4_normal': 4,
+        '5_normal': 5,
+        '6_normal': 6,
+        '6_small': 19,
+        '8_normal': 8,
+        '9_normal': 9,
+        '10_normal': 10,
+        '11_normal': 11,
+        '12_normal': 12,
+        '13_normal': 13,
+        '15_normal': 15,
+        '16_normal': 16,
+        '17_normal': 17,
+        '24_normal': 24,
+        '25_normal': 25,
+        '26_normal': 26,
+        '27_normal': 27,
+        '29_normal': 29
     };
     const buildingTypeNames = {
         '0_normal': 'Feuerwache (Normal)',
@@ -723,6 +458,7 @@
         '12_normal': 'Schnelleinsatzgruppe (SEG)',
         '13_normal': 'Polizeihubschrauber-Station',
         '15_normal': 'Wasserrettung',
+        '16_normal': 'Verbandszellen',
         '17_normal': 'Polizei-Sondereinheiten',
         '24_normal': 'Reiterstaffel',
         '25_normal': 'Bergrettungswache',
@@ -747,6 +483,234 @@
         activate: null,
         cancel: null
     };
+    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Verbandsgebäude
+    // Robust: Allianz-Info holen und Rechte normalisieren
+    async function getAllianceInfo() {
+        try {
+            const resp = await fetch('/api/allianceinfo');
+            if (!resp.ok) {
+                console.warn('getAllianceInfo: /api/allianceinfo returned', resp.status);
+                return null;
+            }
+
+            const data = await resp.json();
+            let credits_current = Number(data.credits_current ?? data.credits ?? 0);
+            let admin = false, coadmin = false, finance = false;
+            if (typeof data.admin !== 'undefined' || typeof data.coadmin !== 'undefined' || typeof data.finance !== 'undefined') {
+                admin = Boolean(data.admin);
+                coadmin = Boolean(data.coadmin);
+                finance = Boolean(data.finance);
+            }
+            if (data.role_flags && typeof data.role_flags === 'object') {
+                admin = admin || Boolean(data.role_flags.admin);
+                coadmin = coadmin || Boolean(data.role_flags.coadmin);
+                finance = finance || Boolean(data.role_flags.finance || data.role_flags.finanace);
+            }
+            const memberArrays = ['members', 'users', 'memberships', 'members_info'];
+            const foundArrayName = memberArrays.find(k => Array.isArray(data[k]));
+            if (foundArrayName) {
+                const members = data[foundArrayName];
+
+                // Hole aktuelle User-ID
+                let currentUserId = null;
+                try {
+                    const userResp = await fetch('/api/userinfo');
+                    if (userResp.ok) {
+                        const userJson = await userResp.json();
+                        currentUserId = userJson.id ?? userJson.user_id ?? null;
+                    }
+                } catch (e) {
+                    console.debug('getAllianceInfo: konnte /api/userinfo nicht lesen', e);
+                }
+
+                if (currentUserId !== null) {
+                    const me = members.find(m => Number(m.id) === Number(currentUserId) || Number(m.user_id) === Number(currentUserId) || m.name === (window.current_user_name || ''));
+                    if (me) {
+                        if (me.role_flags && typeof me.role_flags === 'object') {
+                            admin = admin || Boolean(me.role_flags.admin);
+                            coadmin = coadmin || Boolean(me.role_flags.coadmin);
+                            finance = finance || Boolean(me.role_flags.finance);
+                        }
+                        admin = admin || Boolean(me.admin || me.is_admin);
+                        coadmin = coadmin || Boolean(me.coadmin);
+                        finance = finance || Boolean(me.finance);
+                    } else {
+                        // Falls kein matching member gefunden: prüfe erstes Mitglied mit role_flags.admin (falls dein User listbar ist)
+                        const anyAdmin = members.find(m => (m.role_flags && m.role_flags.admin) || m.admin || m.role === 'Verbands-Admin');
+                        if (anyAdmin) {
+                        }
+                    }
+                }
+            }
+
+            return { credits_current, admin, coadmin, finance, raw: data };
+        } catch (err) {
+            console.warn('getAllianceInfo error', err);
+            return null;
+        }
+    }
+    async function initAllianceUI() {
+        try {
+            // Hide as default
+            const allianceBtn = document.getElementById('open-alliance-buildings');
+            const allianceInfoDiv = document.getElementById('alliance-info');
+            const allianceCreditsSpan = document.getElementById('current-alliance-credits');
+
+            if (allianceBtn) allianceBtn.style.display = 'none';
+            if (allianceInfoDiv) allianceInfoDiv.style.display = 'none';
+
+            const info = await getAllianceInfo();
+            allianceInfo = info; // setze globale Variable, falls vorhanden
+
+            if (!info) return;
+
+            const hasRights = Boolean(info.admin) || Boolean(info.coadmin) || Boolean(info.finance);
+
+            if (!hasRights) {
+                // Keine Rechte -> nichts anzeigen
+                if (allianceBtn) allianceBtn.style.display = 'none';
+                if (allianceInfoDiv) allianceInfoDiv.style.display = 'none';
+                return;
+            }
+
+            // Hat Rechte: Anzeige aktivieren
+            if (allianceCreditsSpan) allianceCreditsSpan.textContent = (info.credits_current || 0).toLocaleString();
+            const selAllianceSpan = document.getElementById('selected-alliance-credits');
+            if (selAllianceSpan) selAllianceSpan.textContent = '0';
+            if (allianceInfoDiv) allianceInfoDiv.style.display = 'flex';
+
+            if (allianceBtn) {
+                allianceBtn.style.display = 'inline-block';
+                allianceBtn.textContent = 'Verbandsgebäude';
+                // Entferne vorherige Handler, falls mehrfach init aufgerufen
+                allianceBtn.replaceWith(allianceBtn.cloneNode(true));
+                const newBtn = document.getElementById('open-alliance-buildings');
+
+                newBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (currentView === 'alliance') {
+                        currentView = 'personal';
+                        newBtn.textContent = 'Verbandsgebäude';
+                        setLightboxTitleForView();
+                        await fetchBuildingsAndRender();
+                    } else {
+                        currentView = 'alliance';
+                        newBtn.textContent = 'Eigene Wachen';
+                        setLightboxTitleForView();
+                        await fetchAllianceBuildingsAndRender();
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('initAllianceUI error', err);
+        }
+    }
+
+    async function fetchAllianceBuildingsAndRender() {
+    // Bereich befindet sich noch im Aufbau
+    alert('Der Bereich „Verbandsgebäude“ befindet sich noch im Aufbau.');
+
+    currentView = 'personal';
+
+    const allianceBtn = document.getElementById('open-alliance-buildings');
+    if (allianceBtn) allianceBtn.textContent = 'Verbandsgebäude';
+
+    setLightboxTitleForView();
+
+    return;
+
+    const loadingText = document.getElementById('loading-text');
+    const loadingContainer = document.getElementById('loading-container');
+    const extensionList = document.getElementById('extension-list');
+
+    let dotInterval;
+
+    function startLoadingAnimation() {
+        let dots = 0;
+        if (loadingText) loadingText.textContent = 'Lade Verbandsgebäude...';
+
+        dotInterval = setInterval(() => {
+            dots = (dots + 1) % 4;
+            if (loadingText) {
+                loadingText.textContent = 'Lade Verbandsgebäude' + '.'.repeat(dots);
+            }
+        }, 500);
+    }
+
+    function stopLoadingAnimation() {
+        clearInterval(dotInterval);
+    }
+
+    if (loadingContainer) loadingContainer.style.display = 'block';
+    if (extensionList) extensionList.style.display = 'none';
+
+    startLoadingAnimation();
+
+    try {
+        const response = await fetch('/api/alliance_buildings');
+        if (!response.ok) throw new Error('Fehler beim Abrufen der Verbandsgebäude');
+
+        const buildingsData = await response.json();
+
+        // Speichern
+        allianceBuildingsData = buildingsData;
+
+        // Falls allianceInfo noch nicht geladen, lade sie
+        if (!allianceInfo) {
+            allianceInfo = await getAllianceInfo();
+        }
+
+        // Nur anzeigen, wenn Berechtigung besteht
+        const hasRights = allianceInfo &&
+            (allianceInfo.admin || allianceInfo.coadmin || allianceInfo.finance);
+
+        if (hasRights && allianceInfo && document.getElementById('current-alliance-credits')) {
+            document.getElementById('current-alliance-credits').textContent =
+                (allianceInfo.credits_current || 0).toLocaleString();
+
+            const allianceInfoDiv = document.getElementById('alliance-info');
+            if (allianceInfoDiv) allianceInfoDiv.style.display = 'flex';
+        }
+
+        // userInfoOverride so setzen, dass die Anzeige/Buttons auf Verbandscredits prüfen
+        const allianceUserInfo = {
+            credits: allianceInfo ? (allianceInfo.credits_current || 0) : 0,
+            coins: 0,
+            premium: false
+        };
+
+        // Rendern: übergebe buildingsData und userInfoOverride
+        await renderMissingExtensions(buildingsData, allianceUserInfo);
+
+        stopLoadingAnimation();
+
+        if (loadingContainer) loadingContainer.style.display = 'none';
+        if (extensionList) extensionList.style.display = 'block';
+
+    } catch (error) {
+        stopLoadingAnimation();
+
+        if (loadingContainer) loadingContainer.style.display = 'none';
+        if (extensionList) extensionList.style.display = 'block';
+
+        if (extensionList) {
+            extensionList.innerHTML = 'Fehler beim Laden der Verbandsgebäude.';
+        }
+
+        console.error(error);
+    }
+}
+
+    function setLightboxTitleForView() {
+        const titleEl = document.querySelector('#extension-lightbox-content h2');
+        if (!titleEl) return;
+        if (currentView === 'alliance') {
+            titleEl.textContent = 'Verbandsgebäude - Erweiterungs-Manager';
+        } else {
+            titleEl.textContent = 'Dem Erweiterungs-Manager';
+        }
+    }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Bereich für das Userinterface
@@ -901,17 +865,43 @@
         function createExtensionForm() {
             const form = document.createElement('form');
 
-            for (const category in manualExtensions) {
+            for (const category in buildingTypeNames) {
                 const fieldset = document.createElement('fieldset');
                 fieldset.style.marginBottom = '12px';
 
-                const { legend, arrow } = createSpoilerLegend(buildingTypeNames[category] || category);
+                const { legend, arrow } = createSpoilerLegend(
+                    buildingTypeNames[category] || category
+                );
 
                 const content = document.createElement('div');
                 content.style.display = 'none';
                 content.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
                 content.style.gap = '8px';
                 content.style.padding = '8px 0';
+
+                const extensions = manualExtensions[category] || [];
+
+                if (extensions.length === 0) {
+                    const noData = document.createElement('div');
+                    noData.textContent = 'Keine Erweiterungen vorhanden.';
+                    noData.style.opacity = '0.7';
+                    noData.style.fontStyle = 'italic';
+                    noData.style.padding = '6px 0';
+
+                    content.appendChild(noData);
+
+                    legend.addEventListener('click', () => {
+                        const open = content.style.display === 'grid';
+                        content.style.display = open ? 'none' : 'grid';
+                        arrow.textContent = open ? '▶' : '▼';
+                    });
+
+                    fieldset.appendChild(legend);
+                    fieldset.appendChild(content);
+                    form.appendChild(fieldset);
+
+                    continue;
+                }
 
                 const allLabel = document.createElement('label');
                 allLabel.style.gridColumn = '1 / -1';
@@ -934,7 +924,7 @@
 
                 const checkboxes = [];
 
-                manualExtensions[category]
+                extensions
                     .slice()
                     .sort((a, b) => {
                     const aAlpha = /^[A-Za-z]/.test(a.name);
@@ -943,10 +933,13 @@
                     if (aAlpha && !bAlpha) return -1;
                     if (!aAlpha && bAlpha) return 1;
 
-                    return a.name.localeCompare(b.name, 'de', { numeric: true });
+                    return a.name.localeCompare(b.name, 'de', {
+                        numeric: true
+                    });
                 })
                     .forEach(ext => {
                     const key = `${category}_${ext.id}`;
+
                     const label = document.createElement('label');
                     label.style.display = 'flex';
                     label.style.alignItems = 'center';
@@ -954,22 +947,28 @@
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.checked = settings[key];
+                    checkbox.checked = settings[key] ?? true;
                     checkbox.dataset.key = key;
 
                     checkbox.addEventListener('change', () => {
                         settings[key] = checkbox.checked;
-                        const allChecked = checkboxes.every(cb => cb.checked);
-                        selectAllCheckbox.checked = allChecked;
+
+                        selectAllCheckbox.checked =
+                            checkboxes.length > 0 &&
+                            checkboxes.every(cb => cb.checked);
                     });
 
                     label.appendChild(checkbox);
                     label.append(` ${ext.name}`);
+
                     content.appendChild(label);
                     checkboxes.push(checkbox);
                 });
 
-                selectAllCheckbox.checked = checkboxes.every(cb => cb.checked);
+                selectAllCheckbox.checked =
+                    checkboxes.length > 0 &&
+                    checkboxes.every(cb => cb.checked);
+
                 selectAllCheckbox.addEventListener('change', () => {
                     checkboxes.forEach(cb => {
                         cb.checked = selectAllCheckbox.checked;
@@ -995,10 +994,18 @@
             const form = document.createElement('form');
 
             for (const category in manualStorageRooms) {
+                const storageRooms = manualStorageRooms[category];
+
+                if (!Array.isArray(storageRooms) || storageRooms.length === 0) {
+                    continue;
+                }
+
                 const fieldset = document.createElement('fieldset');
                 fieldset.style.marginBottom = '12px';
 
-                const {legend, arrow} = createSpoilerLegend(buildingTypeNames[category] || category);
+                const { legend, arrow } = createSpoilerLegend(
+                    buildingTypeNames[category] || category
+                );
 
                 const content = document.createElement('div');
                 content.style.display = 'none';
@@ -1006,7 +1013,6 @@
                 content.style.gap = '8px';
                 content.style.padding = '8px 0';
 
-                // Alle an-/abwählen Checkbox
                 const allLabel = document.createElement('label');
                 allLabel.style.gridColumn = '1 / -1';
                 allLabel.style.display = 'flex';
@@ -1028,8 +1034,10 @@
 
                 const checkboxes = [];
 
-                manualStorageRooms[category].forEach(room => {
-                    const key = `${category}_storage_${room.name.replace(/\s+/g, '_')}`;
+                storageRooms.forEach(room => {
+                    const key =
+                          `${category}_storage_${room.name.replace(/\s+/g, '_')}`;
+
                     const label = document.createElement('label');
                     label.style.display = 'flex';
                     label.style.alignItems = 'center';
@@ -1037,22 +1045,28 @@
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.checked = settings[key];
+                    checkbox.checked = settings[key] ?? true;
                     checkbox.dataset.key = key;
 
                     checkbox.addEventListener('change', () => {
                         settings[key] = checkbox.checked;
-                        const allChecked = checkboxes.every(cb => cb.checked);
-                        selectAllCheckbox.checked = allChecked;
+
+                        selectAllCheckbox.checked =
+                            checkboxes.length > 0 &&
+                            checkboxes.every(cb => cb.checked);
                     });
 
                     label.appendChild(checkbox);
                     label.append(` ${room.name}`);
+
                     content.appendChild(label);
                     checkboxes.push(checkbox);
                 });
 
-                selectAllCheckbox.checked = checkboxes.every(cb => cb.checked);
+                selectAllCheckbox.checked =
+                    checkboxes.length > 0 &&
+                    checkboxes.every(cb => cb.checked);
+
                 selectAllCheckbox.addEventListener('change', () => {
                     checkboxes.forEach(cb => {
                         cb.checked = selectAllCheckbox.checked;
@@ -1260,6 +1274,15 @@
             document.getElementById('selected-coins').textContent = "0";
 
             checkPremiumAndShowHint();
+            loadManualDataFromLSSM();
+            applyTheme();
+            checkPremiumStatus();
+            getAllianceInfo();
+            initAllianceUI();
+            initUserCredits();
+            fetchBuildingsAndRender();
+            updateBuildSelectedButton();
+            startConstructionCountdowns();
         });
         menuButton.appendChild(link);
 
@@ -1277,7 +1300,7 @@
         var scripts = document.getElementsByTagName('script');
         for (var i = 0; i < scripts.length; i++) {
             var scriptContent = scripts[i].textContent;
-            var premiumMatch = scriptContent.match(/var user_premium\s*=\s*(true|false);/);
+            var premiumMatch = scriptContent.match(/user_premium\s*=\s*(true|false);/);
             if (premiumMatch) {
                 user_premium = (premiumMatch[1] === 'true');
                 break;
@@ -1360,6 +1383,121 @@
             return building.caption;
         }
         return 'Unbekanntes Gebäude';
+    }
+
+    // Daten vom der LSSM API beziehen
+    async function loadManualDataFromLSSM() {
+        const response = await fetch(
+            'https://api.lss-manager.de/de_DE/buildings',
+            {
+                method: 'GET',
+                cache: 'no-store'
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`[LSSM] API HTTP-Fehler: ${response.status}`);
+        }
+
+        const json = await response.json();
+        const buildings = json?.buildings ?? json;
+
+        if (!buildings || typeof buildings !== 'object') {
+            throw new Error('[LSSM] Ungültige Gebäude-Daten erhalten.');
+        }
+
+        const extensionsData = {};
+        const storageData = {};
+        const levelsData = {};
+
+        for (const [key, apiId] of Object.entries(buildingTypeApiMapping)) {
+            const building = buildings[String(apiId)];
+
+            if (!building) {
+                console.warn(
+                    `[LSSM] Gebäudetyp ${apiId} für "${key}" wurde nicht gefunden.`
+                );
+                continue;
+            }
+
+            if (Array.isArray(building.extensions)) {
+                extensionsData[key] = building.extensions
+                    .map((extension, id) => {
+                    if (!extension) return null;
+
+                    return {
+                        id,
+                        name: extension.caption ?? `Erweiterung ${id}`,
+                        cost: Number(extension.credits ?? 0),
+                        coins: Number(extension.coins ?? 0)
+                    };
+                })
+                    .filter(Boolean);
+            }
+            if (
+                building.storageUpgrades &&
+                typeof building.storageUpgrades === 'object'
+            ) {
+                storageData[key] = Object.entries(building.storageUpgrades)
+                    .map(([id, storage]) => {
+                    if (!storage) return null;
+
+                    return {
+                        id,
+                        name: storage.caption ?? id,
+                        cost: Number(storage.credits ?? 0),
+                        coins: Number(storage.coins ?? 0),
+                        additionalStorage: Number(
+                            storage.additionalStorage ?? 0
+                        )
+                    };
+                })
+                    .filter(Boolean);
+            }
+
+            if (
+                building.levelPrices &&
+                Array.isArray(building.levelPrices.credits)
+            ) {
+                const credits = building.levelPrices.credits;
+
+                const coins = Array.isArray(building.levelPrices.coins)
+                ? building.levelPrices.coins
+                : [];
+
+                levelsData[key] = credits.map((cost, id) => ({
+                    id: id + 1,
+                    name: String(id + 1),
+                    cost: Number(cost ?? 0),
+                    coins: Number(coins[id] ?? 0)
+                }));
+            }
+        }
+
+        // Die drei bestehenden Variablen befüllen
+        Object.assign(manualExtensions, extensionsData);
+        Object.assign(manualStorageRooms, storageData);
+        Object.assign(manualLevels, levelsData);
+    }
+
+    function buildDefaultExtensionSettings() {
+        const defaults = {};
+
+        // Erweiterungen
+        for (const category in manualExtensions) {
+            for (const ext of manualExtensions[category]) {
+                defaults[`${category}_${ext.id}`] = true;
+            }
+        }
+
+        // Lagerräume
+        for (const category in manualStorageRooms) {
+            for (const room of manualStorageRooms[category]) {
+                const key = `${category}_storage_${room.name.replace(/\s+/g, '_')}`;
+                defaults[key] = true;
+            }
+        }
+        return defaults;
     }
 
     // Funktion um alle Daten zu sammeln
@@ -1491,7 +1629,7 @@
 
     // Funktion um die Tabellen mit Daten zu füllen
     async function renderMissingExtensions(buildings) {
-        const userInfo = await getUserCredits();
+        const userInfo = (typeof arguments[1] !== 'undefined' && arguments[1]) ? arguments[1] : await getUserCredits();
         const list = document.getElementById('extension-list');
         list.innerHTML = '';
 
@@ -2526,9 +2664,10 @@
             }
 
             if (selectedLevelId >= currentLevel) {
-                for (let i = currentLevel; i <= selectedLevelId; i++) {
-                    const stufe = levelList[i];
+                for (let levelId = currentLevel + 1; levelId <= selectedLevelId; levelId++) {
+                    const stufe = levelList.find(level => level.id === levelId);
                     if (!stufe) continue;
+
                     totalCredits += stufe.cost || 0;
                     totalCoins += stufe.coins || 0;
                 }
@@ -2730,18 +2869,27 @@
 
         // Alle möglichen Stufen bestimmen
         const allLevelIds = new Set();
+
         group.forEach(({ building }) => {
             const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
             const levelList = manualLevels[key];
-            if (levelList) levelList.forEach(l => allLevelIds.add(l.id + 1)); // Anzeige 1-basiert
+
+            if (levelList) {
+                levelList.forEach(level => allLevelIds.add(level.id));
+            }
         });
 
         const sortedLevels = [...allLevelIds].sort((a, b) => a - b);
-        globalLevelSelect.innerHTML = `<option value="">🔽 Globale Stufenauswahl</option>`;
-        sortedLevels.forEach(lvl => {
+
+        globalLevelSelect.innerHTML =
+            `<option value="">🔽 Globale Stufenauswahl</option>`;
+
+        sortedLevels.forEach(levelId => {
             const opt = document.createElement('option');
-            opt.value = lvl - 1; // intern 0-basiert
-            opt.textContent = `Stufe ${lvl}`;
+
+            opt.value = levelId;
+            opt.textContent = `Stufe ${levelId}`;
+
             globalLevelSelect.appendChild(opt);
         });
 
@@ -2761,7 +2909,7 @@
                 if (!levelList) return;
 
                 // Nur setzen, wenn Stufe gültig ist
-                if (selectedLevelId < levelList.length && selectedLevelId >= levelInfo.currentLevel) {
+                if (selectedLevelId <= levelList.length && selectedLevelId > levelInfo.currentLevel) {
                     selectedLevels[buildingData.building.id] = selectedLevelId;
 
                     const levelChoiceCell = row.children[3];
@@ -2879,63 +3027,117 @@
             // Credit- und Coin-Buttons initial auf 0 setzen
             updateBuildButtons(building, null, creditCell, coinCell, levelList, currentLevel);
 
-            // Level-Auswahl Buttons
+            if (!levelInfo) return;
+
+            const nextLevel = levelInfo.next;
+
+            levelChoiceCell.style.padding = '8px';
+            levelChoiceCell.style.textAlign = 'center';
+            creditCell.style.textAlign = 'center';
+            coinCell.style.textAlign = 'center';
+
+            row.appendChild(leitstelleCell);
+            row.appendChild(wacheCell);
+            row.appendChild(currentLevelCell);
+            row.appendChild(levelChoiceCell);
+            row.appendChild(creditCell);
+            row.appendChild(coinCell);
+
+            updateBuildButtons(
+                building,
+                null,
+                creditCell,
+                coinCell,
+                levelList,
+                currentLevel
+            );
+
+            // Level-Auswahl
             levelList.forEach(stufe => {
-                if (stufe.id >= currentLevel) {
-                    const lvlBtn = document.createElement('button');
-                    lvlBtn.textContent = (stufe.id + 1).toString();
-                    lvlBtn.className = 'expand_direct';
-                    lvlBtn.setAttribute('level', stufe.id.toString());
-                    lvlBtn.style.display = 'inline-block';
-                    lvlBtn.style.padding = '2px 6px';
-                    lvlBtn.style.margin = '0 2px';
-                    lvlBtn.style.fontSize = '11px';
-                    lvlBtn.style.borderRadius = '12px';
-                    lvlBtn.style.border = 'none';
-                    lvlBtn.style.cursor = 'pointer';
-                    lvlBtn.style.fontWeight = 'bold';
-                    lvlBtn.style.transition = 'background-color 0.2s, color 0.2s';
-                    lvlBtn.dataset.active = 'false';
+                // Bereits erreichte Stufen niemals anzeigen
+                if (stufe.id <= currentLevel) return;
 
-                    lvlBtn.addEventListener('mouseenter', () => {
-                        if (lvlBtn.dataset.active !== 'true') {
-                            lvlBtn.style.backgroundColor = isDarkMode() ? '#666' : '#ccc';
-                        }
-                    });
-                    lvlBtn.addEventListener('mouseleave', () => {
-                        if (lvlBtn.dataset.active !== 'true') {
-                            updateButtonColors(levelChoiceCell);
-                        }
-                    });
+                const lvlBtn = document.createElement('button');
 
-                    lvlBtn.onclick = () => {
-                        let totalCredits = 0;
-                        let totalCoins = 0;
-                        for (let i = currentLevel; i <= stufe.id; i++) {
-                            const s = levelList[i];
-                            if (!s) continue;
-                            totalCredits += s.cost || 0;
-                            totalCoins += s.coins || 0;
-                        }
+                lvlBtn.textContent = stufe.id.toString();
+                lvlBtn.className = 'expand_direct';
+                lvlBtn.setAttribute('level', stufe.id.toString());
+                lvlBtn.style.display = 'inline-block';
+                lvlBtn.style.padding = '2px 6px';
+                lvlBtn.style.margin = '0 2px';
+                lvlBtn.style.fontSize = '11px';
+                lvlBtn.style.borderRadius = '12px';
+                lvlBtn.style.border = 'none';
+                lvlBtn.style.cursor = 'pointer';
+                lvlBtn.style.fontWeight = 'bold';
+                lvlBtn.style.transition = 'background-color 0.2s, color 0.2s';
+                lvlBtn.dataset.active = 'false';
 
-                        const canPayWithCredits = userInfo.credits >= totalCredits && totalCredits > 0;
-                        const canPayWithCoins = userInfo.coins >= totalCoins && totalCoins > 0;
-                        if (!canPayWithCredits && !canPayWithCoins) {
-                            alert('Nicht genug Credits oder Coins für diese Stufe!');
-                            return;
-                        }
+                lvlBtn.addEventListener('mouseenter', () => {
+                    if (lvlBtn.dataset.active !== 'true') {
+                        lvlBtn.style.backgroundColor = isDarkMode() ? '#666' : '#ccc';
+                    }
+                });
 
-                        levelChoiceCell.querySelectorAll('button').forEach(btn => btn.dataset.active = 'false');
-                        lvlBtn.dataset.active = 'true';
+                lvlBtn.addEventListener('mouseleave', () => {
+                    if (lvlBtn.dataset.active !== 'true') {
                         updateButtonColors(levelChoiceCell);
-                        selectedLevels[building.id] = stufe.id;
-                        updateBuildButtons(building, stufe.id, creditCell, coinCell, levelList, currentLevel);
-                        updateSelectedAmounts(buildingsData);
-                        updateBuildSelectedLevelsButtonState(group);
-                    };
+                    }
+                });
 
-                    levelChoiceCell.appendChild(lvlBtn);
-                }
+                lvlBtn.onclick = () => {
+                    let totalCredits = 0;
+                    let totalCoins = 0;
+
+                    for (
+                        let levelId = currentLevel + 1;
+                        levelId <= stufe.id;
+                        levelId++
+                    ) {
+                        const s = levelList.find(level => level.id === levelId);
+                        if (!s) continue;
+
+                        totalCredits += s.cost || 0;
+                        totalCoins += s.coins || 0;
+                    }
+
+                    const canPayWithCredits =
+                          userInfo.credits >= totalCredits && totalCredits > 0;
+
+                    const canPayWithCoins =
+                          userInfo.coins >= totalCoins && totalCoins > 0;
+
+                    if (!canPayWithCredits && !canPayWithCoins) {
+                        alert('Nicht genug Credits oder Coins für diese Stufe!');
+                        return;
+                    }
+
+                    levelChoiceCell
+                        .querySelectorAll('button')
+                        .forEach(btn => {
+                        btn.dataset.active = 'false';
+                    });
+
+                    lvlBtn.dataset.active = 'true';
+
+                    updateButtonColors(levelChoiceCell);
+
+                    selectedLevels[building.id] = stufe.id;
+
+                    updateBuildButtons(
+                        building,
+                        stufe.id,
+                        creditCell,
+                        coinCell,
+                        levelList,
+                        currentLevel
+                    );
+
+                    updateSelectedAmounts(buildingsData);
+                    updateBuildSelectedLevelsButtonState(group);
+                };
+
+                levelChoiceCell.appendChild(lvlBtn);
             });
 
             // Reset-Button pro Zeile
@@ -3005,52 +3207,72 @@
             totalCoins += Number(cb.dataset.coinCost) || 0;
         });
 
-        // Alle Gebäude durchgehen
+        // Alle Gebäude durchgehen (Level-Auswahl)
         buildingsData.forEach(building => {
             const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
             const levelList = manualLevels[key];
             if (!levelList) return;
 
-            const apiLevel = getBuildingLevelInfo(building)?.currentLevel ?? 0;
-            let currentLevelIndex = levelList.findIndex(l => Number(l.name) === Number(apiLevel));
-            if (currentLevelIndex === -1) currentLevelIndex = -1;
+            const currentLevel = getBuildingLevelInfo(building)?.currentLevel ?? -1;
+            const selectedLevel = selectedLevels[building.id] ?? null;
 
-            const selectedLevelIndex = selectedLevels[building.id] ?? currentLevelIndex;
+            if (selectedLevel === null || selectedLevel <= currentLevel) return;
 
-            if (selectedLevelIndex <= currentLevelIndex) return;
-
-            for (let i = currentLevelIndex + 1; i <= selectedLevelIndex; i++) {
-                const stufe = levelList[i];
+            // Vom aktuellen Level bis zum ausgewählten Level alle Kosten addieren
+            for (let levelId = currentLevel + 1; levelId <= selectedLevel; levelId++) {
+                const stufe = levelList.find(l => l.id === levelId);
                 if (!stufe) continue;
                 totalCredits += stufe.cost || 0;
                 totalCoins += stufe.coins || 0;
             }
         });
 
-        // Ergebnisse anzeigen
-        document.getElementById('selected-credits').textContent = totalCredits.toLocaleString();
-        document.getElementById('selected-coins').textContent = totalCoins.toLocaleString();
+        // Elemente
+        const selectedCreditsSpan = document.getElementById('selected-credits');
+        const selectedCoinsSpan = document.getElementById('selected-coins');
+        const selectedAllianceCreditsSpan = document.getElementById('selected-alliance-credits');
 
-        // Prüfen, ob Spieler genug Guthaben hat
-        const canPayAllWithCredits = currentCredits >= totalCredits;
-        const canPayAllWithCoins = currentCoins >= totalCoins;
+        // Je nach View nur das eine Feld füllen und das andere zurücksetzen
+        if (currentView === 'alliance') {
+            if (selectedAllianceCreditsSpan) selectedAllianceCreditsSpan.textContent = totalCredits.toLocaleString();
+            if (selectedCreditsSpan) selectedCreditsSpan.textContent = '0';
 
-        if (!canPayAllWithCredits && !canPayAllWithCoins) {
+            if (selectedCoinsSpan) selectedCoinsSpan.textContent = totalCoins.toLocaleString();
 
-            const missingCredits = Math.max(0, totalCredits - currentCredits);
-            const missingCoins = Math.max(0, totalCoins - currentCoins);
+            // Prüfen auf Verbands-Credits (AllianceInfo verwenden)
+            const allianceCreditsAvailable = allianceInfo ? Number(allianceInfo.credits_current || 0) : 0;
+            const canPayAllWithAllianceCredits = allianceCreditsAvailable >= totalCredits;
+            const canPayAllWithCoins = currentCoins >= totalCoins; // Coins evtl. weiterhin personal
 
-            let message = "Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n";
+            // Optional: Button-Disabling / Warnung (wie vorher)
+            if (!canPayAllWithAllianceCredits && !canPayAllWithCoins) {
+                const missingAlliance = Math.max(0, totalCredits - allianceCreditsAvailable);
+                const missingCoins = Math.max(0, totalCoins - currentCoins);
 
-            if (missingCredits > 0) {
-                message += `Fehlende Credits: ${formatNumber(missingCredits)}\n`;
+                let message = "Deine Auswahl übersteigt das Verbandsguthaben bzw. deine Coins.\n\n";
+                if (missingAlliance > 0) message += `Fehlende Verbands-Credits: ${formatNumber(missingAlliance)}\n`;
+                if (missingCoins > 0) message += `Fehlende Coins: ${formatNumber(missingCoins)}\n`;
+                // Nur Hinweis, kein Block (so wie vorher)
+                alert(message);
             }
+        } else {
+            // personal view
+            if (selectedCreditsSpan) selectedCreditsSpan.textContent = totalCredits.toLocaleString();
+            if (selectedAllianceCreditsSpan) selectedAllianceCreditsSpan.textContent = '0';
+            if (selectedCoinsSpan) selectedCoinsSpan.textContent = totalCoins.toLocaleString();
 
-            if (missingCoins > 0) {
-                message += `Fehlende Coins: ${missingCoins}\n`;
+            const canPayAllWithCredits = currentCredits >= totalCredits;
+            const canPayAllWithCoins = currentCoins >= totalCoins;
+
+            if (!canPayAllWithCredits && !canPayAllWithCoins) {
+                const missingCredits = Math.max(0, totalCredits - currentCredits);
+                const missingCoins = Math.max(0, totalCoins - currentCoins);
+
+                let message = "Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n";
+                if (missingCredits > 0) message += `Fehlende Credits: ${formatNumber(missingCredits)}\n`;
+                if (missingCoins > 0) message += `Fehlende Coins: ${formatNumber(missingCoins)}\n`;
+                alert(message);
             }
-
-            alert(message);
         }
     }
 
@@ -3479,7 +3701,7 @@
             selectedStoragesByBuilding[buildingId].push(storageType);
         });
 
-        // === Prüfung auf ungültige Erweiterungen für Kleinwachen ===
+        // Prüfung auf ungültige Erweiterungen für Kleinwachen
         for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
             const building = buildingsData.find(b => String(b.id) === String(buildingId));
             if (!building) continue;
@@ -3515,7 +3737,7 @@
             }
         }
 
-        // === Prüfung Lagerreihenfolge wachenweise ===
+        // Prüfung Lagerreihenfolge wachenweise
         for (const [buildingId, storageTypes] of Object.entries(selectedStoragesByBuilding)) {
             if (!canBuildAllSelectedInOrder(buildingId, storageTypes)) {
                 showError(`Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n...`);
@@ -3524,8 +3746,17 @@
             }
         }
 
-        // === Credits und Coins berechnen ===
-        const userInfo = await getUserCredits();
+        // Credits und Coins berechnen
+        let userInfo;
+        if (currentView === 'alliance') {
+            userInfo = {
+                credits: allianceInfo ? Number(allianceInfo.credits_current || 0) : 0,
+                coins: 0,
+                premium: false
+            };
+        } else {
+            userInfo = await getUserCredits();
+        }
         let totalCredits = 0;
         let totalCoins = 0;
 
@@ -3886,55 +4117,65 @@
     // Funktion zum Bau der ausgewählten Stufen
     async function buildSelectedLevelsAll(buildingsData, userInfo) {
 
-        let totalCredits = 0;
-        let totalCoins = 0;
-        const levelRows = [];
+    let totalCredits = 0;
+    let totalCoins = 0;
+    const levelRows = [];
 
-        for (const building of buildingsData) {
-            const level = selectedLevels[building.id];
-            if (level === undefined || level === null) continue;
+    for (const building of buildingsData) {
+        const level = selectedLevels[building.id];
+        if (level === undefined || level === null) continue;
 
-            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const levelList = manualLevels[key];
-            if (!levelList) continue;
+        const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+        const levelList = manualLevels[key];
+        if (!levelList) continue;
 
-            const currentLevel = getBuildingLevelInfo(building)?.currentLevel ?? -1;
+        const currentLevel = getBuildingLevelInfo(building)?.currentLevel ?? -1;
 
-            const start = currentLevel === -1 ? 0 : Math.min(currentLevel, level);
-            const end = Math.max(currentLevel, level);
+        // Startet bei der nächsten Stufe nach currentLevel (bei nicht vorhandenem Gebäude: Stufe 1)
+        const startLevel = currentLevel >= 0 ? currentLevel + 1 : 1;
+        const targetLevel = Number(level);
 
-            let buildingCredits = 0;
-            let buildingCoins = 0;
+        // Falls nichts zu tun (z.B. ausgewählte Stufe <= aktuelles Level), überspringen
+        if (targetLevel < startLevel) continue;
 
-            for (let i = start; i <= end; i++) {
-                const stufe = levelList[i];
-                if (!stufe) continue;
-                buildingCredits += stufe.cost || 0;
-                buildingCoins += stufe.coins || 0;
-            }
+        let buildingCredits = 0;
+        let buildingCoins = 0;
 
-            if (buildingCredits === 0 && buildingCoins === 0) continue;
-
-            totalCredits += buildingCredits;
-            totalCoins += buildingCoins;
-
-            levelRows.push({
-                buildingId: building.id,
-                targetLevel: level,
-                buildingCredits,
-                buildingCoins
-            });
+        // Summiere Levelkosten anhand der Level-IDs (nicht Array-Indizes)
+        for (let levelId = startLevel; levelId <= targetLevel; levelId++) {
+            const stufe = levelList.find(l => Number(l.id) === levelId);
+            if (!stufe) continue;
+            buildingCredits += Number(stufe.cost || 0);
+            buildingCoins += Number(stufe.coins || 0);
         }
 
-        if (levelRows.length === 0) {
-            alert("Keine Leveländerungen ausgewählt.");
-            return;
-        }
+        if (buildingCredits === 0 && buildingCoins === 0) continue;
 
-        // Übergabe von userInfo, hier befüllt mit den globalen Werten
-        userInfo = userInfo || { credits: currentCredits, coins: currentCoins };
-        await showCurrencySelectionForLevelsAll(levelRows, userInfo, totalCredits, totalCoins);
+        totalCredits += buildingCredits;
+        totalCoins += buildingCoins;
+
+        levelRows.push({
+            buildingId: building.id,
+            targetLevel,
+            buildingCredits,
+            buildingCoins
+        });
     }
+
+    if (levelRows.length === 0) {
+        alert("Keine Leveländerungen ausgewählt.");
+        return;
+    }
+
+    // Übergabe von userInfo wie bisher
+    let runtimeUserInfo;
+    if (currentView === 'alliance') {
+        runtimeUserInfo = { credits: allianceInfo ? Number(allianceInfo.credits_current || 0) : 0, coins: 0 };
+    } else {
+        runtimeUserInfo = { credits: currentCredits, coins: currentCoins };
+    }
+    await showCurrencySelectionForLevelsAll(levelRows, runtimeUserInfo, totalCredits, totalCoins);
+}
 
     // Funktion um den Ausgewählte Stufen Button zu aktivieren
     function updateBuildSelectedLevelsButtonState(group) {
@@ -4068,27 +4309,22 @@
         creditsButton.style.cursor = creditsButton.disabled ? 'not-allowed' : 'pointer';
 
         creditsButton.onclick = async () => {
-            const progress = showProgress();
-            let done = 0;
+    const progress = showProgress();
+    let done = 0;
 
-            for (const lvl of levelRows) {
-                if (userInfo.credits < lvl.buildingCredits) {
-                    alert(`Nicht genügend Credits für Gebäude ID ${lvl.buildingId}`);
-                    break;
-                }
+    // Einfach bauen ohne einzeln zu prüfen - Gesamtprüfung erfolgt vorher
+    for (const lvl of levelRows) {
+        await buildLevel(lvl.buildingId, 'credits', lvl.targetLevel);
+        done++;
+        progress.update(done);
+    }
 
-                await buildLevel(lvl.buildingId, 'credits', lvl.targetLevel);
-                userInfo.credits -= lvl.buildingCredits;
-                done++;
-                progress.update(done);
-            }
+    progress.close();
+    document.body.removeChild(selectionDiv);
 
-            progress.close();
-            document.body.removeChild(selectionDiv);
-
-            initUserCredits();       // aktualisiert globale Werte
-            fetchBuildingsAndRender(); // rendert alles neu
-        };
+    initUserCredits();       // aktualisiert globale Werte
+    fetchBuildingsAndRender(); // rendert alles neu
+};
 
         const coinsButton = document.createElement('button');
         coinsButton.className = 'currency-button coins-button';
@@ -4103,28 +4339,21 @@
         coinsButton.style.cursor = coinsButton.disabled ? 'not-allowed' : 'pointer';
 
         coinsButton.onclick = async () => {
-            const progress = showProgress();
-            let done = 0;
+    const progress = showProgress();
+    let done = 0;
 
-            for (const lvl of levelRows) {
-                if (userInfo.coins < lvl.buildingCoins) {
-                    alert(`Nicht genügend Coins für Gebäude ID ${lvl.buildingId}`);
-                    break;
-                }
-                userInfo.coins -= lvl.buildingCoins;
+    for (const lvl of levelRows) {
+        await buildLevel(lvl.buildingId, 'coins', lvl.targetLevel);
+        done++;
+        progress.update(done);
+    }
 
-                await buildLevel(lvl.buildingId, 'coins', lvl.targetLevel);
-                userInfo.credits -= lvl.buildingCredits;
-                done++;
-                progress.update(done);
-            }
+    progress.close();
+    document.body.removeChild(selectionDiv);
 
-            progress.close();
-            document.body.removeChild(selectionDiv);
-
-            initUserCredits();       // aktualisiert globale Werte
-            fetchBuildingsAndRender(); // rendert alles neu
-        };
+    initUserCredits();
+    fetchBuildingsAndRender();
+};
 
         const cancelButton = document.createElement('button');
         cancelButton.className = 'cancel-button';
@@ -4174,7 +4403,12 @@
             });
         });
 
-        const userInfo = await getUserCredits();
+        let userInfo;
+        if (currentView === 'alliance') {
+            userInfo = { credits: allianceInfo ? Number(allianceInfo.credits_current || 0) : 0, coins: 0 };
+        } else {
+            userInfo = await getUserCredits();
+        }
         const fehlendeCredits = Math.max(0, totalCredits - userInfo.credits);
         const fehlendeCoins = Math.max(0, totalCoins - userInfo.coins);
 
@@ -5058,11 +5292,6 @@
     });
 
     // Initiale Aufrufe
-    applyTheme();
     addMenuButton();
-    checkPremiumStatus();
-    initUserCredits();
-    fetchBuildingsAndRender();
-    updateBuildSelectedButton();
-    startConstructionCountdowns();
+
 })();
