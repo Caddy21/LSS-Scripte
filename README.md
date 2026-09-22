@@ -116,4 +116,8 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Leitstellensortierer
     - Parkplätze ausblenden
     - Icon-Manager
+    - Fahrzeugdatenkopierer
+    - POI-Manager
+    - THW Dienstzeiten
+    - AB-Manager
 </details>
