@@ -15,11 +15,12 @@
 
     function ensureMenu() {
         if (window.CADDY_MENU) return window.CADDY_MENU;
+
         const profileLink = document.querySelector('#navbar_profile_link');
         if (!profileLink) return null;
         const parentLi = profileLink.closest('li');
         if (!parentLi) return null;
-        
+
         const rootLi = document.createElement('li');
         rootLi.id = 'caddy_menu_root';
         rootLi.setAttribute('role', 'presentation');
@@ -78,10 +79,12 @@
                 const li = document.createElement('li');
                 li.id = id;
                 li.setAttribute('role', 'presentation');
+                // existierendes Element einfach reinpacken
                 li.appendChild(existingElement);
                 subUl.appendChild(li);
             }
         };
+
         return window.CADDY_MENU;
     }
 
@@ -89,10 +92,11 @@
         const menu = ensureMenu();
         const origBtn = document.querySelector(selector);
         if (!origBtn || !menu) return;
+
         menu.addItem({ id, label, existingElement: origBtn });
     }
 
-    // Hier gibt es Buttons, die gibt es (noch) gar nicht!
+    // Vorhandene Buttons verschieben
     setTimeout(() => {
         migrateButton('#lss_mb_open', 'mass-builder-btn', 'Bau-Manager');
         migrateButton('#open-extension-helper', 'extension-manager-btn', 'Erweiterungs-Manager');
@@ -104,6 +108,9 @@
         migrateButton('#multiausblender-settings-btn', 'multiausblender-btn', 'Multiausblender');
         migrateButton('#open-icon-manager', 'open-icon-manager', 'Gebäudegrafiken');
         migrateButton('#open-thw-working-hours-manager', 'open-thw-working-hours-manager-btn', 'THW-Arbeitszeiten');
-        migrateButton('#open-lss-massenbearbeiter', 'open-lss-massenbearbeiter', 'Wachen-Massenbearbeiter');     
+        migrateButton('#open-lss-massenbearbeiter', 'open-lss-massenbearbeiter', 'Wachen-Massenbearbeiter');
+        migrateButton('#ab-settings-menu', 'ab-settings-menu', 'Abrollbehälter-Manager');
+       
     }, 10000);
+
 })();
