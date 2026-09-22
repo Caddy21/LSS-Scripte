@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Scriptmenü
+// @name         [LSS] 48 - Scriptmenü
 // @namespace    https://www.leitstellenspiel.de/caddy
 // @version      1.0
 // @description  Zentraler Ort für die Menüeinträge vom Erweiterungs-Manager, Fahrzeug-Manager, Multiausblender, Personalübersicht und Massenbauer
@@ -15,12 +15,11 @@
 
     function ensureMenu() {
         if (window.CADDY_MENU) return window.CADDY_MENU;
-
         const profileLink = document.querySelector('#navbar_profile_link');
         if (!profileLink) return null;
         const parentLi = profileLink.closest('li');
         if (!parentLi) return null;
-
+        
         const rootLi = document.createElement('li');
         rootLi.id = 'caddy_menu_root';
         rootLi.setAttribute('role', 'presentation');
@@ -30,10 +29,11 @@
         rootA.href = '#';
         rootA.style.cursor = 'pointer';
         rootA.innerHTML = `
-              <i class="glyphicon glyphicon-wrench" style="margin-right:6px;"></i>
-              Scripte
-              <span style="float:right;">▶</span>
-            `;
+          <img src="https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png"
+               style="width:27px; height:27px; margin-right:6px; object-fit:contain; vertical-align:middle;">
+          Caddy's Scripte
+          <span style="float:right;">▶</span>
+        `;
 
         const subUl = document.createElement('ul');
         subUl.className = 'caddy-flyout-menu';
@@ -78,12 +78,10 @@
                 const li = document.createElement('li');
                 li.id = id;
                 li.setAttribute('role', 'presentation');
-                // existierendes Element einfach reinpacken
                 li.appendChild(existingElement);
                 subUl.appendChild(li);
             }
         };
-
         return window.CADDY_MENU;
     }
 
@@ -91,19 +89,21 @@
         const menu = ensureMenu();
         const origBtn = document.querySelector(selector);
         if (!origBtn || !menu) return;
-
         menu.addItem({ id, label, existingElement: origBtn });
     }
 
-    // Beispiele: vorhandene Buttons verschieben
+    // Hier gibt es Buttons, die gibt es (noch) gar nicht!
     setTimeout(() => {
         migrateButton('#lss_mb_open', 'mass-builder-btn', 'Bau-Manager');
         migrateButton('#open-extension-helper', 'extension-manager-btn', 'Erweiterungs-Manager');
         migrateButton('#fahrzeug-manager-btn', 'fahrzeug-manager-btn', 'Fahrzeug-Manager');
-        migrateButton('#multiausblender-settings-btn', 'multiausblender-btn', 'Multiausblender');
+        migrateButton('#open-trailer-manager', 'open-trailer-manager-btn', 'Anhänger-Manager');
         migrateButton('#Personalübersicht', 'personal-overview-btn', 'Personalübersicht');
         migrateButton('#open-alias-manager', 'open-alias-manager-btn', 'Wachenalias-Manager');
-
-    }, 1000);
-
+        migrateButton('#lssfm-open-menu', 'lssfm-open-menu-btn', 'Fleet Manager');
+        migrateButton('#multiausblender-settings-btn', 'multiausblender-btn', 'Multiausblender');
+        migrateButton('#open-icon-manager', 'open-icon-manager', 'Gebäudegrafiken');
+        migrateButton('#open-thw-working-hours-manager', 'open-thw-working-hours-manager-btn', 'THW-Arbeitszeiten');
+        migrateButton('#open-lss-massenbearbeiter', 'open-lss-massenbearbeiter', 'Wachen-Massenbearbeiter');     
+    }, 10000);
 })();
