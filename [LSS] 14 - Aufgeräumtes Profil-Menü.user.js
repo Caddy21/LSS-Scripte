@@ -1,109 +1,66 @@
 // ==UserScript==
-// @name         [LSS] Aufgeräumtes Profil-Menü
+// @name         [LSS] 14 - Aufgeräumtes Profil-Menü
 // @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Ausblenden von bestimmten Bereichen im Profil-Menü
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
+// @match        https://polizei.leitstellenspiel.de/
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        GM_addStyle
 // ==/UserScript==
 
 (function() {
     'use strict';
-    // True - Anzeigen
+
+    // True  - Anzeigen
     // False - Ausblenden
     const settings = {
-        "profile": true,
-        // Profil
-        "tasks": true,
-        // Aufgaben und Events
-        "level": true,
-        // Dienstgrad
-        "auszeichnungen": true,
-        // Auszeichnungen
-        "premiumaccount": true,
-        // Premium Account
-        "account": true,
-        // Profil bearbeiten
-        "weiterempfehlen": true,
-        // Spiel weiterempfehlen
-        "notizen": true,
-        // Notizen
-        "aao": true,
-        // Alarm und Ausrückeordnung
-        "geschwindigkeit": true,
-        // Einsatzgeschwindigkeit
-        "grafik": true,
-        // Grafiksets
-        "setting": true,
-        // Einstellungen
-        "logout": true,
-        // Auslogen
-        "divider": true,
-        // Trennlinien
+        profile: false,          // Profil
+        tasks: true,             // Aufgaben und Events
+        level: false,            // Dienstgrad
+        auszeichnungen: true,    // Auszeichnungen
+        premiumaccount: true,    // Premium Account
+        account: false,          // Profil bearbeiten
+        weiterempfehlen: false,  // Spiel weiterempfehlen
+        notizen: false,          // Notizen
+        aao: true,               // Alarm und Ausrückeordnung
+        geschwindigkeit: false,  // Einsatzgeschwindigkeit
+        grafik: false,           // Grafiksets
+        setting: true,           // Einstellungen
+        logout: true,            // Ausloggen
+        divider: false           // Trennlinien
     };
 
-    // Warten, bis das DOM vollständig geladen ist
     window.addEventListener('load', function() {
+        const menuItems = {
+            profile: '#navbar_profile_link',
+            tasks: 'a[href="/tasks/index"]',
+            level: 'a[href="/level"]',
+            auszeichnungen: 'a[href="/auszeichnungen"]',
+            premiumaccount: 'a[href="/premiumaccount"]',
+            account: 'a[href="/users/edit"]',
+            weiterempfehlen: 'a[href="/referrals"]',
+            notizen: 'a[href="/note"]',
+            aao: 'a[href="/aaos"]',
+            geschwindigkeit: 'a[href="/settings/index?mission_speed=true"]',
+            grafik: 'a[href="/vehicle_graphics"]',
+            setting: 'a[href="/settings/index"]',
+            logout: 'a[href="/users/sign_out"]'
+        };
+        Object.entries(menuItems).forEach(([setting, selector]) => {
+            if (settings[setting] === false) {
+                const item = document.querySelector(selector);
 
-        // Dropdown-Menü Elemente finden
-        const menuItems = document.querySelectorAll('.dropdown-menu a');
-
-        menuItems.forEach(item => {
-            // Überprüfen, ob das Item mit einer der angegebenen URLs übereinstimmt
-            const href = item.getAttribute('href');
-
-            // Elemente ausblenden, wenn sie in den Einstellungen auf 'true' gesetzt sind
-            if (href === '/profile' && settings.profile === false) {
-                item.style.display = 'none';
+                if (item) {
+                    item.style.display = 'none';
+                }
             }
-            if (href === '/tasks/index' && settings.tasks === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/level' && settings.level === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/auszeichnungen' && settings.auszeichnungen === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/premiumaccount' && settings.premiumaccount === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/users/edit' && settings.account === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/referrals' && settings.weiterempfehlen === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/note' && settings.notizen === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/aaos' && settings.aao === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/settings/index?mission_speed=true' && settings.geschwindigkeit === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/vehicle_graphics' && settings.grafik === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/settings/index' && settings.setting === false) {
-                item.style.display = 'none';
-            }
-            if (href === '/users/sign_out' && settings.logout === false) {
-                item.style.display = 'none';
-            }
-
         });
-
-        // Divider Elemente finden und ausblenden, wenn in den Einstellungen auf 'false' gesetzt
-        const dividers = document.querySelectorAll('.dropdown-menu .divider');
-        dividers.forEach(divider => {
-            if (settings.divider === false) {
+        if (settings.divider === false) {
+            document.querySelectorAll('.dropdown-menu .divider').forEach(divider => {
                 divider.style.display = 'none';
-            }
-        });
+            });
+        }
     });
-
 })();
