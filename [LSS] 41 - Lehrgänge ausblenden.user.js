@@ -14,7 +14,6 @@
 
     let hidden = true;
 
-    // Tabelle ein-/ausblenden
     function toggleOwnSchoolings(doc) {
         const ownTable = doc.querySelector('#schooling_own_table');
 
@@ -23,35 +22,23 @@
         }
     }
 
-    // Button neben H3 einfügen
     function createToggleButton(doc) {
-
-        // Schon vorhanden?
         if (doc.querySelector('#toggle-schoolings-btn')) return;
-
         const heading = [...doc.querySelectorAll('h3')]
             .find(h => h.textContent.includes('Lehrgänge mit eigenen Teilnehmern'));
 
         if (!heading) return;
-
         const btn = doc.createElement('button');
 
         btn.id = 'toggle-schoolings-btn';
         btn.innerText = 'Anzeigen';
-
         btn.className = 'btn btn-xs btn-primary';
-
         btn.style.marginLeft = '10px';
-
         btn.addEventListener('click', () => {
             hidden = !hidden;
-
-            // Hauptseite
             toggleOwnSchoolings(document);
-
-            // Lightboxen
+            
             const iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
-
             for (const frame of iframes) {
                 try {
                     if (frame.contentDocument) {
@@ -59,41 +46,27 @@
                     }
                 } catch (e) {}
             }
-
             btn.innerText = hidden
                 ? 'Anzeigen'
                 : 'Ausblenden';
         });
-
         heading.appendChild(btn);
     }
-
-    // Initial ausblenden
     toggleOwnSchoolings(document);
-
-    // Button auf Hauptseite
-    createToggleButton(document);
-
-    // Observer für Lightboxen
+    createToggleButton(document); 
     const observer = new MutationObserver(() => {
-
         const iframes = document.querySelectorAll('iframe[id^="lightbox_iframe_"]');
-
         for (const frame of iframes) {
             try {
                 if (frame.contentDocument) {
-
                     toggleOwnSchoolings(frame.contentDocument);
                     createToggleButton(frame.contentDocument);
-
                 }
             } catch (e) {}
         }
     });
-
     observer.observe(document.body, {
         childList: true,
         subtree: true
     });
-
 })();
