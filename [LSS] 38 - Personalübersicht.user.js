@@ -11,8 +11,7 @@
 
 (function () {
     'use strict';
-
-    // ============================ DARK/LIGHT MODE DETECTION ============================
+    
     function isDarkMode() {
         return document.body.classList.contains('dark') || document.body.classList.contains('bigMapDark');
     }
@@ -42,8 +41,7 @@
             diffZero: '#d97706',
         };
     }
-
-    // ============================ MENÜ BUTTON ============================
+    
     const MENU_SELECTORS = [
         '#menu_profile + ul.dropdown-menu',
     ];
@@ -95,7 +93,6 @@
         setTimeout(() => observer.disconnect(), 10000);
     })();
 
-    // ============================ MODAL ERSTELLEN ============================
     function createModal() {
         const existing = document.getElementById('personalzuweiserModal');
         if (existing) return existing;
@@ -120,7 +117,7 @@
             border: `1px solid ${colors.border}`,
             boxShadow: colors.shadow,
             borderRadius: '10px',
-            fontSize: '1.5rem', // ⬆️ leicht vergrößert (vorher 0.9em)
+            fontSize: '1.5rem',
             lineHeight: '1.4',
         });
 
@@ -210,8 +207,6 @@
     `;
 
         document.body.appendChild(modal);
-
-        // 🔘 Button-Funktionen
         document.getElementById('pz-close').addEventListener('click', () => modal.remove());
         document.getElementById('pz-reload').addEventListener('click', () => {
             const status = document.getElementById('pz-status');
@@ -222,7 +217,6 @@
         return modal;
     }
 
-    // ============================ DATEN LADEN ============================
     async function fetchData() {
         const result = { buildings: [], vehicles: [], vehicleTypesArray: [] };
         const headers = { Accept: 'application/json' };
@@ -260,17 +254,13 @@
         tbody.innerHTML = '';
 
         try {
-            // 🔹 Daten laden
             const { buildings, vehicles, vehicleTypesArray } = await fetchData();
             const vtById = new Map(vehicleTypesArray.map(vt => [Number(vt.id), vt]));
-
-            // 🔹 Leitstellen-Mapping
             const leitstellenMap = new Map();
             buildings.forEach(b => {
                 if (b.building_type === 7) leitstellenMap.set(b.id, b.caption);
             });
 
-            // 🔹 Relevante Wachen ermitteln
             const relevanteWachen = [];
             const fahrzeugDatenProWache = new Map();
 
@@ -294,7 +284,6 @@
                 }
             });
 
-            // 🔹 Filter füllen
             const relevanteLeitstellen = [...new Set(relevanteWachen.map(b => b.leitstelle_building_id).filter(Boolean))];
 
             selectLeitstelle.innerHTML = '<option value="">Alle Leitstellen</option>';
@@ -318,7 +307,6 @@
                 selectWache.appendChild(opt);
             });
 
-            // 🔹 Tabelle rendern
             function renderTable() {
                 tbody.innerHTML = '';
 
@@ -334,10 +322,7 @@
                     const maxWache = b.personal_count_target ?? 0;
                     const benoetigt = fahrzeugArray.reduce((sum, f) => sum + f.max, 0);
                     const diff = aktuell - benoetigt;
-
                     const tr = document.createElement('tr');
-
-                    // 🟣 Leitstelle
                     const tdLeit = document.createElement('td');
                     Object.assign(tdLeit.style, {
                         border: `1px solid ${colors.tableBorder}`,
@@ -349,7 +334,6 @@
                     : '-';
                     tr.appendChild(tdLeit);
 
-                    // 🟣 Wache
                     const tdWache = document.createElement('td');
                     Object.assign(tdWache.style, {
                         border: `1px solid ${colors.tableBorder}`,
@@ -358,8 +342,7 @@
                     });
                     tdWache.textContent = b.caption;
                     tr.appendChild(tdWache);
-
-                    // 🟣 Personalzahlen
+                    
                     const personal = [
                         { value: aktuell, color: 'orange' },
                         { value: benoetigt, color: 'green' },
@@ -380,7 +363,6 @@
                         tr.appendChild(td);
                     });
 
-                    // 🟣 Fahrzeug-Badges
                     const fahrzeugTd = document.createElement('td');
                     Object.assign(fahrzeugTd.style, {
                         border: `1px solid ${colors.tableBorder}`,
@@ -446,7 +428,6 @@
                 });
             }
 
-            // Beim Laden + bei Filteränderung neu rendern
             renderTable();
             selectLeitstelle.addEventListener('change', renderTable);
             selectWache.addEventListener('change', renderTable);
