@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         [LSS] Design Switcher
+// @name         [LSS] 05 - Design Switcher
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @description  Wechsel zwischen verschiedenen Desings
 // @author       Caddy21
-// @match        https://www.leitstellenspiel.de/*
+// @match        https://www.leitstellenspiel.de/
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @grant        none
 // ==/UserScript==
