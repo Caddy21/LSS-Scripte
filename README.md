@@ -120,4 +120,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - POI-Manager
     - THW Dienstzeiten
     - AB-Manager
+    - Passende AAO anzeigen
 </details>
