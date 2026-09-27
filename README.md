@@ -48,9 +48,10 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Erweiterungs-Manager
     - Alle LST umschalten
     - Fahrzeuge im S6 auflisten
+    - Design Switcher
     - Fahrzeuge löschen
     - Sprechwunsch Sortierer
-    - Design Switcher
+    - Platzhalter
     - Einsatzkategorienfilter
     - Auszeichnungsverwalter
     - AAO Kategorien Ein und Ausblenden
@@ -122,4 +123,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - AB-Manager
     - Passende AAO anzeigen
     - S4 Filter
+    - Chat-Manager
 </details>
