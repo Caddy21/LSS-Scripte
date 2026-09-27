@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Lehrgänge filtern
+// @name         [LSS] Lehrgangsfilter
 // @namespace    https://leitstellenspiel.de/
 // @version      1.0
 // @description  Blendet Lehrgänge im Dropdown der eigenen Schulen aus
