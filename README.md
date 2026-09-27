@@ -121,4 +121,5 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - THW Dienstzeiten
     - AB-Manager
     - Passende AAO anzeigen
+    - S4 Filter
 </details>
