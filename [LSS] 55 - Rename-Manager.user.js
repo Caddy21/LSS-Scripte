@@ -87,7 +87,7 @@
             const a = document.createElement('a');
             a.href = '#';
             a.id = 'open-alias-manager';
-            a.innerHTML = `<span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp; Wachenalias-Manager`;
+            a.innerHTML = `<span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp; Wachenalias-Manager (Beta)`;
             a.onclick = e => { e.preventDefault(); openAliasManager(); };
             li.appendChild(a);
 
@@ -99,14 +99,36 @@
 
     // Funktion um die Gebäude zu laden
     async function fetchAllBuildings() {
-        try {
-            const res = await fetch('/api/buildings', { credentials: 'include' });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
+    try {
+        const buildings = [];
+        let url = '/api/v2/buildings?limit=1000';
+
+        while (url) {
+            const res = await fetch(url, { credentials: 'include' });
+
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status);
+            }
+
             const data = await res.json();
-            log('Wachen vom API geladen:', data.length);
-            return data;
-        } catch(e){ error('Konnte Wachen nicht laden!', e); alert('Konnte Wachenliste nicht automatisch laden.'); return []; }
+
+            if (Array.isArray(data.result)) {
+                buildings.push(...data.result);
+            }
+
+            url = data.paging?.next_page || null;
+            log( 'Wachen geladen:', buildings.length, '/', data.paging?.count_total ?? '?');
+        }
+
+        log('Wachen vollständig vom API geladen:', buildings.length);
+        return buildings;
+
+    } catch (e) {
+        error('Konnte Wachen nicht laden!', e);
+        alert('Konnte Wachenliste nicht automatisch laden.');
+        return [];
     }
+}
 
     // Öffnet den Alias-Manager
     async function openAliasManager() {
@@ -125,9 +147,9 @@
             });
         } catch (e) { console.error(e); }
 
-        let showAliased = false;   // 👈 Standard: ausgeblendet
+        let showAliased = false;
         let activeType = null;
-        const WACHEN_CHUNK = 500; // Anzahl Wachen pro Ladeblock
+        const WACHEN_CHUNK = 500;
         const typeRenderState = {};
 
         const modal = document.createElement('div');
@@ -152,7 +174,7 @@
 
                 <div style="margin-top:8px; text-align:right;">
                   <button class="btn btn-success btn-sm" id="lss-save-aliases">💾 Speichern</button>
-<button class="btn btn-default btn-sm" id="lss-close-aliases">❌ Schließen</button>
+                  <button class="btn btn-default btn-sm" id="lss-close-aliases">❌ Schließen</button>
                 </div>
               </div>
             </div>
@@ -162,8 +184,6 @@
         const buttonContainer = modal.querySelector('#lss-type-buttons');
         const contentContainer = modal.querySelector('#lss-type-content');
         const showAliasedCheckbox = modal.querySelector('#lss-show-aliased');
-
-        // ---------- Infobox (Startzustand) ----------
         const infoBox = document.createElement('div');
         infoBox.id = 'lss-alias-infobox';
         infoBox.style.padding = '20px';
@@ -190,33 +210,102 @@
               💡 Tipp: Der aktuelle Name ist bereits vorausgefüllt – so kannst du
               schnell kleine Anpassungen vornehmen.
             </p>
+            <h5><b>Farblegende der Wachentypen</b></h5>
+
+                <p style="margin:6px 0;">
+                   🔴 <b>Rot</b> = Noch keine Wache besitzt einen Alias | 🟡 <b>Gelb</b> = Teilweise Aliase vorhanden | 🟢 <b>Grün</b> = Alle Wachen besitzen einen Alias
+                </p>
             `;
 
         contentContainer.appendChild(infoBox);
-
-        // Gruppieren
         const grouped = {};
         buildings.forEach(b => {
             if (!grouped[b.building_type]) grouped[b.building_type] = [];
             grouped[b.building_type].push(b);
         });
 
-        // ---------- Render-Funktion ----------
         function renderType(typeId) {
+
             contentContainer.innerHTML = '';
+            const activeHeader = document.createElement('div');
+            activeHeader.style.background = darkMode ? '#2c3e50' : '#337ab7';
+            activeHeader.style.color = '#fff';
+            activeHeader.style.padding = '8px 12px';
+            activeHeader.style.borderRadius = '4px';
+            activeHeader.style.marginBottom = '10px';
+            activeHeader.style.fontWeight = 'bold';
+            activeHeader.style.fontSize = '13px';
+
+            activeHeader.innerHTML = `
+        <span class="glyphicon glyphicon-folder-open"></span>
+        Aktiver Wachentyp:
+        ${buildingTypeNames[typeId] || `Typ ${typeId}`}
+    `;
+
+            contentContainer.appendChild(activeHeader);
 
             const sorted = grouped[typeId]
             .slice()
-            .sort((a, b) => (a.caption || '').localeCompare(b.caption || '', 'de'));
+            .sort((a, b) =>
+                  (a.caption || '').localeCompare(b.caption || '', 'de')
+                 );
 
-            sorted.forEach(b => {
-                const name = b.caption || '(ohne Name)';
+            const visibleStations = sorted.filter(b => {
+                const name = b.caption || '';
                 const currentAlias = map[b.id];
 
-                // FILTER: Standard = nur ohne Alias
-                if (!showAliased && currentAlias && currentAlias.trim() !== name.trim()) {
-                    return;
+                if (
+                    !showAliased &&
+                    currentAlias &&
+                    currentAlias.trim() !== name.trim()
+                ) {
+                    return false;
                 }
+
+                return true;
+            });
+
+            if (visibleStations.length === 0) {
+
+                const infoBox = document.createElement('div');
+
+                infoBox.style.padding = '20px';
+                infoBox.style.border = `2px dashed ${darkMode ? '#444' : '#ccc'}`;
+                infoBox.style.borderRadius = '6px';
+                infoBox.style.textAlign = 'center';
+                infoBox.style.color = darkMode ? '#aaa' : '#666';
+                infoBox.style.background = darkMode ? '#1a1a1a' : '#fafafa';
+                infoBox.style.marginTop = '10px';
+
+                infoBox.innerHTML = `
+            <h4 style="margin-top:0;">
+                <span class="glyphicon glyphicon-ok-circle"></span>
+                Alle Wachen dieses Typs besitzen bereits einen Alias
+            </h4>
+
+            <p>
+                Für diesen Wachentyp sind aktuell keine offenen Alias-Einträge vorhanden.
+            </p>
+
+            <p>
+                Aktiviere die Checkbox
+                <b>"Auch Wachen mit eigenem Alias anzeigen"</b>,
+                um bereits bearbeitete Wachen anzuzeigen.
+            </p>
+
+            <p style="font-size:12px; margin-top:12px;">
+                💡 Tipp: Aktiviere die Checkbox oben, um alle bereits vergebenen Aliase zu kontrollieren oder anzupassen.
+            </p>
+        `;
+
+                contentContainer.appendChild(infoBox);
+                return;
+            }
+
+            visibleStations.forEach(b => {
+
+                const name = b.caption || '(ohne Name)';
+                const currentAlias = map[b.id];
 
                 const row = document.createElement('div');
                 row.style.display = 'flex';
@@ -246,59 +335,107 @@
 
                 row.appendChild(nameDiv);
                 row.appendChild(input);
+
                 contentContainer.appendChild(row);
             });
         }
 
-        // ---------- Typ-Buttons ----------
+        function updateTypeButtonColors() {
+            buttonContainer.querySelectorAll('button[data-type-id]').forEach(btn => {
+                const typeId = parseInt(btn.dataset.typeId, 10);
+                const stations = grouped[typeId] || [];
+                let aliased = 0;
+                stations.forEach(b => {
+                    const name = (b.caption || '').trim();
+                    const alias = (map[b.id] || '').trim();
+                    if (alias && alias !== name) {
+                        aliased++;
+                    }
+                });
+                btn.classList.remove('btn-success', 'btn-warning', 'btn-danger');
+                if (aliased === stations.length && stations.length > 0) {
+                    btn.classList.add('btn-success');
+                } else if (aliased === 0) {
+                    btn.classList.add('btn-danger');
+                } else {
+                    btn.classList.add('btn-warning');
+                }
+                btn.textContent = `${buildingTypeNames[typeId] || `Typ ${typeId}`} (${aliased}/${stations.length})`;
+            });
+        }
+
         Object.keys(grouped)
             .map(t => parseInt(t, 10))
             .sort((a, b) => a - b)
             .forEach(typeId => {
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-default btn-sm';
-            btn.textContent = buildingTypeNames[typeId] || `Typ ${typeId}`;
 
+            const stations = grouped[typeId] || [];
+
+            let aliased = 0;
+
+            stations.forEach(b => {
+                const name = (b.caption || '').trim();
+                const alias = (map[b.id] || '').trim();
+
+                if (alias && alias !== name) {
+                    aliased++;
+                }
+            });
+
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-sm';
+            btn.dataset.typeId = typeId;
+            if (aliased === stations.length && stations.length > 0) {
+                btn.classList.add('btn-success');
+            } else if (aliased === 0) {
+                btn.classList.add('btn-danger');
+            } else {
+                btn.classList.add('btn-warning');
+            }
+            btn.textContent = `${buildingTypeNames[typeId] || `Typ ${typeId}`} (${aliased}/${stations.length})`;
             btn.onclick = () => {
                 activeType = typeId;
                 buttonContainer.querySelectorAll('button').forEach(b => {
-                    b.classList.remove('btn-primary');
-                    b.classList.add('btn-default');
+                    b.style.outline = '';
+                    b.style.boxShadow = '';
+                    b.style.transform = '';
                 });
-                btn.classList.remove('btn-default');
-                btn.classList.add('btn-primary');
+                btn.style.outline = darkMode ? '3px solid #ffffff' : '3px solid #000000';
+                btn.style.boxShadow = darkMode ? '0 0 10px rgba(255,255,255,0.5)' : '0 0 10px rgba(0,0,0,0.4)';
+                btn.style.transform = 'scale(1.03)';
                 renderType(typeId);
             };
-
             buttonContainer.appendChild(btn);
         });
-
-        // ---------- Checkbox ----------
         showAliasedCheckbox.onchange = () => {
             showAliased = showAliasedCheckbox.checked;
             if (activeType !== null) renderType(activeType);
         };
-
-        // ---------- Save & Close ----------
-        // Nur speichern
         modal.querySelector('#lss-save-aliases').onclick = async () => {
             try {
                 modal.querySelectorAll('.lss-alias-input').forEach(inp => {
                     const val = inp.value.trim();
-                    if (val) map[inp.dataset.id] = val;
-                    else delete map[inp.dataset.id];
+
+                    if (val) {
+                        map[inp.dataset.id] = val;
+                    } else {
+                        delete map[inp.dataset.id];
+                    }
                 });
 
                 await saveAliasMap(map);
+                updateTypeButtonColors();
+                if (activeType !== null) {
+                    renderType(activeType);
+                }
 
                 alert("Aliase wurden erfolgreich gespeichert!");
+
             } catch (e) {
                 console.error(e);
                 alert("Fehler beim Speichern!");
             }
         };
-
-        // Nur schließen
         modal.querySelector('#lss-close-aliases').onclick = () => {
             modal.remove();
         };
@@ -306,78 +443,137 @@
 
     // Fügt die Rename-UI auf der Gebäude-Seite ein
     (function insertRenameUI() {
-        const tabs = document.querySelector('#tabs');
 
-        if (!location.pathname.startsWith('/buildings') || !tabs || tabs.closest('.modal, .lightbox')) {
-            log('Nicht auf der Haupt-Building-Seite – Script wird hier nicht eingefügt.');
+        if (!location.pathname.startsWith('/buildings')) {
+            log('Nicht auf einer Gebäudeseite – Script wird hier nicht eingefügt.');
             return;
         }
 
-        log('Building-Seite erkannt – Rename-UI wird eingefügt');
+        if (document.getElementById('lss-rename-manager')) {
+            return;
+        }
+
+        const hr = document.querySelector('hr');
+        const tabs = document.querySelector('#tabs');
+
+        if (!hr && !tabs) {
+            log('Kein <hr> und kein #tabs gefunden – Rename-UI wird nicht eingefügt.');
+            return;
+        }
+
+        log('Gebäudeseite erkannt – Rename-UI wird eingefügt');
 
         const box = document.createElement('div');
+        box.id = 'lss-rename-manager';
         box.className = 'panel panel-default';
+
         box.innerHTML = `
-            <div class="panel-heading"><strong>🛠 Fahrzeugnamen-Manager</strong></div>
-            <div class="panel-body">
-                <div style="margin-bottom:8px;">
-                    <b>Wachen-Alias:</b>
-                    <span class="label label-primary" id="lss_alias_label">
-                        ${stationAlias || '❌ KEIN ALIAS GESETZT'}
-                    </span>
-                    <span class="help-block" style="display:inline; margin-left:10px;">
-                        Schema: <code>{vehicleType}-{number} - {stationAlias}</code>
-                    </span>
-                </div>
+        <div class="panel-heading">
+            <strong>🛠 Fahrzeugnamen-Manager</strong>
+        </div>
 
-                <button class="btn btn-info" id="lss_preview_btn">Vorschau</button>
-                <button class="btn btn-success" id="lss_rename_btn">Umbennen</button>
-                <button class="btn btn-danger" id="lss_cancel_preview_btn">Vorschau abbrechen</button>
-                <span id="lss_status" style="margin-left:10px;">Status: Bereit</span>
+        <div class="panel-body">
 
-                ${!stationAlias ? `
-                    <div class="alert alert-warning" style="margin-top:10px;">
-                        ⚠️ Für diese Wache ist kein Alias gesetzt!<br>
-                        Öffne den <b>Fahrzeugnamen-Manager</b> und trage einen Alias ein.
-                    </div>` : ''}
+            <div style="margin-bottom:8px;">
+                <b>Wachen-Alias:</b>
+
+                <span class="label label-primary" id="lss_alias_label">
+                    ${stationAlias || '❌ KEIN ALIAS GESETZT'}
+                </span>
+
+                <span class="help-block" style="display:inline; margin-left:10px;">
+                    Schema:
+                    <code>{vehicleType}-{number} - {stationAlias}</code>
+                </span>
             </div>
-        `;
-        tabs.parentNode.insertBefore(box, tabs);
+
+            <button class="btn btn-info" id="lss_preview_btn">
+                Vorschau
+            </button>
+
+            <button class="btn btn-success" id="lss_rename_btn">
+                Umbenennen
+            </button>
+
+            <button class="btn btn-danger" id="lss_cancel_preview_btn">
+                Vorschau abbrechen
+            </button>
+
+            <span id="lss_status" style="margin-left:10px;">
+                Status: Bereit
+            </span>
+
+            ${!stationAlias ? `
+                <div class="alert alert-warning" style="margin-top:10px;">
+                    ⚠️ Für diese Wache ist kein Alias gesetzt!<br>
+                    Öffne den <b>Wachenalias-Manager</b> und trage einen Alias ein.
+                </div>
+            ` : ''}
+
+        </div>
+    `;
+
+        if (hr) {
+            hr.insertAdjacentElement('afterend', box);
+            log('Rename-UI direkt nach <hr> eingefügt');
+        }
+        else if (tabs) {
+            tabs.parentNode.insertBefore(box, tabs);
+            log('Rename-UI vor #tabs eingefügt');
+        }
 
         const previewBtn = document.getElementById('lss_preview_btn');
-        if (previewBtn) previewBtn.onclick = () => { log('Vorschau-Button geklickt'); applyPreviewInTableWithInputs(); };
+
+        if (previewBtn) {
+            previewBtn.onclick = () => {
+                log('Vorschau-Button geklickt');
+                applyPreviewInTableWithInputs();
+            };
+        }
 
         const renameBtn = document.getElementById('lss_rename_btn');
-        if (renameBtn) renameBtn.onclick = async () => {
-            log('Globaler Umbennen-Button geklickt');
-            const statusDiv = document.getElementById('lss_status');
-            if (statusDiv) statusDiv.textContent = 'Status: Umbennen läuft...';
-            await triggerAllInlineSaves();
-        };
+
+        if (renameBtn) {
+            renameBtn.onclick = async () => {
+
+                log('Umbenennen-Button geklickt');
+
+                const statusDiv = document.getElementById('lss_status');
+
+                if (statusDiv) {
+                    statusDiv.textContent = 'Status: Umbenennen läuft...';
+                }
+
+                await triggerAllInlineSaves();
+            };
+        }
 
         const cancelPreviewBtn = document.getElementById('lss_cancel_preview_btn');
-        if (cancelPreviewBtn) cancelPreviewBtn.onclick = () => {
-            log('Vorschau abbrechen geklickt');
 
-            // Vorschau rückgängig machen
-            revertPreviewInTable();
+        if (cancelPreviewBtn) {
+            cancelPreviewBtn.onclick = () => {
 
-            const statusDiv = document.getElementById('lss_status');
-            if (statusDiv) statusDiv.textContent = 'Status: Bereit';
-        };
+                log('Vorschau abbrechen geklickt');
+
+                revertPreviewInTable();
+
+                const statusDiv = document.getElementById('lss_status');
+
+                if (statusDiv) {
+                    statusDiv.textContent = 'Status: Bereit';
+                }
+            };
+        }
     })();
 
     // Prüft, ob ein Fahrzeugname bereits dem gewünschten Schema entspricht
     function isAlreadyCorrectlyNamed(currentName, vehicleType, stationAlias) {
-        // Beispiel: HLF-3 - Wache Mitte
         const escapedAlias = stationAlias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const escapedType = vehicleType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
         const regex = new RegExp(`^${escapedType}-\\d+\\s+-\\s+${escapedAlias}$`);
         return regex.test(currentName);
     }
 
-    // Erstellt die Vorschau mit Inline-Inputs
     function applyPreviewInTableWithInputs() {
         if (!stationAlias) {
             alert('Kein Wachen-Alias gesetzt!');
@@ -393,8 +589,6 @@
         const typeCounters = new Map();
 
         let total = 0;
-
-        // 1️⃣ Bestehende Nummern EINMALIG sammeln
         for (const row of rows) {
             const nameLink = row.querySelector('td a[href^="/vehicles/"]');
             if (!nameLink) continue;
@@ -420,8 +614,6 @@
                 highestNumber.set(vehicleType, number);
             }
         }
-
-        // 2️⃣ Lücken effizient berechnen (O(n))
         for (const [type, numbersSet] of existingNumbers.entries()) {
             const max = highestNumber.get(type);
             const missing = [];
@@ -435,13 +627,9 @@
             nextFreeNumbers.set(type, missing);
             typeCounters.set(type, max);
         }
-
-        // 3️⃣ Vorschau generieren
         for (const row of rows) {
             const nameLink = row.querySelector('td a[href^="/vehicles/"]');
             if (!nameLink) continue;
-
-            // Schutz gegen mehrfaches Vorschau-Klicken
             if (nameLink.dataset.lssPreviewApplied === 'true') continue;
 
             const oldName = nameLink.textContent.trim();
@@ -457,11 +645,8 @@
             }
 
             const vehicleType = baseType;
-
-            // Bereits korrekt?
             if (isAlreadyCorrectlyNamed(oldName, vehicleType, stationAlias)) {
 
-                // Doppeltes Hinzufügen verhindern
                 if (!row.querySelector('.lss-already-ok')) {
                     const infoSpan = document.createElement('span');
                     infoSpan.textContent = ' ✔ Bereits korrekt benannt';
@@ -475,7 +660,6 @@
                 continue;
             }
 
-            // Nummer bestimmen (erst Lücke, dann max+1)
             let typeNumber;
 
             if (!nextFreeNumbers.has(vehicleType)) {
@@ -544,12 +728,8 @@
         document.querySelectorAll('a[data-lss-preview-applied="true"]').forEach(nameLink => {
             const original = nameLink.dataset.originalValue;
             if (!original) return;
-
-            // Container mit Input + Button entfernen
             const container = nameLink.parentElement.querySelector('div');
             if (container) container.remove();
-
-            // Link wieder anzeigen
             nameLink.style.display = '';
             delete nameLink.dataset.lssPreviewApplied;
 
@@ -601,15 +781,11 @@
     async function triggerAllInlineSaves() {
         const saveButtons = Array.from(document.querySelectorAll('.lss-inline-save-btn'));
         if (!saveButtons.length) {
-            alert('Keine Fahrzeuge zum Umbennen gefunden!');
             return;
         }
-
         const statusDiv = document.getElementById('lss_status');
-
         let done = 0;
         const total = saveButtons.length;
-
         for (const btn of saveButtons) {
             if (!document.body.contains(btn)) continue;
 
@@ -620,14 +796,11 @@
                 }
 
                 btn.click();
-
-                // kleine Pause, damit Server & UI hinterherkommen
                 await new Promise(r => setTimeout(r, 400));
             } catch (e) {
                 error('Fehler beim Triggern eines Save-Buttons', e);
             }
         }
-
         if (statusDiv) {
             statusDiv.textContent = `Status: Fertig! ${done} von ${total} Fahrzeugen umbenannt ✅`;
         }
@@ -636,32 +809,23 @@
     // Hotkeys für Vorschau / Umbenennen / Abbrechen + Kombi mit ALT
     function registerHotkeys() {
         document.addEventListener('keydown', async e => {
-            // Nicht auslösen, wenn man gerade in ein Input- oder Textarea-Feld tippt
             const tag = document.activeElement?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-
-            // Alt + V = Vorschau
             if (e.altKey && !e.shiftKey && !e.ctrlKey && e.code === 'KeyV') {
                 e.preventDefault();
                 log('Hotkey Alt+V -> Vorschau');
                 applyPreviewInTableWithInputs();
             }
-
-            // Alt + U = Umbenennen
             if (e.altKey && !e.shiftKey && !e.ctrlKey && e.code === 'KeyU') {
                 e.preventDefault();
                 log('Hotkey Alt+U -> Umbenennen');
                 await triggerAllInlineSaves();
             }
-
-            // Alt + C = Vorschau abbrechen
             if (e.altKey && !e.shiftKey && !e.ctrlKey && e.code === 'KeyC') {
                 e.preventDefault();
                 log('Hotkey Alt+C -> Vorschau abbrechen');
                 revertPreviewInTable();
             }
-
-            // Alt + Enter = Vorschau + direkt Umbenennen
             if (e.altKey && !e.shiftKey && !e.ctrlKey && e.code === 'Enter') {
                 e.preventDefault();
                 log('Hotkey Alt+Enter -> Vorschau + Umbenennen');
@@ -673,17 +837,10 @@
     // Kombi-Funktion: Vorschau + direkt Umbenennen
     async function previewAndRenameAll() {
         log('Kombi-Aktion: Vorschau + Umbenennen');
-
-        // Vorschau erstellen
         applyPreviewInTableWithInputs();
-
-        // Kurze Pause, damit Inputs im DOM erstellt werden
         await new Promise(r => setTimeout(r, 300));
-
-        // Direkt alle falsch benannten Fahrzeuge umbenennen
         await triggerAllInlineSaves();
     }
-
 
     // Initialisierung des Scriptes
     addMenuButton();
