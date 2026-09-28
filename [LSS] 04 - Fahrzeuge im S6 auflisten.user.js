@@ -430,20 +430,21 @@
                 currentButton.classList.add('btn-warning');
             }, 2500);
         }
+    }
 
-        function showInfoModal(title, message) {
-            document.querySelector('#lss-s6-info')?.remove();
-            document.querySelector('#lss-s6-info-backdrop')?.remove();
+    function showInfoModal(title, message) {
+        document.querySelector('#lss-s6-info')?.remove();
+        document.querySelector('#lss-s6-info-backdrop')?.remove();
 
-            const overlay = document.createElement('div');
-            overlay.id = 'lss-s6-info';
-            overlay.className = 'modal fade in';
-            overlay.setAttribute('role', 'dialog');
-            overlay.setAttribute('aria-modal', 'true');
-            overlay.style.display = 'block';
-            overlay.style.zIndex = MODAL_Z_INDEX + 1;
+        const overlay = document.createElement('div');
+        overlay.id = 'lss-s6-info';
+        overlay.className = 'modal fade in';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.style.display = 'block';
+        overlay.style.zIndex = MODAL_Z_INDEX + 1;
 
-            overlay.innerHTML = `
+        overlay.innerHTML = `
             <div class="modal-dialog modal-sm">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -455,65 +456,65 @@
             </div>
         `;
 
-            document.body.appendChild(overlay);
+        document.body.appendChild(overlay);
 
-            const backdrop = document.createElement('div');
-            backdrop.id = 'lss-s6-info-backdrop';
-            backdrop.className = 'modal-backdrop fade in';
-            backdrop.style.zIndex = MODAL_Z_INDEX;
-            document.body.appendChild(backdrop);
+        const backdrop = document.createElement('div');
+        backdrop.id = 'lss-s6-info-backdrop';
+        backdrop.className = 'modal-backdrop fade in';
+        backdrop.style.zIndex = MODAL_Z_INDEX;
+        document.body.appendChild(backdrop);
 
-            overlay.querySelector('#lss-s6-info-close')?.addEventListener('click', () => {
+        overlay.querySelector('#lss-s6-info-close')?.addEventListener('click', () => {
+            overlay.remove();
+            backdrop.remove();
+        });
+
+        overlay.addEventListener('click', event => {
+            if (event.target === overlay) {
                 overlay.remove();
                 backdrop.remove();
-            });
-
-            overlay.addEventListener('click', event => {
-                if (event.target === overlay) {
-                    overlay.remove();
-                    backdrop.remove();
-                }
-            });
-        }
-
-        function closeOverlay() {
-            document.querySelector('#lss-s6-overlay')?.remove();
-            document.querySelector('#lss-s6-backdrop')?.remove();
-            document.removeEventListener('keydown', handleEscape);
-        }
-
-        function handleEscape(event) {
-            if (event.key === 'Escape') closeOverlay();
-        }
-
-        function escapeHTML(value) {
-            return String(value ?? '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#039;');
-        }
-
-        function insertButton() {
-            if (document.querySelector('#lss-s6-button')) return;
-
-            const buildingPanelBody = document.querySelector('#building_panel_body');
-
-            if (!buildingPanelBody) {
-                console.warn('[LSS S6] #building_panel_body nicht gefunden.');
-                return;
             }
+        });
+    }
 
-            const button = document.createElement('button');
-            button.id = 'lss-s6-button';
-            button.type = 'button';
-            button.className = 'btn btn-primary';
-            button.innerHTML = '🚨 Fahrzeuge im S6';
-            button.addEventListener('click', loadBuildingsAndVehicles);
+    function closeOverlay() {
+        document.querySelector('#lss-s6-overlay')?.remove();
+        document.querySelector('#lss-s6-backdrop')?.remove();
+        document.removeEventListener('keydown', handleEscape);
+    }
 
-            buildingPanelBody.appendChild(button);
+    function handleEscape(event) {
+        if (event.key === 'Escape') closeOverlay();
+    }
+
+    function escapeHTML(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function insertButton() {
+        if (document.querySelector('#lss-s6-button')) return;
+
+        const buildingPanelBody = document.querySelector('#building_panel_body');
+
+        if (!buildingPanelBody) {
+            console.warn('[LSS S6] #building_panel_body nicht gefunden.');
+            return;
         }
 
-        window.addEventListener('load', insertButton);
-    })();
+        const button = document.createElement('button');
+        button.id = 'lss-s6-button';
+        button.type = 'button';
+        button.className = 'btn btn-primary';
+        button.innerHTML = '🚨 Fahrzeuge im S6';
+        button.addEventListener('click', loadBuildingsAndVehicles);
+
+        buildingPanelBody.appendChild(button);
+    }
+
+    window.addEventListener('load', insertButton);
+})();
