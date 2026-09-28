@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Einsatzkategorienfilter
 // @namespace    http://tampermonkey.net/
-// @version      1.8.5
+// @version      1.9
 // @description  Filtert die Einsatzliste nach Kategorien
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -27,50 +27,50 @@
         "WF": ['factory_fire_brigade'],
         "SEG": ['seg', 'seg_medical_service'],
         "Stromausfälle": ['energy_supply', 'energy_supply_2'],
-        "Tierrettung": ['animal_rescue'],
-    }; // Beschriftung und Zusammenstellung der Gruppen -> Hier könnt Ihr euch die Button beschriften und die Gruppen zuordnen
+        "Tierrettung": ['animal_rescue']
+    };
     const defaultEventMissionIds = [];
-    const specialMissionIds = [41, 43, 59, 75, 99, 207, 221, 222, 256, 350]; // Spezielle Einsatz-IDs (VGSL)
+    const specialMissionIds = [41, 43, 59, 75, 99, 207, 221, 222, 256, 350];
     const customCategoryLabels = {
-        'fire': 'Feuerwehr',
-        'police': 'Polizei',
-        'ambulance': 'Rettungsdienst',
-        'thw': 'Technisches Hilfswerk',
-        'criminal_investigation': 'Kripo',
-        'riot_police': 'Bereitschaftspolizei',
-        'highway_police': 'Autobahnpolizei',
-        'water_rescue': 'Wasserrettung',
-        'mountain': 'Bergrettung',
-        'coastal': 'Seenotrettung',
-        'airport': 'Flughafeneinsätze',
-        'airport_specialization': 'Speziallisierte Flughafeneinsätze',
-        'factory_fire_brigade': 'Werkfeuerwehr',
-        'seg': 'SEG-Einsätze',
-        'seg_medical_service': 'SEG-Sanitätsdiensteinsätze',
-        'energy_supply': 'NEA 50',
-        'energy_supply_2': 'NEA 200',
-        'animal_rescue': 'Tierrettung',
-        'event': 'Eventeinsätze',}; // Mapping der Kategorien zu den benutzerdefinierten Beschriftungen
+        fire: 'Feuerwehr',
+        police: 'Polizei',
+        ambulance: 'Rettungsdienst',
+        thw: 'Technisches Hilfswerk',
+        criminal_investigation: 'Kripo',
+        riot_police: 'Bereitschaftspolizei',
+        highway_police: 'Autobahnpolizei',
+        water_rescue: 'Wasserrettung',
+        mountain: 'Bergrettung',
+        coastal: 'Seenotrettung',
+        airport: 'Flughafeneinsätze',
+        airport_specialization: 'Speziallisierte Flughafeneinsätze',
+        factory_fire_brigade: 'Werkfeuerwehr',
+        seg: 'SEG-Einsätze',
+        seg_medical_service: 'SEG-Sanitätsdiensteinsätze',
+        energy_supply: 'NEA 50',
+        energy_supply_2: 'NEA 200',
+        animal_rescue: 'Tierrettung',
+        event: 'Eventeinsätze'
+    };
     const customTooltips = {
-        'fire': 'Zeigt alle Einsätze der Feuerwehr',
-        'police': 'Zeigt alle Einsätze der Polizei',
-        'ambulance': 'Zeigt alle Einsätze des Rettungsdienstes',
-        'thw': 'Zeigt alle Einsätze des THW',
-        'riot_police': 'Zeigt alle Einsätze der Bereitschaftspolizei',
-        'water_rescue': 'Zeigt alle Einsätze der Wasserrettung',
-        'mountain': 'Zeigt alle Einsätze der Bergwacht',
-        'coastal': 'Zeigt alle Einsätze der Küstenschutz-Einheit',
-        'airport': 'Zeigt alle Einsätze am Flughafen',
-        'factory_fire_brigade': 'Zeigt alle Einsätze der Werksfeuerwehr',
-        'criminal_investigation': 'Zeigt alle Einsätze der Kriminalpolizei',
-        'seg_medical_service': 'Zeigt alle Einsätze des Sanitäts- und Rettungsdienstes',
-        'seg': 'Zeigt alle Einsätze der Schnelleinsatzgruppe',
-        'energy_supply': 'Zeigt alle Einsätze der NEA50 an',
-        'energy_supply_2': 'Zeigt alle Einsätze der NEA200 an',
-        'highway_police': 'Zeigt alle Einsätze der Autobahnpolizei an',
-        'animal_rescue': 'Zeigt alle Einsätze der Tierrettung an',
-
-    }; // Tooltipps der Kategoriebutton
+        fire: 'Zeigt alle Einsätze der Feuerwehr',
+        police: 'Zeigt alle Einsätze der Polizei',
+        ambulance: 'Zeigt alle Einsätze des Rettungsdienstes',
+        thw: 'Zeigt alle Einsätze des THW',
+        riot_police: 'Zeigt alle Einsätze der Bereitschaftspolizei',
+        water_rescue: 'Zeigt alle Einsätze der Wasserrettung',
+        mountain: 'Zeigt alle Einsätze der Bergwacht',
+        coastal: 'Zeigt alle Einsätze der Küstenschutz-Einheit',
+        airport: 'Zeigt alle Einsätze am Flughafen',
+        factory_fire_brigade: 'Zeigt alle Einsätze der Werksfeuerwehr',
+        criminal_investigation: 'Zeigt alle Einsätze der Kriminalpolizei',
+        seg_medical_service: 'Zeigt alle Einsätze des Sanitäts- und Rettungsdienstes',
+        seg: 'Zeigt alle Einsätze der Schnelleinsatzgruppe',
+        energy_supply: 'Zeigt alle Einsätze der NEA50 an',
+        energy_supply_2: 'Zeigt alle Einsätze der NEA200 an',
+        highway_police: 'Zeigt alle Einsätze der Autobahnpolizei an',
+        animal_rescue: 'Zeigt alle Einsätze der Tierrettung an'
+    };
     const missionListIds = [
         "mission_list",
         "mission_list_krankentransporte",
@@ -78,37 +78,36 @@
         "mission_list_sicherheitswache_alliance",
         "mission_list_alliance_event",
         "mission_list_sicherheitswache"
-    ]; // Globale Variable für die Einsatzlisten
+    ];
     const allCategories = [
         'fire', 'police', 'ambulance', 'thw', 'criminal_investigation',
         'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport',
-        'airport_specialization', 'factory_fire_brigade', 'seg', 'seg_medical_service',
-        'energy_supply', 'energy_supply_2', 'highway_police', 'animale_rescue',
-    ]; // Globale Konstanten für Kategorien & Labels
-    const apiUrl = "https://v3.lss-manager.de/modules/lss-missionHelper/missions/de_DE.json"; // API zum Abrufen der Einsätze
-    const settingsApiUrl = "https://www.leitstellenspiel.de/api/settings"; // API zum Abrufen der Einstellungen
-    const storageKey = "lssMissionsData"; // Globale Konstanze für LocalStore
-    const storageTimestampKey = "lssMissionsDataTimestamp"; // Zeitpunkt der letzten Speicherung
-    const updateInterval = 6 * 60 * 60 * 1000; // 6 Stunden in Millisekunden
+        'airport_specialization', 'factory_fire_brigade', 'seg',
+        'seg_medical_service', 'energy_supply', 'energy_supply_2',
+        'highway_police', 'animal_rescue'
+    ];
+    const apiUrl = "https://v3.lss-manager.de/modules/lss-missionHelper/missions/de_DE.json";
+    const settingsApiUrl = "https://www.leitstellenspiel.de/api/settings";
+    const storageKey = "lssMissionsData";
+    const storageTimestampKey = "lssMissionsDataTimestamp";
+    const updateInterval = 6 * 60 * 60 * 1000;
 
     let missions = {};
     let categories = new Set();
     let missionCategoryMap = new Map();
-    let isDarkMode = false; // Standardwert: Helles Design
-    let activeCategoryButton = null; // Referenz auf den aktiven Button
-    let activeFilters = []; // Globale Variable zur Speicherung der aktiven Filter
-    let missionData = {}; // Globale Variable zur Speicherung der Missionsdaten inklusive der durchschnittlichen Credits
-    let categoryButtonsMap = new Map(); // Speichert die Buttons zur späteren Aktualisierung
-    let activeMissions = new Set(); // Zwischenspeicher für aktive Einsätze
+    let isDarkMode = false;
+    let activeCategoryButton = null;
+    let activeFilters = [];
+    let missionData = {};
+    let categoryButtonsMap = new Map();
+    let activeMissions = new Set();
     let categoryGroups = { ...defaultCategoryGroups };
     let eventMissionIds = [...defaultEventMissionIds];
 
-    // Funktion zum Überprüfen, ob eine Kategorie in einer der Gruppen enthalten ist
     function isCategoryInAnyGroup(category) {
         return Object.values(categoryGroups).some(group => group.includes(category));
     }
 
-    // Funktion um die Missionen zu laden
     async function loadMissionData() {
         const now = Date.now();
         const storedTimestamp = await GM.getValue(storageTimestampKey, 0);
@@ -118,25 +117,26 @@
             missions = JSON.parse(await GM.getValue(storageKey, "{}"));
         } else {
             const response = await fetch(apiUrl);
+
             if (!response.ok) {
                 console.error("Fehler beim Abrufen der API:", response.statusText);
                 return;
             }
+
             missions = await response.json();
             await GM.setValue(storageKey, JSON.stringify(missions));
             await GM.setValue(storageTimestampKey, now);
         }
 
-        missionData = {}; // Leeres Objekt für die Missionen
+        missionData = {};
 
-        // Durchlaufe alle Missionen und lade die Daten in missionData
         for (const mission of Object.values(missions)) {
             const baseMissionId = mission.base_mission_id;
             const additiveOverlays = mission.additive_overlays;
 
-            // Falls die Mission eine Basis-Mission hat, speichere den Verdienst
             if (baseMissionId) {
                 const baseCredits = mission.average_credits || 0;
+
                 if (!missionData[baseMissionId]) {
                     missionData[baseMissionId] = {
                         base_credits: baseCredits,
@@ -144,13 +144,12 @@
                     };
                 }
 
-                // Wenn Additive Overlays vorhanden sind, speichere den Verdienst für jedes Overlay
                 if (additiveOverlays) {
                     missionData[baseMissionId].overlays[additiveOverlays] = mission.average_credits || 0;
                 }
             }
 
-            if (mission.mission_categories && Array.isArray(mission.mission_categories)) {
+            if (Array.isArray(mission.mission_categories)) {
                 mission.mission_categories.forEach(category => categories.add(category));
             }
 
@@ -158,18 +157,16 @@
         }
 
         await loadSettings();
-        createCategoryButtons(); // Jetzt, wo die Daten geladen wurden, können die Buttons erstellt werden
+        createCategoryButtons();
     }
 
-    // Funktion um den Modus (Dark/White) abzurufen
     async function loadSettings() {
         try {
             const response = await fetch(settingsApiUrl);
             const settings = await response.json();
 
             if (settings && settings.design_mode !== undefined) {
-                const designMode = settings.design_mode;
-                isDarkMode = (designMode === 1 || designMode === 4);
+                isDarkMode = settings.design_mode === 1 || settings.design_mode === 4;
             } else {
                 console.error("Die erwartete Struktur wurde in der API-Antwort nicht gefunden.");
             }
@@ -178,29 +175,11 @@
         }
     }
 
-    // Funktion um die Einsätze zu laden, aktuallisieren
-    async function fetchMissionData() {
-        try {
-            const response = await fetch("https://v3.lss-manager.de/modules/lss-missionHelper/missions/de_DE.json");
-            const missions = await response.json();
-            return missions.reduce((acc, mission) => {
-                acc[mission.id] = mission.average_credits || 0;
-                return acc;
-            }, {});
-        } catch (error) {
-            console.error("Fehler beim Abrufen der Missionen:", error);
-            return {};
-        }
-    }
-
-    // Funktion für die Tooltips der Buttons
     function generateGroupTooltip(groupCategories) {
         const categoryLabels = groupCategories.map(category => customCategoryLabels[category] || category);
-        const tooltipText = `Zeigt alle Einsätze der Kategorien: ${categoryLabels.join(', ')}`;
-        return tooltipText;
+        return `Zeigt alle Einsätze der Kategorien: ${categoryLabels.join(', ')}`;
     }
 
-    // Funktion um die Buttonfarbe dem Dark- oder White-Modus anzupassen
     function styleButtonForCurrentTheme(button) {
         if (isDarkMode) {
             button.style.backgroundColor = '#333';
@@ -213,26 +192,43 @@
         }
     }
 
-    // Funktion zur Erstellung der Buttons
-    async function createCategoryButtons() {
+    function showStandardEarnings() {
+        document.getElementById('standard_earnings_display').style.display = 'inline';
+        document.getElementById('full_earnings_display').style.display = 'none';
+    }
 
+    function createFilterButton(text, title, onClick, classes = ['btn', 'btn-xs']) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        button.title = title;
+        button.classList.add(...classes);
+        button.style.margin = '2px';
+
+        if (!classes.includes('btn-primary')) {
+            styleButtonForCurrentTheme(button);
+        }
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    function createCategoryButtons() {
         loadCustomSettings();
+
         const searchInput = document.getElementById('search_input_field_missions');
         if (!searchInput) {
             console.error("Suchfeld nicht gefunden!");
             return;
         }
 
-        const missionData = await fetchMissionData();
         const summary = getMissionSummary();
-
-        // Alten Container entfernen, wenn vorhanden
         const existingContainer = document.getElementById('categoryButtonContainer');
+
         if (existingContainer) {
             existingContainer.remove();
         }
 
-        // Neuen Container erstellen
+        categoryButtonsMap.clear();
+
         const buttonContainer = document.createElement('div');
         buttonContainer.id = 'categoryButtonContainer';
         buttonContainer.style.display = 'flex';
@@ -240,132 +236,110 @@
         buttonContainer.style.marginBottom = '10px';
 
         const desiredOrder = [
-            'fire', 'police', 'highway_police', 'ambulance', 'thw', 'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport', 'factory_fire_brigade', 'criminal_investigation', 'seg', 'seg_medical_service', 'energy_supply', 'energy_supply_2', 'animal_rescue', 'event'
+            'fire', 'police', 'highway_police', 'ambulance', 'thw',
+            'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport',
+            'factory_fire_brigade', 'criminal_investigation', 'seg',
+            'seg_medical_service', 'energy_supply', 'energy_supply_2',
+            'animal_rescue', 'event'
         ];
 
-        // Kategorie-Buttons erzeugen
         desiredOrder.forEach(category => {
-            if (categories.has(category) && !isCategoryInAnyGroup(category)) {
-                const button = document.createElement('button');
-                button.textContent = `${customCategoryLabels[category] || category} (${summary[category] || 0})`;
-                button.classList.add('btn', 'btn-xs');
-                button.style.margin = '2px';
-                styleButtonForCurrentTheme(button);
-                button.title = customTooltips[category] || `Zeigt Einsätze der Kategorie ${customCategoryLabels[category] || category}`;
+            if (!categories.has(category) || isCategoryInAnyGroup(category)) return;
 
-                button.addEventListener('click', () => {
+            const label = customCategoryLabels[category] || category;
+            const button = createFilterButton(
+                `${label} (${summary[category] || 0})`,
+                customTooltips[category] || `Zeigt Einsätze der Kategorie ${label}`,
+                () => {
                     filterMissionListByCategory(category);
                     storeVisibleMissions();
                     setActiveButton(button);
-                    document.getElementById('standard_earnings_display').style.display = 'inline';
-                    document.getElementById('full_earnings_display').style.display = 'none';
+                    showStandardEarnings();
                     updateAverageEarnings();
-                });
+                }
+            );
 
-                buttonContainer.appendChild(button);
-                categoryButtonsMap.set(category, button);
-            }
+            buttonContainer.appendChild(button);
+            categoryButtonsMap.set(category, button);
         });
 
-        // Gruppenbuttons
         for (const [groupName, groupCategories] of Object.entries(categoryGroups)) {
-            const groupButton = document.createElement('button');
-            groupButton.textContent = `${groupName} (${summary[groupName] || 0})`;
-            groupButton.classList.add('btn', 'btn-xs');
-            groupButton.style.margin = '2px';
-            styleButtonForCurrentTheme(groupButton);
-            groupButton.title = generateGroupTooltip(groupCategories);
-
-            groupButton.addEventListener('click', () => {
-                filterMissionListByCategoryGroup(groupCategories);
-                storeVisibleMissions();
-                setActiveButton(groupButton);
-                document.getElementById('standard_earnings_display').style.display = 'inline';
-                document.getElementById('full_earnings_display').style.display = 'none';
-                updateAverageEarnings();
-            });
+            const groupButton = createFilterButton(
+                `${groupName} (${summary[groupName] || 0})`,
+                generateGroupTooltip(groupCategories),
+                () => {
+                    filterMissionListByCategoryGroup(groupCategories);
+                    storeVisibleMissions();
+                    setActiveButton(groupButton);
+                    showStandardEarnings();
+                    updateAverageEarnings();
+                }
+            );
 
             buttonContainer.appendChild(groupButton);
             categoryButtonsMap.set(groupName, groupButton);
         }
 
-        // VGSL/ÜO Button
-        const unoButton = document.createElement('button');
-        unoButton.textContent = `VGSL/ÜO (${summary['no-category'] || 0})`;
-        unoButton.classList.add('btn', 'btn-xs');
-        unoButton.style.margin = '2px';
-        styleButtonForCurrentTheme(unoButton);
-        unoButton.title = customTooltips['VGSL/ÜO'] || "Zeigt Verbandsgroßschadenslagen und Übergabeorte an";
-
-        unoButton.addEventListener('click', () => {
-            filterMissionListWithoutCategory();
-            storeVisibleMissions();
-            setActiveButton(unoButton);
-            document.getElementById('standard_earnings_display').style.display = 'inline';
-            document.getElementById('full_earnings_display').style.display = 'none';
-            updateAverageEarnings();
-        });
+        const unoButton = createFilterButton(
+            `VGSL/ÜO (${summary['no-category'] || 0})`,
+            customTooltips['VGSL/ÜO'] || "Zeigt Verbandsgroßschadenslagen und Übergabeorte an",
+            () => {
+                filterMissionListWithoutCategory();
+                storeVisibleMissions();
+                setActiveButton(unoButton);
+                showStandardEarnings();
+                updateAverageEarnings();
+            }
+        );
 
         buttonContainer.appendChild(unoButton);
         categoryButtonsMap.set('VGSL/ÜO', unoButton);
 
-        // Eventeinsätze Button
-        const eventButton = document.createElement('button');
-        eventButton.textContent = `Eventeinsätze (${summary['Event'] || 0})`;
-        eventButton.classList.add('btn', 'btn-xs');
-        eventButton.style.margin = '2px';
-        styleButtonForCurrentTheme(eventButton);
-        eventButton.title = customTooltips['event'] || "Zeigt alle Eventeinsätze";
-
-        eventButton.addEventListener('click', () => {
-            filterMissionListByEvent();
-            storeVisibleMissions();
-            setActiveButton(eventButton);
-            document.getElementById('standard_earnings_display').style.display = 'inline';
-            document.getElementById('full_earnings_display').style.display = 'none';
-            updateAverageEarnings();
-        });
+        const eventButton = createFilterButton(
+            `Eventeinsätze (${summary['event'] || 0})`,
+            customTooltips['event'] || "Zeigt alle Eventeinsätze",
+            () => {
+                filterMissionListByEvent();
+                storeVisibleMissions();
+                setActiveButton(eventButton);
+                showStandardEarnings();
+                updateAverageEarnings();
+            }
+        );
 
         buttonContainer.appendChild(eventButton);
-        categoryButtonsMap.set('Event', eventButton);
+        categoryButtonsMap.set('event', eventButton);
 
-        // "Alle anzeigen" Button
-        const resetButton = document.createElement('button');
-        resetButton.textContent = 'Alle anzeigen';
-        resetButton.classList.add('btn', 'btn-xs', 'btn-primary');
-        resetButton.style.margin = '2px';
-        resetButton.title = customTooltips['reset'] || "Alle Einsätze anzeigen";
-
-        resetButton.addEventListener('click', () => {
-            resetMissionList();
-            resetActiveButton();
-            sessionStorage.removeItem('visibleMissions');
-            document.getElementById('standard_earnings_display').style.display = 'none';
-            document.getElementById('full_earnings_display').style.display = 'inline';
-            updateAverageEarnings();
-        });
+        const resetButton = createFilterButton(
+            'Alle anzeigen',
+            customTooltips['reset'] || "Alle Einsätze anzeigen",
+            () => {
+                resetMissionList();
+                resetActiveButton();
+                sessionStorage.removeItem('visibleMissions');
+                document.getElementById('standard_earnings_display').style.display = 'none';
+                document.getElementById('full_earnings_display').style.display = 'inline';
+                updateAverageEarnings();
+            },
+            ['btn', 'btn-xs', 'btn-primary']
+        );
 
         buttonContainer.appendChild(resetButton);
-
-        // Button-Container einfügen
         searchInput.parentNode.insertBefore(buttonContainer, searchInput);
 
         window.categoryButtonReady = true;
         document.dispatchEvent(new Event('categoryButtonReady'));
 
-        // Statistik direkt unter die Buttons schieben, falls sie existiert
-        const stats = document.getElementById('average_earnings_display');
-        if (stats) {
-            buttonContainer.parentNode.insertBefore(stats, buttonContainer.nextSibling);
+        const oldStats = document.getElementById('average_earnings_display');
+
+        if (oldStats) {
+            buttonContainer.parentNode.insertBefore(oldStats, buttonContainer.nextSibling);
         }
 
-        // Zahnrad-Einstellungen-Button (hinter "Alle anzeigen"), falls du das hast!
         if (typeof createSettingsButton === "function") {
-            const settingsButton = createSettingsButton();
-            buttonContainer.appendChild(settingsButton);
+            buttonContainer.appendChild(createSettingsButton());
         }
 
-        // Verdienstanzeige-Bereich einfügen (optional, wenn du das noch brauchst)
         const earningsContainer = document.createElement('div');
         earningsContainer.id = 'average_earnings_display';
         earningsContainer.style.marginTop = '10px';
@@ -384,71 +358,56 @@
         updateAverageEarnings();
     }
 
-    // ----- Bereich für das Userinterface ----- \\
-
-    // Funktion zum Laden der Einstellungen
     function loadCustomSettings() {
         const storedGroups = JSON.parse(localStorage.getItem('customCategoryGroups'));
         const storedEvents = JSON.parse(localStorage.getItem('customEventMissionIds'));
 
-        if (storedGroups) categoryGroups = storedGroups;
-
-        if (Array.isArray(storedEvents)) {
-            eventMissionIds = storedEvents.map(id => parseInt(id)).filter(id => !isNaN(id));
-        } else {
-            eventMissionIds = [...defaultEventMissionIds];
-            //console.log("Default-Eventmissionen verwendet:", eventMissionIds);
+        if (storedGroups) {
+            categoryGroups = storedGroups;
         }
+
+        eventMissionIds = Array.isArray(storedEvents)
+            ? storedEvents.map(id => parseInt(id)).filter(id => !isNaN(id))
+        : [...defaultEventMissionIds];
     }
 
-    // Funktion zum Speichern der Einstellungen
     function saveCustomSettings() {
         const newGroups = {};
-        const usedCategories = new Set();
 
         document.querySelectorAll('#categorySettingsContainer .category-group-row').forEach(row => {
             const name = row.querySelector('.group-name-input').value.trim();
-            const selects = row.querySelectorAll('.category-select');
-            const categories = [...selects].map(sel => sel.value).filter(Boolean);
+            const categories = [...row.querySelectorAll('.category-select')]
+            .map(select => select.value)
+            .filter(Boolean);
+
             if (name && categories.length) {
                 newGroups[name] = categories;
-                categories.forEach(cat => usedCategories.add(cat));
             }
         });
-
-        // Kategorien filtern
-        for (const [group, cats] of Object.entries(newGroups)) {
-            newGroups[group] = cats.filter(cat => usedCategories.has(cat));
-        }
 
         categoryGroups = newGroups;
         localStorage.setItem('customCategoryGroups', JSON.stringify(categoryGroups));
 
-        // Gruppen in UI neu darstellen:
         const container = document.getElementById('categorySettingsContainer');
+
         if (container) {
             populateGroupSettings(container, categoryGroups, allCategories, customCategoryLabels);
         }
 
-        // Statistik-Bereich sichern (falls vorhanden)
-        let stats = document.getElementById('average_earnings_display');
+        const stats = document.getElementById('average_earnings_display');
+
         if (stats && stats.parentNode) {
             stats.parentNode.removeChild(stats);
         }
 
-        // Buttons neu aufbauen
         createCategoryButtons();
-
-        // Statistik-Flag/Event für Script 2 (wichtig, damit Statistik im Notfall neu erstellt wird)
         window.categoryButtonReady = true;
         document.dispatchEvent(new Event('categoryButtonReady'));
-
-
     }
 
-    // Funktiom zum erstellen des Einstellungsbutton
     function createSettingsButton() {
         const settingsButton = document.createElement('button');
+
         settingsButton.innerHTML = '⚙️';
         settingsButton.classList.add('btn', 'btn-xs', 'btn-warning');
         settingsButton.style.margin = '2px';
@@ -456,18 +415,19 @@
 
         settingsButton.addEventListener('click', () => {
             let modal = document.getElementById('customSettingsModal');
+
             if (!modal) {
                 createSettingsModal();
                 modal = document.getElementById('customSettingsModal');
             }
+
             modal.style.display = 'flex';
         });
 
         return settingsButton;
     }
 
-    // Funktion um die Dropdowns zu erstellen
-    function createCategoryDropdown(selected, allCategories, labelMap, onRemove) {
+    function createCategoryDropdown(selected, categoriesList, labelMap, onRemove) {
         const wrapper = document.createElement('div');
         wrapper.style.display = 'inline-flex';
         wrapper.style.alignItems = 'center';
@@ -481,34 +441,32 @@
         optionDefault.textContent = 'Kategorie wählen';
         select.appendChild(optionDefault);
 
-        allCategories.forEach(cat => {
+        categoriesList.forEach(category => {
             const option = document.createElement('option');
-            option.value = cat;
-            option.textContent = labelMap[cat] || cat;
-            if (cat === selected) option.selected = true;
+            option.value = category;
+            option.textContent = labelMap[category] || category;
+            option.selected = category === selected;
             select.appendChild(option);
         });
 
         wrapper.appendChild(select);
 
-        // Einheitlicher Entfernen-Button
         if (typeof onRemove === 'function') {
-            const removeBtn = document.createElement('button');
-            removeBtn.textContent = '✖';
-            removeBtn.className = 'btn btn-xs btn-danger remove-dropdown-btn';
-            removeBtn.type = 'button';
-            removeBtn.onclick = () => onRemove(wrapper);
-            wrapper.appendChild(removeBtn);
+            const removeButton = document.createElement('button');
+            removeButton.textContent = '✖';
+            removeButton.className = 'btn btn-xs btn-danger remove-dropdown-btn';
+            removeButton.type = 'button';
+            removeButton.onclick = () => onRemove(wrapper);
+            wrapper.appendChild(removeButton);
         }
 
         return wrapper;
     }
 
-    // Funktion um die Gruppennamen und Kategorien
-    function populateGroupSettings(container, categoryGroups, allCategories, labelMap) {
+    function populateGroupSettings(container, groups, categoriesList, labelMap) {
         container.innerHTML = '';
 
-        Object.entries(categoryGroups).forEach(([groupName, categories]) => {
+        Object.entries(groups).forEach(([groupName, categories]) => {
             const groupDiv = document.createElement('div');
             groupDiv.className = 'category-group-row flex items-center gap-2';
             groupDiv.style.marginBottom = '10px';
@@ -520,57 +478,44 @@
             nameInput.className = 'input input-sm group-name-input';
             groupDiv.appendChild(nameInput);
 
+            const addCategoryButton = () => {
+                const dropdown = createCategoryDropdown('', categoriesList, labelMap, wrapper => wrapper.remove());
+                groupDiv.insertBefore(dropdown, addCategoryBtn);
+            };
+
             categories.forEach(category => {
-                const dropdownWrapper = createCategoryDropdown(category, allCategories, labelMap, (wrapper) => {
-                    wrapper.remove();
-                });
-                groupDiv.appendChild(dropdownWrapper);
+                groupDiv.appendChild(
+                    createCategoryDropdown(category, categoriesList, labelMap, wrapper => wrapper.remove())
+                );
             });
 
-            // +Kategorie Button
             const addCategoryBtn = document.createElement('button');
             addCategoryBtn.textContent = '+ Kategorie';
             addCategoryBtn.className = 'btn btn-xs btn-info';
             addCategoryBtn.type = 'button';
-            addCategoryBtn.onclick = () => {
-                const dropdownWrapper = createCategoryDropdown('', allCategories, labelMap, (wrapper) => {
-                    wrapper.remove();
-                });
-                groupDiv.insertBefore(dropdownWrapper, addCategoryBtn);
-            };
+            addCategoryBtn.onclick = addCategoryButton;
             groupDiv.appendChild(addCategoryBtn);
 
-            // Nach oben Button
             const moveUpBtn = document.createElement('button');
             moveUpBtn.textContent = '⬆';
             moveUpBtn.className = 'btn btn-xs btn-move';
             moveUpBtn.type = 'button';
-
             moveUpBtn.onclick = () => {
-                const prev = groupDiv.previousElementSibling;
-                if (prev) {
-                    container.insertBefore(groupDiv, prev);
-                }
+                const previous = groupDiv.previousElementSibling;
+                if (previous) container.insertBefore(groupDiv, previous);
             };
-
             groupDiv.appendChild(moveUpBtn);
 
-            // Nach unten Button
             const moveDownBtn = document.createElement('button');
             moveDownBtn.textContent = '⬇';
             moveDownBtn.className = 'btn btn-xs btn-move';
             moveDownBtn.type = 'button';
-
             moveDownBtn.onclick = () => {
                 const next = groupDiv.nextElementSibling;
-                if (next) {
-                    container.insertBefore(next, groupDiv);
-                }
+                if (next) container.insertBefore(next, groupDiv);
             };
-
             groupDiv.appendChild(moveDownBtn);
 
-            // Gruppe löschen Button
             const removeBtn = document.createElement('button');
             removeBtn.textContent = '✖';
             removeBtn.className = 'btn btn-xs btn-danger remove-group-btn';
@@ -582,32 +527,31 @@
         });
     }
 
-    // Funktion zur Erstellung des Userinterfaces
     function createSettingsModal() {
         loadCustomSettings();
+
         if (document.getElementById('customSettingsModal')) return;
 
-        // CSS für Entfernen-Button
         if (!document.getElementById('tm-btn-remove-style')) {
             const style = document.createElement('style');
             style.id = 'tm-btn-remove-style';
             style.textContent = `
-            .btn-remove {
-                background-color: #dc2626 !important;
-                color: white !important;
-                border: none !important;
-                cursor: pointer !important;
-                padding: 0.25rem 0.5rem !important;
-                border-radius: 0.25rem !important;
-                font-size: 0.75rem !important;
-                line-height: 1rem !important;
-                height: 1.5rem !important;
-                display: inline-flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                margin-left: 10px !important;
-            }
-        `;
+
+                .btn-remove {
+                    background-color: #dc2626 !important;
+                    color: white !important;
+                    border: none !important;
+                    cursor: pointer !important;
+                    padding: 0.25rem 0.5rem !important;
+                    border-radius: 0.25rem !important;
+                    font-size: 0.75rem !important;
+                    line-height: 1rem !important;
+                    height: 1.5rem !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    margin-left: 10px !important;
+                }`;
             document.head.appendChild(style);
         }
 
@@ -615,65 +559,65 @@
             const style = document.createElement('style');
             style.id = 'tm-formstyle';
             style.textContent = `
-        .category-group-row .form-select,
-        .category-group-row .input-sm,
-        .category-group-row input[type="text"] {
-            height: 1.85em !important;
-            padding: 0 0.5em !important;
-            font-size: 0.95em !important;
-            border-radius: 0.2em !important;
-            min-width: 120px;
-        }
-        .category-group-row .btn {
-            height: 1.85em !important;
-            padding: 0 0.7em !important;
-            font-size: 0.95em !important;
-            border-radius: 0.2em !important;
-            display: inline-flex;
-            align-items: center;
-        }
-        .category-group-row > * {
-            margin-right: 6px;
-        }
-        .btn-move {
-        background-color: #000 !important;
-        color: #fff !important;
-    border: 1px solid #444 !important;
-}
 
-.btn-move:hover {
-    background-color: #222 !important;
-}
-    `;
+                        .category-group-row .form-select,
+                        .category-group-row .input-sm,
+                            .category-group-row input[type="text"] {
+                                height: 1.85em !important;
+                                padding: 0 0.5em !important;
+                                font-size: 0.95em !important;
+                                border-radius: 0.2em !important;
+                                min-width: 120px;
+                            }
+                    .category-group-row .btn {
+                        height: 1.85em !important;
+                        padding: 0 0.7em !important;
+                        font-size: 0.95em !important;
+                        border-radius: 0.2em !important;
+                        display: inline-flex;
+                        align-items: center;
+                    }
+                    .category-group-row > * {
+                        margin-right: 6px;
+                    }
+                        .btn-move {
+                            background-color: #000 !important;
+                            color: #fff !important;
+                            border: 1px solid #444 !important;
+                        }
+                    .btn-move:hover {
+                        background-color: #222 !important;
+                    }`;
             document.head.appendChild(style);
         }
 
-        const allCategories = [
+        const modalCategories = [
             'fire', 'police', 'ambulance', 'thw', 'criminal_investigation',
             'riot_police', 'water_rescue', 'mountain', 'coastal', 'airport',
-            'airport_specialization', 'factory_fire_brigade', 'seg', 'seg_medical_service',
-            'energy_supply', 'energy_supply_2', 'highway_police', 'animal_rescue',
+            'airport_specialization', 'factory_fire_brigade', 'seg',
+            'seg_medical_service', 'energy_supply', 'energy_supply_2',
+            'highway_police', 'animal_rescue'
         ];
 
-        const customCategoryLabels = {
-            'fire': 'Feuerwehr',
-            'police': 'Polizei',
-            'ambulance': 'Rettungsdienst',
-            'thw': 'Technisches Hilfswerk',
-            'criminal_investigation': 'Kriminalpolizei',
-            'riot_police': 'Bereitschaftspolizei',
-            'water_rescue': 'Wasserrettung',
-            'mountain': 'Bergrettung',
-            'coastal': 'Seenotrettung',
-            'airport': 'Flughafeneinsätze',
-            'airport_specialization': 'Spezialisierte Flughafeneinsätze',
-            'factory_fire_brigade': 'Werkfeuerwehr',
-            'seg': 'SEG-Einsätze',
-            'seg_medical_service': 'SEG-Sanitätsdienst',
-            'energy_supply': 'NEA 50',
-            'energy_supply_2': 'NEA 200',
-            'highway_police': 'Autobahnpolizei',
-            'animal_rescue': 'Tierrettung',
+        const modalLabels = {
+            fire: 'Feuerwehr',
+            police: 'Polizei',
+            ambulance: 'Rettungsdienst',
+            thw: 'Technisches Hilfswerk',
+            criminal_investigation: 'Kriminalpolizei',
+            riot_police: 'Bereitschaftspolizei',
+            water_rescue: 'Wasserrettung',
+            mountain: 'Bergrettung',
+            coastal: 'Seenotrettung',
+            airport: 'Flughafeneinsätze',
+            airport_specialization: 'Spezialisierte Flughafeneinsätze',
+            factory_fire_brigade: 'Werkfeuerwehr',
+            seg: 'SEG-Einsätze',
+            seg_medical_service: 'SEG-Sanitätsdienst',
+            energy_supply: 'NEA 50',
+            energy_supply_2: 'NEA 200',
+            highway_police: 'Autobahnpolizei',
+            animal_rescue: 'Tierrettung'
         };
 
         const eventMissions = {
@@ -693,101 +637,91 @@
             "Silvester": [259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 326, 591, 695],
             "WM / EM": [371, 372, 373, 374, 375, 376, 641, 642, 849, 850, 851, 852, 1004, 1005, 1006, 1007, 1008, 1009],
             "Jubiläum": [756, 757, 758, 759, 760, 761, 762, 763, 764, 765, 766, 767, 768, 769, 770, 771, 772],
-            "Sportevent": [868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878],
+            "Sportevent": [868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878]
         };
-
-        let eventMissionIds = JSON.parse(localStorage.getItem('customEventMissionIds') || '[]');
 
         const modal = document.createElement('div');
         modal.id = 'customSettingsModal';
         modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(0, 0, 0, 0.6);
-        z-index: 10000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    `;
+
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    background-color: rgba(0, 0, 0, 0.6);
+                    z-index: 10000;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;`;
 
         const isDarkMode = document.body.classList.contains('dark');
 
         const modalBox = document.createElement('div');
         modalBox.className = 'modal-box';
         modalBox.style.cssText = `
-        max-height: 90vh;
-        overflow-y: auto;
-        max-width: 90vw;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        background-color: ${isDarkMode ? '#1e1e1e' : '#ffffff'};
-        color: ${isDarkMode ? '#ffffff' : '#000000'};
-    `;
+
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    max-width: 90vw;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+                    background-color: ${isDarkMode ? '#1e1e1e' : '#ffffff'};
+                    color: ${isDarkMode ? '#ffffff' : '#000000'};`;
 
         modalBox.innerHTML = `
-        <h3 class="font-bold text-lg mb-2">Einstellungen</h3>
-        <div id="categorySettingsContainer" class="space-y-2 mb-4"></div>
-        <button class="btn btn-sm btn-success my-2" id="addGroupBtn">+ Neue Gruppe</button>
 
-        <h4 class="font-bold text-lg mb-1 text-left w-full">Eventeinsätze auswählen</h4>
-        <p class="font-bold text-xl text-black mb-2 text-left w-full" style="margin-top: 0;">
-        Die ausgewählten Events werden im Button <strong>"Eventeinsätze"</strong> angezeigt.
-        </p>
+                        <h3 class="font-bold text-lg mb-2">Einstellungen</h3>
+                    <div id="categorySettingsContainer" class="space-y-2 mb-4"></div>
+                    <button class="btn btn-sm btn-success my-2" id="addGroupBtn">+ Neue Gruppe</button>
+                    <h4 class="font-bold text-lg mb-1 text-left w-full">Eventeinsätze auswählen</h4>
+                    <p class="font-bold text-xl text-black mb-2 text-left w-full" style="margin-top: 0;">
+                        Die ausgewählten Events werden im Button <strong>"Eventeinsätze"</strong> angezeigt.
+                    </p>
+                    <div id="eventCheckboxContainer" class="grid grid-cols-3 gap-2 mb-4 w-full"></div>
+                    <div class="modal-action">
+                        <button class="btn btn-success" id="saveSettingsBtn">Speichern</button>
+                    <button class="btn btn-primary" id="closeSettingsBtn">Schließen</button>
+                    <button class="btn btn-danger" id="resetSettingsBtn">Zurücksetzen</button>
+                    </div>`;
 
-        <div id="eventCheckboxContainer" class="grid grid-cols-3 gap-2 mb-4 w-full"></div>
-
-        <div class="modal-action">
-            <button class="btn btn-success" id="saveSettingsBtn">Speichern</button>
-            <button class="btn btn-primary" id="closeSettingsBtn">Schließen</button>
-            <button class="btn btn-danger" id="resetSettingsBtn">Zurücksetzen</button>
-        </div>
-    `;
 
         modal.appendChild(modalBox);
         document.body.appendChild(modal);
 
-        // Gruppen laden
         const container = modal.querySelector('#categorySettingsContainer');
-        container.innerHTML = ''; // <-- Alte Inhalte löschen
-        populateGroupSettings(container, categoryGroups, allCategories, customCategoryLabels);
+        populateGroupSettings(container, categoryGroups, modalCategories, modalLabels);
 
-        // Event-Checkboxen laden (in 3 Spalten)
         const checkboxContainer = modal.querySelector('#eventCheckboxContainer');
         const savedEventLabels = JSON.parse(localStorage.getItem('customEventMissionLabels') || '[]');
 
-        // Grid-Layout für 3 Spalten
         checkboxContainer.style.display = 'grid';
         checkboxContainer.style.gridTemplateColumns = 'repeat(3, 1fr)';
         checkboxContainer.style.gap = '0.5rem';
 
         Object.keys(eventMissions).forEach(label => {
             const id = `eventCheckbox-${label.replace(/\s+/g, '_')}`;
-            const isChecked = savedEventLabels.includes(label);
-
             const wrapper = document.createElement('label');
+            const checkbox = document.createElement('input');
+
             wrapper.setAttribute('for', id);
             wrapper.style.display = 'flex';
             wrapper.style.alignItems = 'center';
             wrapper.style.gap = '0.5rem';
             wrapper.style.cursor = 'pointer';
 
-            const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'event-checkbox';
             checkbox.dataset.event = label;
             checkbox.id = id;
-            if (isChecked) checkbox.checked = true;
+            checkbox.checked = savedEventLabels.includes(label);
 
             wrapper.appendChild(checkbox);
             wrapper.append(label);
             checkboxContainer.appendChild(wrapper);
         });
 
-        // Neue Gruppe hinzufügen
         document.getElementById('addGroupBtn').addEventListener('click', () => {
             const groupDiv = document.createElement('div');
             groupDiv.className = 'category-group-row flex items-center gap-2';
@@ -797,33 +731,27 @@
             nameInput.className = 'input input-sm group-name-input';
             groupDiv.appendChild(nameInput);
 
-            const dropdownWrapper = createCategoryDropdown('', allCategories, customCategoryLabels, (wrapper) => {
-                wrapper.remove();
-            });
-            groupDiv.appendChild(dropdownWrapper);
-
             const addCategoryBtn = document.createElement('button');
             addCategoryBtn.textContent = '+ Kategorie';
             addCategoryBtn.className = 'btn btn-xs btn-info';
             addCategoryBtn.type = 'button';
             addCategoryBtn.onclick = () => {
-                const dropdownWrapper = createCategoryDropdown('', allCategories, customCategoryLabels, (wrapper) => {
-                    wrapper.remove();
-                });
-                groupDiv.insertBefore(dropdownWrapper, addCategoryBtn);
+                const dropdown = createCategoryDropdown('', modalCategories, modalLabels, wrapper => wrapper.remove());
+                groupDiv.insertBefore(dropdown, addCategoryBtn);
             };
+
+            groupDiv.appendChild(
+                createCategoryDropdown('', modalCategories, modalLabels, wrapper => wrapper.remove())
+            );
             groupDiv.appendChild(addCategoryBtn);
 
             const moveUpBtn = document.createElement('button');
             moveUpBtn.textContent = '⬆';
             moveUpBtn.className = 'btn btn-xs btn-move';
             moveUpBtn.type = 'button';
-
             moveUpBtn.onclick = () => {
-                const prev = groupDiv.previousElementSibling;
-                if (prev) {
-                    container.insertBefore(groupDiv, prev);
-                }
+                const previous = groupDiv.previousElementSibling;
+                if (previous) container.insertBefore(groupDiv, previous);
             };
             groupDiv.appendChild(moveUpBtn);
 
@@ -831,12 +759,9 @@
             moveDownBtn.textContent = '⬇';
             moveDownBtn.className = 'btn btn-xs btn-move';
             moveDownBtn.type = 'button';
-
             moveDownBtn.onclick = () => {
                 const next = groupDiv.nextElementSibling;
-                if (next) {
-                    container.insertBefore(next, groupDiv);
-                }
+                if (next) container.insertBefore(next, groupDiv);
             };
             groupDiv.appendChild(moveDownBtn);
 
@@ -850,86 +775,72 @@
             container.appendChild(groupDiv);
         });
 
-        // Speichern
         document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-            const selectedLabels = Array.from(document.querySelectorAll('.event-checkbox'))
-            .filter(cb => cb.checked)
-            .map(cb => cb.dataset.event);
+            const selectedLabels = [...document.querySelectorAll('.event-checkbox')]
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.dataset.event);
 
             const selectedEventIds = selectedLabels.flatMap(label => eventMissions[label]);
 
             localStorage.setItem('customEventMissionLabels', JSON.stringify(selectedLabels));
             localStorage.setItem('customEventMissionIds', JSON.stringify(selectedEventIds));
 
-            // Speichere auch Kategoriegruppen
             saveCustomSettings();
-
             loadCustomSettings();
 
             alert('Einstellungen gespeichert.');
             modal.style.display = 'none';
 
-            // Alte Buttons entfernen (z.B. den Container mit den Buttons)
             const searchInput = document.getElementById('search_input_field_missions');
-            const oldButtonContainer = searchInput.previousElementSibling; // Wenn Buttons direkt davor eingefügt wurden
+            const oldButtonContainer = searchInput.previousElementSibling;
+
             if (oldButtonContainer) {
                 oldButtonContainer.remove();
             }
 
-            // Buttons neu erstellen
             createCategoryButtons();
         });
 
-        // Zurücksetzen
         document.getElementById('resetSettingsBtn').addEventListener('click', () => {
-            if (confirm("Zurücksetzen auf Standardeinstellungen? Dies löscht alle deine bisherigen Gruppeneinstellungen!")) {
-                // LocalStorage löschen
-                localStorage.removeItem('customCategoryGroups');
-                localStorage.removeItem('customEventMissionLabels');
-                localStorage.removeItem('customEventMissionIds');
+            if (!confirm("Zurücksetzen auf Standardeinstellungen? Dies löscht alle deine bisherigen Gruppeneinstellungen!")) return;
 
-                // Variablen zurücksetzen
-                categoryGroups = {};
-                eventMissionIds = [];
+            localStorage.removeItem('customCategoryGroups');
+            localStorage.removeItem('customEventMissionLabels');
+            localStorage.removeItem('customEventMissionIds');
 
-                // Gruppencontainer komplett leeren
-                const container = document.getElementById('categorySettingsContainer');
-                if (container) {
-                    container.innerHTML = '';
-                }
+            categoryGroups = {};
+            eventMissionIds = [];
 
-                // Event-Checkboxen entchecken
-                const checkboxContainer = document.getElementById('eventCheckboxContainer');
-                if (checkboxContainer) {
-                    checkboxContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                        cb.checked = false;
-                    });
-                }
-
-                // Alte Buttons vor dem Neubauen entfernen
-                const buttonsContainer = document.getElementById('buttonsContainer'); // Beispiel-Id
-                if (buttonsContainer) {
-                    buttonsContainer.innerHTML = '';
-                }
-
-                // Jetzt neue Buttons erstellen (achte darauf, dass createCategoryButtons den Container benutzt)
-                createCategoryButtons();
-
-                alert('Einstellungen wurden zurückgesetzt.');
+            const groupContainer = document.getElementById('categorySettingsContainer');
+            if (groupContainer) {
+                groupContainer.innerHTML = '';
             }
+
+            const eventsContainer = document.getElementById('eventCheckboxContainer');
+            if (eventsContainer) {
+                eventsContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            }
+
+            const buttonsContainer = document.getElementById('buttonsContainer');
+            if (buttonsContainer) {
+                buttonsContainer.innerHTML = '';
+            }
+
+            createCategoryButtons();
+            alert('Einstellungen wurden zurückgesetzt.');
         });
 
-        // Schließen
         document.getElementById('closeSettingsBtn').addEventListener('click', () => {
             modal.style.display = 'none';
         });
     }
 
-    // Funktion für Dark / White
     function applyThemeToModal(modal) {
-        const isDarkMode = document.body.classList.contains('dark');
+        const dark = document.body.classList.contains('dark');
 
-        if (isDarkMode) {
+        if (dark) {
             modal.style.backgroundColor = '#1e1e1e';
             modal.style.color = '#ffffff';
             modal.style.border = '1px solid #444';
@@ -942,21 +853,18 @@
         }
     }
 
-    // ----- Bereich für die Verdienstberechnung ----- \\
-
-    // Funktion zur Berechnung des Verdienstes
     function updateAverageEarnings() {
         const missionElements = document.querySelectorAll('.missionSideBarEntry:not(.mission_deleted)');
         let totalCredits = 0;
         let actualCredits = 0;
         let allCredits = 0;
         let allActualCredits = 0;
-        let currentMissions = new Set();
-        let categoryCredits = {};
+        const currentMissions = new Set();
+        const categoryCredits = {};
 
-        // Multiplikator bestimmen
         let creditMultiplier = 1;
         const eventElement = document.getElementById('event-info-block');
+
         if (eventElement) {
             const timer = eventElement.querySelector('.timer');
             const endTime = parseInt(timer?.getAttribute('data-end-time') || 0, 10);
@@ -969,7 +877,7 @@
                 if (isPremium && titleText.includes('x2,5')) {
                     creditMultiplier = 2.5;
                 } else if (!isPremium && titleText.includes('x2')) {
-                    creditMultiplier = 2.0;
+                    creditMultiplier = 2;
                 }
             }
         }
@@ -981,42 +889,41 @@
             const additiveOverlay = element.getAttribute('data-additive-overlays');
             const category = element.getAttribute('data-mission-category');
 
-            if (missionId && missionData[missionId]) {
-                let baseCredits = missionData[missionId].base_credits;
-                let credits = baseCredits ?? 0;
+            if (!missionId || !missionData[missionId]) return;
 
-                if (additiveOverlay && missionData[missionId].overlays[additiveOverlay]) {
-                    credits = missionData[missionId].overlays[additiveOverlay];
-                }
+            const baseCredits = missionData[missionId].base_credits;
+            let credits = baseCredits ?? 0;
 
-                if (!baseCredits) {
-                    credits += 250;
-                }
+            if (additiveOverlay && missionData[missionId].overlays[additiveOverlay]) {
+                credits = missionData[missionId].overlays[additiveOverlay];
+            }
 
-                // Hier Multiplikator draufrechnen:
-                credits = credits * creditMultiplier;
+            if (!baseCredits) {
+                credits += 250;
+            }
 
-                allCredits += credits;
+            credits *= creditMultiplier;
+            allCredits += credits;
 
-                const idNum = element.id.replace(/\D/g, '');
-                const participantIcon = document.getElementById(`mission_participant_${idNum}`);
-                const isParticipating = participantIcon && !participantIcon.classList.contains('hidden');
+            const idNum = element.id.replace(/\D/g, '');
+            const participantIcon = document.getElementById(`mission_participant_${idNum}`);
+            const isParticipating = participantIcon && !participantIcon.classList.contains('hidden');
 
-                if (isParticipating) {
-                    allActualCredits += credits;
-                    if (category) {
-                        categoryCredits[category] = (categoryCredits[category] || 0) + credits;
-                    }
-                }
+            if (isParticipating) {
+                allActualCredits += credits;
 
-                if (element.style.display !== 'none') {
-                    totalCredits += credits;
-                    if (isParticipating) {
-                        actualCredits += credits;
-                    }
-                    currentMissions.add(missionId);
+                if (category) {
+                    categoryCredits[category] = (categoryCredits[category] || 0) + credits;
                 }
             }
+
+            totalCredits += credits;
+
+            if (isParticipating) {
+                actualCredits += credits;
+            }
+
+            currentMissions.add(missionId);
         });
 
         activeMissions.forEach(missionId => {
@@ -1027,23 +934,21 @@
 
         activeMissions = currentMissions;
 
+        const multiplierHTML = creditMultiplier > 1
+        ? `<br><small style="color: #888;">(Multiplikator aktiv: x${creditMultiplier})</small>`
+        : '';
+
         const standardHTML = `
-<span title="${customTooltips['total_earnings'] || 'Verdienst der Kategorie oder Gruppe'}">💰 ${totalCredits.toLocaleString()} Credits</span>
-/
-<span title="${customTooltips['actual_earnings'] || 'Verdienst aus angefahrenen Einsätzen der Kategorie oder Gruppe'}">
-    <span class="glyphicon glyphicon-user" style="color: #8bc34a;" aria-hidden="true"></span> ${actualCredits.toLocaleString()} Credits
-</span>
-${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: x${creditMultiplier})</small>` : ''}
-`;
+
+        <span title="${customTooltips['total_earnings'] || 'Verdienst der Kategorie oder Gruppe'}">💰 ${totalCredits.toLocaleString()} Credits</span>
+        / <span title="${customTooltips['actual_earnings'] || 'Verdienst aus angefahrenen Einsätzen der Kategorie oder Gruppe'}"> <span class="glyphicon glyphicon-user" style="color: #8bc34a;" aria-hidden="true"></span> ${actualCredits.toLocaleString()} Credits </span>
+            ${multiplierHTML}`;
 
         const fullHTML = `
-<span title="Gesamtverdienst aller Einsätze">💲${allCredits.toLocaleString()} Credits</span>
-/
-<span title="Verdienst aus allen angefahrenen Einsätzen">
-    <span class="glyphicon glyphicon-user" style="color: #4caf50;" aria-hidden="true"></span>💲${allActualCredits.toLocaleString()} Credits
-</span>
-${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: x${creditMultiplier})</small>` : ''}
-`;
+
+            <span title="Gesamtverdienst aller Einsätze">💲${allCredits.toLocaleString()} Credits</span>
+        / <span title="Verdienst aus allen angefahrenen Einsätzen"> <span class="glyphicon glyphicon-user" style="color: #4caf50;" aria-hidden="true"></span>💲${allActualCredits.toLocaleString()} Credits </span>
+            ${multiplierHTML}`;
 
         const standardContainer = document.getElementById('standard_earnings_display');
         const fullContainer = document.getElementById('full_earnings_display');
@@ -1052,32 +957,22 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
         if (fullContainer) fullContainer.innerHTML = fullHTML;
     }
 
-    // Funktion um die Kategoriebuttons zu aktuallisieren
     function updateCategoryButtons() {
-        const summary = getMissionSummary(); // Holt die aktuelle Zählung
+        const summary = getMissionSummary();
 
         categoryButtonsMap.forEach((button, category) => {
-            if (categoryGroups[category]) {
-                // Gruppen-Buttons aktualisieren
-                button.textContent = `${category} (${summary[category] || 0})`;
-            } else {
-                // Einzelne Kategorie-Buttons aktualisieren
-                button.textContent = `${customCategoryLabels[category] || category} (${summary[category] || 0})`;
-            }
+            button.textContent = categoryGroups[category]
+                ? `${category} (${summary[category] || 0})`
+            : `${customCategoryLabels[category] || category} (${summary[category] || 0})`;
         });
 
-        // Speziell für den VGSL/ÜO-Button
         if (categoryButtonsMap.has('VGSL/ÜO')) {
-            const unoButton = categoryButtonsMap.get('VGSL/ÜO');
-            unoButton.textContent = `VGSL/ÜO (${summary['no-category'] || 0})`;
+            categoryButtonsMap.get('VGSL/ÜO').textContent = `VGSL/ÜO (${summary['no-category'] || 0})`;
         }
     }
 
-    // ----- Bereich für die Einsatzzählung ----- \\
-
-    // Funktion um die Button zu aktuallisieren
     function updateMissionCount() {
-        const summary = getMissionSummary(); // Neue Zählung abrufen
+        const summary = getMissionSummary();
         const categoryButtons = document.querySelectorAll('.category-button');
 
         categoryButtons.forEach(button => {
@@ -1085,77 +980,66 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
             const countDisplay = button.querySelector('.mission-count');
 
             if (countDisplay) {
-                countDisplay.textContent = summary[category] || 0; // Falls keine Einsätze, dann 0 setzen
+                countDisplay.textContent = summary[category] || 0;
             }
         });
 
-        // Extra-Handling für VGSL/ÜO (falls nötig)
         const vgsloButton = document.querySelector('.category-button[data-category="VGSL/ÜO"]');
+
         if (vgsloButton) {
             const countDisplay = vgsloButton.querySelector('.mission-count');
+
             if (countDisplay) {
                 countDisplay.textContent = summary["VGSL/ÜO"] || 0;
             }
         }
     }
 
-    // Funktion zur Berechnung der Anzahl der Einsätze für eine bestimmte Kategorie
     function getMissionCountByCategory(category) {
-        const summary = getMissionSummary(); // Holt die bereits berechneten Werte
-        return summary[category] || 0; // Falls die Kategorie nicht existiert, wird 0 zurückgegeben
+        return getMissionSummary()[category] || 0;
     }
 
-    // Funktion zur Berechnung der Anzahl der Einsätze für eine Kategoriegruppe
     function getMissionCountByCategoryGroup(categoriesGroup) {
         const summary = getMissionSummary();
-        let count = 0;
-
-        categoriesGroup.forEach(category => {
-            count += summary[category] || 0; // Addiere die Werte aller Kategorien in der Gruppe
-        });
-
-        return count;
+        return categoriesGroup.reduce((count, category) => count + (summary[category] || 0), 0);
     }
 
-    // Funktion um die Einsätze zu zählen
     function getMissionSummary() {
-        let summary = {};
-
+        const summary = {};
         const missionElements = document.querySelectorAll('.missionSideBarEntry:not(.mission_deleted):not(.hidden)');
 
         missionElements.forEach(element => {
             const missionId = element.getAttribute('mission_type_id');
-            let categories = missionCategoryMap.get(missionId) || ['no-category']; // Standardwert "no-category"
+            let missionCategories = missionCategoryMap.get(missionId) || ['no-category'];
             const idNum = parseInt(missionId);
 
-            // Eventlogik: ZÄHLE NUR, wenn eventMissionIds NICHT LEER ist und die Mission in der Liste ist
             if (eventMissionIds.length > 0 && eventMissionIds.includes(idNum)) {
-                categories = ['event'];
+                missionCategories = ['event'];
             } else if (defaultEventMissionIds.includes(idNum)) {
-                // NICHT als Event, sondern wie normale Kategorie behandeln
+                // Als normale Kategorie behandeln
             } else if (specialMissionIds.includes(idNum)) {
-                categories = ['no-category'];
+                missionCategories = ['no-category'];
             }
 
-            categories.forEach(category => {
+            missionCategories.forEach(category => {
                 summary[category] = (summary[category] || 0) + 1;
             });
         });
 
-        // Berechnung für Gruppen
         for (const [groupName, groupCategories] of Object.entries(categoryGroups)) {
-            summary[groupName] = groupCategories.reduce((sum, category) => sum + (summary[category] || 0), 0);
+            summary[groupName] = groupCategories.reduce(
+                (sum, category) => sum + (summary[category] || 0),
+                0
+            );
         }
 
         return summary;
     }
 
-    // ----- Bereich für die Filterung der Einsätze ----- \\
-
-    // Beobachtet alle Einsatzlisten auf neue Einsätze
     function observeMissionLists() {
         missionListIds.forEach(id => {
             const missionList = document.getElementById(id);
+
             if (!missionList) {
                 console.error(`Einsatzliste ${id} nicht gefunden!`);
                 return;
@@ -1175,7 +1059,6 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
         });
     }
 
-    // Bestimmt, ob ein neuer Einsatz sichtbar sein soll
     function updateSingleMissionVisibility(missionElement) {
         if (activeFilters.length === 0) {
             missionElement.style.display = "";
@@ -1188,7 +1071,8 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
         const missionParticipation = missionElement.getAttribute('data-mission-participation-filter');
         const categories = missionCategoryMap.get(missionId) || [];
 
-        const isVisible = activeFilters.includes(missionType) ||
+        const isVisible =
+              activeFilters.includes(missionType) ||
               activeFilters.includes(missionState) ||
               activeFilters.includes(missionParticipation) ||
               categories.some(category => activeFilters.includes(category));
@@ -1196,24 +1080,20 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
         missionElement.style.display = isVisible ? "" : "none";
     }
 
-    // Aktualisiert die Sichtbarkeit aller bestehenden Einsätze
     function updateMissionVisibility() {
         document.querySelectorAll('.missionSideBarEntry').forEach(updateSingleMissionVisibility);
     }
 
-    // Filter: Nur eine bestimmte Kategorie
     function filterMissionListByCategory(category) {
         activeFilters = [category];
         updateMissionVisibility();
     }
 
-    // Filter: Gruppe von Kategorien
     function filterMissionListByCategoryGroup(categoriesGroup) {
         activeFilters = categoriesGroup;
         updateMissionVisibility();
     }
 
-    // Filter: Einsätze ohne Kategorie
     function filterMissionListWithoutCategory() {
         activeFilters = ['without-category'];
 
@@ -1225,11 +1105,9 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
         });
     }
 
-    // Filter: Eventeinsätze
     function filterMissionListByEvent() {
         activeFilters = ['event'];
 
-        // Wenn keine Eventmissionen ausgewählt sind, ALLES ausblenden!
         if (!Array.isArray(eventMissionIds) || eventMissionIds.length === 0) {
             document.querySelectorAll('.missionSideBarEntry').forEach(mission => {
                 mission.style.display = "none";
@@ -1237,17 +1115,13 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
             return;
         }
 
-        // Sonst nur die gewählten Eventeinsätze anzeigen
         document.querySelectorAll('.missionSideBarEntry').forEach(mission => {
             const missionIdRaw = mission.getAttribute('mission_type_id') || mission.dataset.missionTypeId;
             const missionId = parseInt(missionIdRaw);
-
-            const isEvent = eventMissionIds.includes(missionId);
-            mission.style.display = isEvent ? "" : "none";
+            mission.style.display = eventMissionIds.includes(missionId) ? "" : "none";
         });
     }
 
-    // Alle Einsätze wieder sichtbar machen
     function resetMissionList() {
         activeFilters = [];
         document.querySelectorAll('.missionSideBarEntry').forEach(mission => {
@@ -1255,17 +1129,16 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
         });
     }
 
-    // Visuelle Hervorhebung des aktiven Buttons
     function setActiveButton(button) {
         if (activeCategoryButton) {
             styleButtonForCurrentTheme(activeCategoryButton);
         }
+
         button.style.backgroundColor = '#28a745';
         button.style.color = '#fff';
         activeCategoryButton = button;
     }
 
-    // Entfernt die Hervorhebung des aktiven Buttons
     function resetActiveButton() {
         if (activeCategoryButton) {
             styleButtonForCurrentTheme(activeCategoryButton);
@@ -1273,82 +1146,75 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
         }
     }
 
-    // ----- Bereich für Alamieren und Weiter (Mehr schlecht als Recht aktuell) ----- \\
-
-    // Funktion um die sichtbaren Einsätze in den Session Storage zu speichern
     function storeVisibleMissions() {
         const visibleMissions = [];
-        document.querySelectorAll('.missionSideBarEntry').forEach(mission => {
-            const isVisible = mission.style.display !== 'none';
-            const isNotDeleted = !mission.classList.contains('mission_deleted');
 
-            if (isVisible && isNotDeleted) {
-                const missionId = mission.id.split('_')[1];
-                visibleMissions.push(missionId);
+        document.querySelectorAll('.missionSideBarEntry').forEach(mission => {
+            if (
+                mission.style.display !== 'none' &&
+                !mission.classList.contains('mission_deleted')
+            ) {
+                visibleMissions.push(mission.id.split('_')[1]);
             }
         });
 
-        // Lösche vorherige Speicherung im Session Storage
-        sessionStorage.removeItem('visibleMissions');
-
-        // Speichere neue sichtbare Einsätze
         sessionStorage.setItem('visibleMissions', JSON.stringify(visibleMissions));
-
-        // Ausgabe des gespeicherten Wertes aus dem Session Store
-        const storedMissions = sessionStorage.getItem('visibleMissions');
-        //console.log("Gespeicherte Einsätze im Session Store:", JSON.parse(storedMissions));
     }
 
-    // Funktion zur Bereinigung der aktuellen Mission im SessionStorage
     function cleanUpCurrentMissionInStorage(iframe) {
         const match = iframe.src.match(/\/missions\/(\d+)/);
         const missionId = match ? match[1] : null;
+
         if (!missionId) return;
 
-        let missions = JSON.parse(sessionStorage.getItem('visibleMissions') || '[]');
-        if (missions.includes(missionId)) {
-            missions = missions.filter(id => id !== missionId);
-            sessionStorage.setItem('visibleMissions', JSON.stringify(missions));
-            //console.log(`[SessionStore] Einsatz ${missionId} entfernt. Verbleibend:`, missions);
+        let storedMissions = JSON.parse(sessionStorage.getItem('visibleMissions') || '[]');
+
+        if (storedMissions.includes(missionId)) {
+            storedMissions = storedMissions.filter(id => id !== missionId);
+            sessionStorage.setItem('visibleMissions', JSON.stringify(storedMissions));
         }
     }
 
-    // Funktion um zum nächsten Einsatz der selben Kategorie/Gruppe zu gelangen
     function handleIframeReady(iframe) {
         const doc = iframe.contentDocument;
         if (!doc) return;
 
         const match = iframe.src.match(/\/missions\/(\d+)/);
         const currentId = match ? match[1] : null;
+
         if (!currentId) {
             console.warn("[CustomAlarm] Einsatz-ID nicht aus IFrame lesbar.");
             return;
         }
 
         const previousMissions = JSON.parse(sessionStorage.getItem('visibleMissions') || '[]');
-        cleanUpCurrentMissionInStorage(iframe);
-        const missions = JSON.parse(sessionStorage.getItem('visibleMissions') || '[]');
 
-        if (missions.length === 0 && previousMissions.length > 0) {
+        cleanUpCurrentMissionInStorage(iframe);
+
+        const storedMissions = JSON.parse(sessionStorage.getItem('visibleMissions') || '[]');
+
+        if (storedMissions.length === 0 && previousMissions.length > 0) {
             alert("Dies ist der letzte Einsatz in der ausgewählten Kategorie/Gruppe.");
             return;
         }
 
-        if (missions.length === 0) return;
+        if (storedMissions.length === 0) return;
 
-        const nextId = missions[0];
+        const nextId = storedMissions[0];
         const alarmBtn = doc.querySelector('#mission_alarm_btn');
+
         if (!alarmBtn) {
             console.warn("[CustomAlarm] Alarmieren-Button nicht gefunden.");
             return;
         }
 
-        // 🔽 NEU: Suche nach Warnsymbol anhand des Suffix (_rot, _gelb, _gruen)
-        const warningImg = Array.from(doc.querySelectorAll('.mission_header_info.row img'))
+        const findWarningImage = () =>
+        Array.from(doc.querySelectorAll('.mission_header_info.row img'))
         .find(img => /_(rot|gelb|gruen)\.png$/.test(img.src));
 
+        const warningImg = findWarningImage();
+
         if (warningImg && /_rot\.png$/.test(warningImg.src)) {
-            //console.log("[CustomAlarm] Warnsymbol (_rot) gefunden – Weiterleitung unterdrückt.");
             return;
         }
 
@@ -1357,61 +1223,50 @@ ${creditMultiplier > 1 ? `<br><small style="color: #888;">(Multiplikator aktiv: 
 
         if (drivingOwn || atSceneOwn) {
             iframe.src = `https://www.leitstellenspiel.de/missions/${nextId}`;
-        } else {
-            alarmBtn.addEventListener('click', () => {
-                const recheckImg = Array.from(doc.querySelectorAll('.mission_header_info.row img'))
-                .find(img => /_(rot|gelb|gruen)\.png$/.test(img.src));
-
-                if (recheckImg && /_rot\.png$/.test(recheckImg.src)) {
-                    //console.log("[CustomAlarm] Warnsymbol nach dem Alarmieren (_rot) vorhanden – Weiterleitung abgebrochen.");
-                    return;
-                }
-
-                iframe.src = `https://www.leitstellenspiel.de/missions/${nextId}`;
-            }, { once: true });
+            return;
         }
+
+        alarmBtn.addEventListener('click', () => {
+            const recheckImg = findWarningImage();
+
+            if (recheckImg && /_rot\.png$/.test(recheckImg.src)) {
+                return;
+            }
+
+            iframe.src = `https://www.leitstellenspiel.de/missions/${nextId}`;
+        }, { once: true });
     }
 
-    let hotkeyPressed = false;
-
-    // Beobachtet neue IFrames im DOM
     const observer = new MutationObserver(() => {
         const iframes = Array.from(document.querySelectorAll("iframe[id^='lightbox_iframe_']"));
+
         iframes.forEach(iframe => {
-            if (!iframe.dataset.tampermonkeyInjected) {
-                iframe.dataset.tampermonkeyInjected = "true";
-                //console.log("[Observer] Neues Iframe erkannt:", iframe.id);
+            if (iframe.dataset.tampermonkeyInjected) return;
 
-                iframe.addEventListener("load", () => {
-                    //console.log("[Observer] Iframe geladen:", iframe.id);
-                    handleIframeReady(iframe);
-                });
+            iframe.dataset.tampermonkeyInjected = "true";
+            iframe.addEventListener("load", () => {
+                handleIframeReady(iframe);
+            });
 
-                // Falls das iFrame bereits vollständig geladen wurde
-                if (iframe.contentDocument?.readyState === 'complete') {
-                    //console.log("[Observer] Iframe ist bereits geladen:", iframe.id);
-                    handleIframeReady(iframe);
-                }
+            if (iframe.contentDocument?.readyState === 'complete') {
+                handleIframeReady(iframe);
             }
         });
     });
-    observer.observe(document.body, { childList: true, subtree: true });
-    //console.log("[Tampermonkey] Skript aktiviert – wartet auf IFrames.");
 
-    // Regelmäßige Updates für Statistiken
+    observer.observe(document.body, { childList: true, subtree: true });
+
     setInterval(() => {
         try {
             updateMissionCount();
             updateAverageEarnings();
             updateCategoryButtons();
             getMissionSummary();
-        } catch (e) {
-            console.error("Fehler bei Statistik-Update:", e);
+        } catch (error) {
+            console.error("Fehler bei Statistik-Update:", error);
         }
     }, 1000);
 
-    // Startet die Überwachung
     observeMissionLists();
     loadMissionData();
-
 })();
