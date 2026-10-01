@@ -1658,7 +1658,7 @@
 
             const allowedExtensions = (extensions || []).filter(ext => {
                 const key = `${baseKey}_${ext.id}`;
-                if (!settings[key] || isExtensionLimitReached(building, ext.id)) return false;
+                if (settings[key] === false || isExtensionLimitReached(building, ext.id)) return false;
 
                 // Bereits gebaute Erweiterung ausblenden
                 if (existingExtensions.has(ext.id)) return false;
