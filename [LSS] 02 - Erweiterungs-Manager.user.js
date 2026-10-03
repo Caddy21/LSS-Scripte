@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.5
-// @description  Ermöglicht das einfache Verwalten und Hinzufügen von fehlenden Erweiterungen, Lagerräumen und Ausbaustufen für deine Wachen und Gebäude und den Verbandsgebäuden
+// @version      1.6
+// @description  Ermöglicht das einfache Verwalten und Bauen von fehlenden Erweiterungen, Lagerräumen, Ausbaustufen und Spezialisierungen für eigene Wachen/Gebäude sowie Verbandsgebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
 // @match        https://polizei.leitstellenspiel.de/
@@ -21,233 +21,450 @@
 
     // Funktion um die Lightbox und Stile zu erstellen
     const styles = `
-        :root {
+    :root {
         --background-color: #f2f2f2;
-        --text-color: #000;
+        --surface-color: #ffffff;
+        --text-color: #000000;
         --border-color: #ccc;
+
         --button-background-color: #007bff;
         --button-hover-background-color: #0056b3;
         --button-text-color: #ffffff;
+
+        --level-button-background: #e0e0e0;
+        --level-button-hover: #ccc;
+        --level-button-text: #000;
+
         --warning-color: #fd7e14;
         --warning-hover: #e96b00;
         --credits-color: #28a745;
         --coins-color: #dc3545;
         --cancel-color: #6c757d;
-        }
 
-        #extension-lightbox {
+        --progress-background: #e0e0e0;
+        --progress-fill: #4caf50;
+
+        --input-background: #fff;
+        --input-text: #000;
+
+        --shadow-color: rgba(0, 0, 0, 0.25);
+        --overlay-color: rgba(0, 0, 0, 0.55);
+
+        --radius-small: 4px;
+        --radius-medium: 6px;
+        --radius-large: 10px;
+    }
+
+    body.dark {
+        --background-color: #333;
+        --surface-color: #3b3b3b;
+        --text-color: #fff;
+        --border-color: #444;
+
+        --level-button-background: #444;
+        --level-button-hover: #666;
+        --level-button-text: #fff;
+
+        --progress-background: #444;
+
+        --input-background: #2f2f2f;
+        --input-text: #fff;
+
+        --shadow-color: rgba(0, 0, 0, 0.5);
+    }
+
+    #extension-lightbox {
         position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        inset: 0;
         display: flex;
         justify-content: center;
         align-items: center;
+        background: var(--overlay-color);
         z-index: 10000;
-        }
+    }
 
-        #extension-lightbox-header {
-        background: var(--background-color);
-        padding: 10px;
-        border-bottom: 1px solid var(--border-color);
-        text-align: right;
-        z-index: 2;
-        }
-
-        #extension-lightbox-content {
+    #extension-lightbox-modal {
+        width: 100%;
+        max-width: 1700px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
         background: var(--background-color);
         color: var(--text-color);
         border: 1px solid var(--border-color);
+        border-radius: var(--radius-large);
+        box-shadow: 0 8px 30px var(--shadow-color);
+    }
+
+    #extension-lightbox-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        padding: 10px 15px;
+        background: var(--background-color);
+        color: var(--text-color);
+        border-bottom: 1px solid var(--border-color);
+        z-index: 2;
+    }
+
+    #extension-lightbox-content {
         padding: 20px;
-        width: 100%;
-        max-width: 1500px;
-        max-height: 90vh;
         overflow-y: auto;
-        position: relative;
         text-align: center;
-        }
+        background: var(--background-color);
+        color: var(--text-color);
+    }
 
-        #extension-lightbox-header #close-extension-helper {
+    #extension-lightbox-header #close-extension-helper {
         font-weight: 600;
-        background-color: #ff4d4d;
-        color: white;
-        border: none;
         padding: 6px 14px;
-        border-radius: 5px;
+        background: #ff4d4d;
+        color: #fff;
+        border: none;
+        border-radius: var(--radius-medium);
         cursor: pointer;
-        transition: background-color 0.3s ease;
-        }
+        transition: filter 0.2s ease;
+    }
 
-        #extension-lightbox table {
+    #extension-lightbox-header #close-extension-helper:hover {
+        filter: brightness(0.9);
+    }
+
+    #extension-lightbox table {
         width: 100%;
-        border-collapse: collapse;
         margin-top: 10px;
+        border-collapse: collapse;
         font-size: 16px;
-        }
+    }
 
-        #extension-lightbox th,
-        #extension-lightbox td {
+    #extension-lightbox th,
+    #extension-lightbox td {
+        padding: 10px;
         text-align: center;
         vertical-align: middle;
-        }
+    }
 
-        #extension-lightbox td {
-        background-color: var(--background-color);
+    #extension-lightbox td {
+        background: var(--background-color);
         color: var(--text-color);
         border: 1px solid var(--border-color);
-        padding: 10px;
-        }
+    }
 
-        #extension-lightbox thead {
-        background-color: var(--background-color);
+    #extension-lightbox thead {
+        background: var(--background-color);
+        color: var(--text-color);
         font-weight: bold;
         border-bottom: 2px solid var(--border-color);
-        }
+    }
 
-        #extension-lightbox      #loading-overlay {
-        background-color: #f0f0f0;
-        border-radius: 6px;
+    #extension-lightbox #loading-overlay {
         padding: 15px;
         margin-bottom: 15px;
-        }
+        background: var(--background-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-medium);
+    }
 
-        /* === Buttons === */
-        #extension-lightbox button,
-        .currency-button,
-        .cancel-button {
+    #extension-lightbox .extension-search {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        margin: 10px 0;
+        background: var(--input-background);
+        color: var(--input-text);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-medium);
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #extension-lightbox .extension-search:focus {
+        border-color: var(--button-background-color);
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+    }
+
+    #extension-lightbox button,
+    .currency-button,
+    .cancel-button {
         border: none;
-        padding: 5px 10px;
+        padding: 6px 10px;
         cursor: pointer;
-        border-radius: 4px;
+        border-radius: var(--radius-small);
         font-size: 14px;
         color: var(--button-text-color);
-        transition: background-color 0.2s ease-in-out;
-        }
+        transition: filter 0.2s ease, transform 0.1s ease;
+    }
 
-        #extension-lightbox .spoiler-button               { background-color: green; }
-        #extension-lightbox .lager-button                 { background-color: darkorange; }
-        #extension-lightbox .level-button                 { background-color: brown; }
-        #extension-lightbox .build-selected-button        { background-color: blue; }
-        #extension-lightbox .build-all-button             { background-color: red; }
-        #extension-lightbox .build-selected-levels-button { background-color: purple; }
+    #extension-lightbox button:hover:not(:disabled),
+    .currency-button:hover:not(:disabled),
+    .cancel-button:hover:not(:disabled) {
+        filter: brightness(0.9);
+    }
 
-        #extension-lightbox .build-selected-button:hover:enabled,
-        #extension-lightbox .build-selected-levels-button:enabled,
-        #extension-lightbox .build-all-button:hover:enabled {
-        filter: brightness(90%);
-        }
+    #extension-lightbox button:active:not(:disabled),
+    .currency-button:active:not(:disabled),
+    .cancel-button:active:not(:disabled) {
+        transform: translateY(1px);
+    }
 
-        #extension-lightbox .extension-button:disabled,
-        #extension-lightbox .build-selected-button:disabled,
-        #extension-lightbox .build-selected-levels-button:disabled,
-        #extension-lightbox .build-all-button:disabled {
-        background-color: gray !important;
+    #extension-lightbox .spoiler-button {
+        background: #198754;
+    }
+
+    #extension-lightbox .lager-button {
+        background: #EE9A00;
+    }
+
+    #extension-lightbox .level-button {
+        background: #CD661D;
+    }
+
+    #extension-lightbox .build-selected-button {
+        background: #0d6efd;
+    }
+
+    #extension-lightbox .special-button {
+        background: #408080;
+    }
+
+    #extension-lightbox .build-selected-special-button {
+        background: #ee6a50;
+    }
+
+    #extension-lightbox .build-all-button {
+        background: #dc3545;
+    }
+
+    #extension-lightbox .build-selected-levels-button {
+        background: #6f42c1;
+    }
+
+    #extension-lightbox .extension-button:disabled,
+    #extension-lightbox .build-selected-button:disabled,
+    #extension-lightbox .build-selected-levels-button:disabled,
+    #extension-lightbox .build-selected-special-button:disabled,
+    #extension-lightbox .build-all-button:disabled {
+        background: #777 !important;
+        color: #ddd !important;
         cursor: not-allowed;
-        }
+        filter: none !important;
+        transform: none !important;
+    }
 
-        #extension-lightbox button.btn-danger,
-        #extension-lightbox button.btn-danger:hover,
-        #extension-lightbox button.btn-danger:focus,
-        #extension-lightbox button.btn-danger:active {
-        background-color: var(--coins-color) !important;
+    #extension-lightbox button.btn-danger,
+    #extension-lightbox button.btn-danger:hover,
+    #extension-lightbox button.btn-danger:focus,
+    #extension-lightbox button.btn-danger:active {
+        background: var(--coins-color) !important;
         border-color: var(--coins-color) !important;
-        color: white !important;
+        color: #fff !important;
         box-shadow: none !important;
         filter: none !important;
         transition: none !important;
-        cursor: pointer;
-        }
+    }
 
-        /* Neue Flexbox-Regel für Button-Container mit Abständen */
-        #extension-lightbox .button-container {
+    #extension-lightbox .button-container {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         justify-content: center;
-        gap: 8px 5px;
-        }
+        gap: 6px;
+    }
 
-        /* Alte margin bei Buttons entfernen */
-        #extension-lightbox .button-container > button {
+    #extension-lightbox .button-container > button {
         margin: 0;
-        }
+    }
 
-        #extension-lightbox .spoiler-content {
+    #extension-lightbox .spoiler-content {
         display: none;
-        }
+    }
 
-        #extension-lightbox .extension-search {
-        width: 100%;
-        padding: 8px;
-        margin: 10px 0;
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-        font-size: 14px;
-        }
+    #extension-lightbox .level-choice-button {
+        display: inline-block;
+        padding: 3px 7px;
+        margin: 0 2px;
+        font-size: 11px;
+        font-weight: bold;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        background: var(--level-button-background);
+        color: var(--level-button-text);
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
 
-        /* === Currency Modal === */
-        .currency-selection {
+    #extension-lightbox .level-choice-button:hover:not([data-active="true"]) {
+        background: var(--level-button-hover);
+    }
+
+    #extension-lightbox .level-choice-button[data-active="true"] {
+        background: var(--credits-color);
+        color: #fff;
+    }
+
+    .active-button {
+        background: var(--button-background-color);
+        color: #fff;
+        font-weight: bold;
+    }
+
+    #open-extension-helper {
+        cursor: pointer;
+    }
+
+    .currency-selection {
         position: fixed;
-        top: 50%; left: 50%;
+        top: 50%;
+        left: 50%;
         transform: translate(-50%, -50%);
-        background: white;
-        border: 1px solid black;
-        padding: 20px;
-        z-index: 10001;
         display: flex;
         flex-direction: column;
         gap: 10px;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+        min-width: 220px;
+        padding: 20px;
+        z-index: 10001;
+        background: var(--background-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-large);
+        box-shadow: 0 8px 25px var(--shadow-color);
+    }
 
-        .currency-button.credits-button { background-color: var(--credits-color); }
-        .currency-button.coins-button   { background-color: var(--coins-color); }
-        .cancel-button                  { background-color: var(--cancel-color); }
+    .currency-button.credits-button {
+        background: var(--credits-color);
+    }
 
-        #open-extension-helper {
-        cursor: pointer;
-        }
+    .currency-button.coins-button {
+        background: var(--coins-color);
+    }
 
-        .active-button {
-        background-color: #007bff;
-        color: white;
-        font-weight: bold;
-        }
+    .cancel-button {
+        background: var(--cancel-color);
+    }
 
-        /* Bauprojekte Buttons */
-        #construction-lightbox .bau-btn {
-        border: none; padding: 4px 8px;
+    #construction-lightbox .bau-btn {
+        padding: 5px 9px;
+        border: none;
+        border-radius: var(--radius-small);
         font-size: 13px;
-        border-radius: 3px;
-        cursor: pointer; color: #fff;
-        }
+        cursor: pointer;
+        color: #fff;
+        transition: filter 0.2s ease, transform 0.1s ease;
+    }
 
-        #construction-lightbox .bau-btn-danger {
-        background-color: var(--coins-color); /* rot */
-        }
+    #construction-lightbox .bau-btn:hover {
+        filter: brightness(0.9);
+    }
 
-        #construction-lightbox .bau-btn-success {
-        background-color: var(--credits-color); /* grün */
-        }
+    #construction-lightbox .bau-btn:active {
+        transform: translateY(1px);
+    }
 
-        #construction-lightbox .bau-btn-warning {
-        background-color: var(--warning-color); /* orange */
-        }
+    #construction-lightbox .bau-btn-danger {
+        background: var(--coins-color);
+    }
 
-        #construction-lightbox .bau-btn:hover {
-        filter: brightness(90%);
-        }
+    #construction-lightbox .bau-btn-success {
+        background: var(--credits-color);
+    }
 
-        #open-alliance-buildings { background-color: deeppink; color: #fff; }
-        #open-alliance-buildings:hover { filter:brightness(0.9); }
-        `;
+    #construction-lightbox .bau-btn-warning {
+        background: var(--warning-color);
+    }
 
-    // Wende den Modus an, wenn das DOM bereit ist
-    window.addEventListener('load', () => {
-        applyMode();
-        observeLightbox(); // Beobachtet dynamische Änderungen
-    });
+    #open-alliance-buildings {
+        background: #e83e8c;
+        color: #fff;
+    }
+
+    #open-alliance-buildings:hover {
+        filter: brightness(0.9);
+    }
+
+    .progress-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 280px;
+        padding: 20px;
+        z-index: 10002;
+        text-align: center;
+        background: var(--background-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-large);
+        box-shadow: 0 8px 25px var(--shadow-color);
+    }
+
+    .progress-container .progress-bar {
+        width: 100%;
+        height: 10px;
+        margin-top: 10px;
+        overflow: hidden;
+        background: var(--progress-background);
+        border-radius: 5px;
+    }
+
+    .progress-container .progress-fill {
+        width: 0%;
+        height: 100%;
+        background: var(--progress-fill);
+        border-radius: 5px;
+        transition: width 0.2s ease;
+    }
+
+    .progress-container .progress-text {
+        margin: 8px 0 0;
+    }
+
+    .extension-custom-alert {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 280px;
+        max-width: 500px;
+        padding: 20px;
+        z-index: 10003;
+        text-align: center;
+        background: var(--background-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-large);
+        box-shadow: 0 8px 25px var(--shadow-color);
+    }
+
+    .extension-custom-alert button {
+        margin-top: 15px;
+        background: var(--button-background-color);
+        color: var(--button-text-color);
+    }
+
+    #open-extension-settings {
+    margin: 0 5px;
+    padding: 6px 14px;
+    font-weight: 600;
+    color: var(--button-text-color);
+    background: var(--button-background-color);
+    border: none;
+    border-radius: var(--radius-medium);
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.1s ease;
+    }
+
+    #open-extension-settings:hover {
+        filter: brightness(0.9);
+    }
+
+    #open-extension-settings:active {
+        transform: translateY(1px);
+    }
+`;
 
     // Fügt die Stile hinzu
     const styleElement = document.createElement('style');
@@ -288,25 +505,14 @@
             </div>
           </div>
           <div id="extension-lightbox-content">
-            <h3>🚒🏗️ <strong>Herzlich willkommen beim ultimativen Ausbau-Assistenten für eure Wachen!</strong> 🚒🏗️</h3>
+            <h3>🚒🏗️ <strong>Herzlich willkommen beim ultimativen Ausbau-Assistenten für Eure Wachen!</strong> 🚒🏗️</h3>
             <br>
                 <h2 style="margin:0;">Dem Erweiterungs-Manager</h2>
             <h5>
               <br><br>Dieses kleine Helferlein zeigt euch genau, wo noch Platz in euren Wachen ist: Welche <strong>Erweiterungen, Lagerräume</strong> und <strong>Ausbaustufen</strong> noch möglich sind – und mit nur ein paar Klicks geht’s direkt in den Ausbau.
               <br><br>Einfacher wird’s nicht!
               <br><br>Und das Beste: Über den
-              <button id="open-extension-settings" style="
-                font-weight:600;
-                color:#fff;
-                background-color: var(--primary-color, #007bff);
-                border:none;
-                padding:6px 14px;
-                border-radius:5px;
-                cursor:pointer;
-                transition: background-color 0.3s ease;
-                margin:0 5px;">
-                Einstellungen
-              </button>
+              <button id="open-extension-settings">Einstellungen</button>
               -Button könnt ihr festlegen, welche Erweiterungen und Lagerräume euch pro Wachen-Typ angezeigt werden – ganz nach eurem Geschmack. Einmal gespeichert, für immer gemerkt.
               <br><br>Kleiner Hinweis am Rande: Feedback, Verbesserungsvorschläge oder Kritik zum Skript sind jederzeit im
               <a href="https://forum.leitstellenspiel.de/index.php?thread/27856-script-erweiterungs-manager/" target="_blank" style="color:#007bff; text-decoration:none;">
@@ -315,7 +521,8 @@
               <br><br><br>Und nun viel Spaß beim Credits oder Coins ausgeben!
               <br><br>
               <div id="loading-container" style="display:none; padding:20px; text-align:center;">
-                <div id="loading-text" style="font-weight:bold; font-size:16px;">Lade Daten</div>
+                 <div id="loading-text" style="font-weight:bold; font-size:16px;">Lade Daten</div>
+                 <div id="loading-progress" style="margin-top:6px; font-size:13px; opacity:0.75;"></div>
               </div>
               <div id="extension-list"></div>
             </h5>
@@ -323,19 +530,9 @@
         </div>
         `;
 
-    // Werte nur aktualisieren, nicht die komplette HTML-Struktur ersetzen
-    getUserCredits().then(({ credits, coins }) => {
-        document.getElementById('current-credits').textContent = credits.toLocaleString();
-        document.getElementById('current-coins').textContent = coins.toLocaleString();
-        updateSelectedAmounts();
-    }).catch(() => {
-        document.getElementById('current-credits').textContent = 'Fehler';
-        document.getElementById('current-coins').textContent = 'Fehler';
-    });
-
     document.body.appendChild(lightbox);
 
-    // Update: Alliance info anzeigen & Button ggf. sichtbar machen (nur bei Berechtigung)
+    // Alliance info anzeigen & Button ggf. sichtbar machen
     getAllianceInfo().then(info => {
         allianceInfo = info;
 
@@ -383,31 +580,59 @@
     }).catch(err => {
         console.warn('Allianzinfo konnte nicht geladen werden', err);
     });
-
-    const openBtn = document.getElementById('open-extension-settings');
-    const lightboxContent = lightbox.querySelector('#extension-lightbox-content');
-
-    openBtn.addEventListener('mouseenter', () => {
-        openBtn.style.backgroundColor = '#0056b3';
-    });
-    openBtn.addEventListener('mouseleave', () => {
-        openBtn.style.backgroundColor = 'var(--primary-color, #007bff)';
-    });
-    openBtn.addEventListener('click', () => {
-        openExtensionSettingsOverlay();
-    });
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Globale Variablen
-    var user_premium = false;
     let buildingsData = [];
     let buildingGroups = {};
     let currentCredits = 0;
     let currentCoins = 0;
-    // Verbands-Daten
     let allianceInfo = null;
     let allianceBuildingsData = [];
-    let currentView = 'personal'; // 'personal' oder 'alliance'
+    let currentView = 'personal';
+    let manualSearchTerm = '';
+    let cachedUserInfo = null;
+    let specializationSelectionCounter = 0;
+
+    const buildingCountLimits = {
+        0: {
+            9: {
+                requiredBuildings: 10,
+                countSmallBuildings: true
+            },
+            8: {
+                requiredBuildings: 10,
+                countSmallBuildings: true
+            }
+        },
+        2: {
+            0: {
+                requiredBuildings: 10,
+                countSmallBuildings: true
+            }
+        },
+        6: {
+            14: {
+                requiredBuildings: 10,
+                countSmallBuildings: true
+            },
+            15: {
+                requiredBuildings: 10,
+                countSmallBuildings: true
+            }
+        },
+        4: {
+            9: {
+                requiredBuildings: 5,
+                countSmallBuildings: true
+            }
+        }
+    };
+    const ignoreLevels = [
+        '5_normal',  // Rettungshubschrauber-Station
+        '13_normal', // Polizeihubschrauber-Station
+        '28_normal'  // Seenotrettungshubschrauber-Station
+    ];
     const storageGroups = {};
     const selectedLevels = {};
     const storageBuildQueue = {};
@@ -476,16 +701,67 @@
         '2_small', // Rettungswache (Kleinwache)
         '15_normal', // Wasserrettung
         '25_normal', // Bergrettungswache
-        '26_normal', // Seenotrettungswache)
+        '26_normal', // Seenotrettungswache
         '29_normal', // Autobahnpolizei
     ]);
+    const specializationBuildings = new Set([
+        '0_normal',
+        '0_small',
+        '6_normal',
+        '6_small'
+    ]);
+    const specializationDefinitions = {
+        airport_fire_brigade: {
+            name: 'Flughafen-Spezialisierung',
+            extensionId: 8,
+            coins: 20,
+            apiType: 'airport',
+            buildingTypes: ['0_normal', '0_small']
+        },
+        water_rescue: {
+            name: 'Wasserrettung-Spezialisierung',
+            extensionId: 6,
+            coins: 20,
+            apiType: 'water_rescue',
+            buildingTypes: ['0_normal', '0_small']
+        },
+        factory_fire_brigade: {
+            name: 'Werkfeuerwehr-Spezialisierung',
+            extensionId: 13,
+            coins: 20,
+            apiType: 'factory_fire_brigade',
+            buildingTypes: ['0_normal', '0_small']
+        },
+        highway_police: {
+            name: 'Autobahnpolizei-Spezialisierung',
+            extensionId: 16,
+            coins: 20,
+            apiType: 'highway_police',
+            buildingTypes: ['6_normal', '6_small']
+        }
+    };
     const progressBars = {
         activate: null,
         cancel: null
     };
+    const SETTINGS_KEY = 'enabledExtensions';
+    const defaultExtensionSettings = {};
+
+    // Erweiterungen & Lagerräume in default settings laden
+    for (const category in manualExtensions) {
+        for (const ext of manualExtensions[category]) {
+            defaultExtensionSettings[`${category}_${ext.id}`] = true;
+        }
+    }
+    for (const category in manualStorageRooms) {
+        for (const room of manualStorageRooms[category]) {
+            const key = `${category}_storage_${room.name.replace(/\s+/g, '_')}`;
+            defaultExtensionSettings[key] = true;
+        }
+    }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Verbandsgebäude
-    // Robust: Allianz-Info holen und Rechte normalisieren
+    // Ruft die Verbandsinformationen ab und ermittelt Guthaben sowie Berechtigungen
     async function getAllianceInfo() {
         try {
             const resp = await fetch('/api/allianceinfo');
@@ -511,8 +787,6 @@
             const foundArrayName = memberArrays.find(k => Array.isArray(data[k]));
             if (foundArrayName) {
                 const members = data[foundArrayName];
-
-                // Hole aktuelle User-ID
                 let currentUserId = null;
                 try {
                     const userResp = await fetch('/api/userinfo');
@@ -521,7 +795,6 @@
                         currentUserId = userJson.id ?? userJson.user_id ?? null;
                     }
                 } catch (e) {
-                    console.debug('getAllianceInfo: konnte /api/userinfo nicht lesen', e);
                 }
 
                 if (currentUserId !== null) {
@@ -535,8 +808,6 @@
                         admin = admin || Boolean(me.admin || me.is_admin);
                         coadmin = coadmin || Boolean(me.coadmin);
                         finance = finance || Boolean(me.finance);
-                    } else {
-                        // Falls kein matching member gefunden: prüfe erstes Mitglied mit role_flags.admin (falls dein User listbar ist)
                         const anyAdmin = members.find(m => (m.role_flags && m.role_flags.admin) || m.admin || m.role === 'Verbands-Admin');
                         if (anyAdmin) {
                         }
@@ -550,9 +821,10 @@
             return null;
         }
     }
+
+    // Initialisiert die UI für Verbandsgebäude und prüft die erforderlichen Berechtigungen
     async function initAllianceUI() {
         try {
-            // Hide as default
             const allianceBtn = document.getElementById('open-alliance-buildings');
             const allianceInfoDiv = document.getElementById('alliance-info');
             const allianceCreditsSpan = document.getElementById('current-alliance-credits');
@@ -561,20 +833,17 @@
             if (allianceInfoDiv) allianceInfoDiv.style.display = 'none';
 
             const info = await getAllianceInfo();
-            allianceInfo = info; // setze globale Variable, falls vorhanden
 
             if (!info) return;
 
             const hasRights = Boolean(info.admin) || Boolean(info.coadmin) || Boolean(info.finance);
 
             if (!hasRights) {
-                // Keine Rechte -> nichts anzeigen
                 if (allianceBtn) allianceBtn.style.display = 'none';
                 if (allianceInfoDiv) allianceInfoDiv.style.display = 'none';
                 return;
             }
 
-            // Hat Rechte: Anzeige aktivieren
             if (allianceCreditsSpan) allianceCreditsSpan.textContent = (info.credits_current || 0).toLocaleString();
             const selAllianceSpan = document.getElementById('selected-alliance-credits');
             if (selAllianceSpan) selAllianceSpan.textContent = '0';
@@ -583,7 +852,6 @@
             if (allianceBtn) {
                 allianceBtn.style.display = 'inline-block';
                 allianceBtn.textContent = 'Verbandsgebäude';
-                // Entferne vorherige Handler, falls mehrfach init aufgerufen
                 allianceBtn.replaceWith(allianceBtn.cloneNode(true));
                 const newBtn = document.getElementById('open-alliance-buildings');
 
@@ -607,101 +875,65 @@
         }
     }
 
+    // Lädt die Verbandsgebäude und rendert die verfügbaren Erweiterungen
     async function fetchAllianceBuildingsAndRender() {
-    // Bereich befindet sich noch im Aufbau
-    alert('Der Bereich „Verbandsgebäude“ befindet sich noch im Aufbau.');
+        const loadingText = document.getElementById('loading-text');
+        const loadingContainer = document.getElementById('loading-container');
+        const extensionList = document.getElementById('extension-list');
 
-    currentView = 'personal';
+        let dotInterval;
+        function startLoadingAnimation() {
+            let dots = 0;
+            if (loadingText) loadingText.textContent = 'Lade Verbandsgebäude...';
+            dotInterval = setInterval(() => {
+                dots = (dots + 1) % 4;
+                if (loadingText) loadingText.textContent = 'Lade Verbandsgebäude' + '.'.repeat(dots);
+            }, 500);
+        }
+        function stopLoadingAnimation() { clearInterval(dotInterval); }
 
-    const allianceBtn = document.getElementById('open-alliance-buildings');
-    if (allianceBtn) allianceBtn.textContent = 'Verbandsgebäude';
+        if (loadingContainer) loadingContainer.style.display = 'block';
+        if (extensionList) extensionList.style.display = 'none';
+        startLoadingAnimation();
 
-    setLightboxTitleForView();
+        try {
+            const response = await fetch('/api/alliance_buildings');
+            if (!response.ok) throw new Error('Fehler beim Abrufen der Verbandsgebäude');
+            const buildingsData = await response.json();
 
-    return;
-
-    const loadingText = document.getElementById('loading-text');
-    const loadingContainer = document.getElementById('loading-container');
-    const extensionList = document.getElementById('extension-list');
-
-    let dotInterval;
-
-    function startLoadingAnimation() {
-        let dots = 0;
-        if (loadingText) loadingText.textContent = 'Lade Verbandsgebäude...';
-
-        dotInterval = setInterval(() => {
-            dots = (dots + 1) % 4;
-            if (loadingText) {
-                loadingText.textContent = 'Lade Verbandsgebäude' + '.'.repeat(dots);
+            // Speichern
+            allianceBuildingsData = buildingsData;
+            if (!allianceInfo) {
+                allianceInfo = await getAllianceInfo();
             }
-        }, 500);
+            const hasRights = allianceInfo && (allianceInfo.admin || allianceInfo.coadmin || allianceInfo.finance);
+
+            if (hasRights && allianceInfo && document.getElementById('current-alliance-credits')) {
+                document.getElementById('current-alliance-credits').textContent = (allianceInfo.credits_current || 0).toLocaleString();
+                const allianceInfoDiv = document.getElementById('alliance-info');
+                if (allianceInfoDiv) allianceInfoDiv.style.display = 'flex';
+            }
+            const allianceUserInfo = {
+                credits: allianceInfo ? (allianceInfo.credits_current || 0) : 0,
+                coins: 0,
+                premium: false
+            };
+            await renderMissingExtensions(buildingsData, allianceUserInfo);
+
+            stopLoadingAnimation();
+            if (loadingContainer) loadingContainer.style.display = 'none';
+            if (extensionList) extensionList.style.display = 'block';
+
+        } catch (error) {
+            stopLoadingAnimation();
+            if (loadingContainer) loadingContainer.style.display = 'none';
+            if (extensionList) extensionList.style.display = 'block';
+            if (extensionList) extensionList.innerHTML = 'Fehler beim Laden der Verbandsgebäude.';
+            console.error(error);
+        }
     }
 
-    function stopLoadingAnimation() {
-        clearInterval(dotInterval);
-    }
-
-    if (loadingContainer) loadingContainer.style.display = 'block';
-    if (extensionList) extensionList.style.display = 'none';
-
-    startLoadingAnimation();
-
-    try {
-        const response = await fetch('/api/alliance_buildings');
-        if (!response.ok) throw new Error('Fehler beim Abrufen der Verbandsgebäude');
-
-        const buildingsData = await response.json();
-
-        // Speichern
-        allianceBuildingsData = buildingsData;
-
-        // Falls allianceInfo noch nicht geladen, lade sie
-        if (!allianceInfo) {
-            allianceInfo = await getAllianceInfo();
-        }
-
-        // Nur anzeigen, wenn Berechtigung besteht
-        const hasRights = allianceInfo &&
-            (allianceInfo.admin || allianceInfo.coadmin || allianceInfo.finance);
-
-        if (hasRights && allianceInfo && document.getElementById('current-alliance-credits')) {
-            document.getElementById('current-alliance-credits').textContent =
-                (allianceInfo.credits_current || 0).toLocaleString();
-
-            const allianceInfoDiv = document.getElementById('alliance-info');
-            if (allianceInfoDiv) allianceInfoDiv.style.display = 'flex';
-        }
-
-        // userInfoOverride so setzen, dass die Anzeige/Buttons auf Verbandscredits prüfen
-        const allianceUserInfo = {
-            credits: allianceInfo ? (allianceInfo.credits_current || 0) : 0,
-            coins: 0,
-            premium: false
-        };
-
-        // Rendern: übergebe buildingsData und userInfoOverride
-        await renderMissingExtensions(buildingsData, allianceUserInfo);
-
-        stopLoadingAnimation();
-
-        if (loadingContainer) loadingContainer.style.display = 'none';
-        if (extensionList) extensionList.style.display = 'block';
-
-    } catch (error) {
-        stopLoadingAnimation();
-
-        if (loadingContainer) loadingContainer.style.display = 'none';
-        if (extensionList) extensionList.style.display = 'block';
-
-        if (extensionList) {
-            extensionList.innerHTML = 'Fehler beim Laden der Verbandsgebäude.';
-        }
-
-        console.error(error);
-    }
-}
-
+    // Passt den Titel des Erweiterungs-Managers an die aktuell angezeigte Ansicht an
     function setLightboxTitleForView() {
         const titleEl = document.querySelector('#extension-lightbox-content h2');
         if (!titleEl) return;
@@ -711,27 +943,30 @@
             titleEl.textContent = 'Dem Erweiterungs-Manager';
         }
     }
+
+    // Prüft, ob der aktuelle Benutzer über Berechtigungen zum Bauen von Verbandsgebäuden verfügt
+    function hasAllianceBuildingRights() {
+        return allianceInfo && (
+            Boolean(allianceInfo.admin) ||
+            Boolean(allianceInfo.coadmin) ||
+            Boolean(allianceInfo.finance)
+        );
+    }
+
+    // Prüft, ob die angegebene Gebäudekategorie zu den Verbandsgebäuden gehört
+    function isAllianceBuildingCategory(category) {
+        return [
+            '1_normal',
+            '3_normal',
+            '4_normal',
+            '8_normal',
+            '10_normal',
+            '16_normal'
+        ].includes(category);
+    }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    // Bereich für das Userinterface
-    const SETTINGS_KEY = 'enabledExtensions';
-    const defaultExtensionSettings = {};
-
-    // Extensions in default settings
-    for (const category in manualExtensions) {
-        for (const ext of manualExtensions[category]) {
-            defaultExtensionSettings[`${category}_${ext.id}`] = true;
-        }
-    }
-
-    // Lagerräume in default settings
-    for (const category in manualStorageRooms) {
-        for (const room of manualStorageRooms[category]) {
-            const key = `${category}_storage_${room.name.replace(/\s+/g, '_')}`;
-            defaultExtensionSettings[key] = true;
-        }
-    }
-
+    // Bereich für die Einstellungen
     // Funktion um Einstellungen zu speichern
     function saveExtensionSettings(settings) {
         GM_setValue(SETTINGS_KEY, settings);
@@ -742,9 +977,30 @@
         return { ...defaultExtensionSettings, ...GM_getValue(SETTINGS_KEY, {}) };
     }
 
+    // Ermittelt den lokalen Speicher-Schlüssel für eine Gebäudeerweiterung
+    function getExtensionSettingKey(category, extensionId, isAlliance = false) {
+        if (isAlliance && isAllianceBuildingCategory(category)) {
+            return `alliance_${category}_${extensionId}`;
+        }
+
+        return `${category}_${extensionId}`;
+    }
+
+    // Ermittelt den lokalen Speicher-Schlüssel für einen Lagerraum
+    function getStorageSettingKey(category, roomId, isAlliance = false) {
+        const roomKey = String(roomId);
+
+        if (isAlliance && isAllianceBuildingCategory(category)) {
+            return `alliance_${category}_storage_${roomKey}`;
+        }
+
+        return `${category}_storage_${roomKey}`;
+    }
+
     // Funktion um das Overlay anzuzeigen
     function openExtensionSettingsOverlay() {
         const settings = getExtensionSettings();
+        const allianceRights = hasAllianceBuildingRights();
 
         const overlay = document.createElement('div');
         Object.assign(overlay.style, {
@@ -755,86 +1011,149 @@
             height: '100vh',
             backgroundColor: 'rgba(0, 0, 0, 0.5)',
             zIndex: 10001,
-            overflowY: 'auto',
+            overflowY: 'auto'
         });
 
         const panel = document.createElement('div');
+
         Object.assign(panel.style, {
-            margin: '50px auto',
-            padding: '20px',
+            margin: '30px auto',
             background: 'var(--background-color, #fff)',
             color: 'var(--text-color, #000)',
             borderRadius: '10px',
-            maxWidth: '800px',
-            boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+            maxWidth: '900px',
+            height: 'calc(100vh - 80px)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 0 10px rgba(0,0,0,0.25)'
         });
 
         // Beschreibung
         const description = document.createElement('div');
-        description.style.marginBottom = '20px';
+
+        Object.assign(description.style, {
+            padding: '20px 20px 0',
+            marginBottom: '20px',
+            flexShrink: '0'
+        });
 
         const descHeading = document.createElement('h4');
         Object.assign(descHeading.style, {
             marginBottom: '10px',
             fontSize: '1.2em',
-            lineHeight: '1.4',
+            lineHeight: '1.4'
         });
         descHeading.textContent = '🛠️ Erweiterungen & Lagerräume anpassen';
 
-        description.appendChild(descHeading);
-
         const descText = document.createElement('p');
-        descText.textContent = 'Gestalte deine Wachen individuell: Bestimme, welche Erweiterungen und Lagerräume du je Gebäude-Typ sehen möchtest. Deine Einstellungen werden gespeichert und beibehalten!';
-        descText.style.lineHeight = '1.6';
-        descText.style.margin = '0';
+        descText.textContent =
+            'Bestimme, welche Erweiterungen und Lagerräume in den jeweiligen Gebäudearten angezeigt werden. Eigene Gebäude und Verbandsgebäude können unabhängig voneinander konfiguriert werden.';
+        Object.assign(descText.style, {
+            lineHeight: '1.6',
+            margin: '0'
+        });
 
+        description.appendChild(descHeading);
         description.appendChild(descText);
         panel.appendChild(description);
 
-        // Tabs Buttons
+        // Tabs
         const btnGroup = document.createElement('div');
-        btnGroup.style.marginBottom = '10px';
-
-        const extBtn = document.createElement('button');
-        extBtn.id = 'tab-ext-btn';
-        extBtn.className = 'tab-btn active';
-        extBtn.textContent = 'Erweiterungen';
-        Object.assign(extBtn.style, {
-            background: '#007bff',
-            color: 'white',
-            padding: '6px 12px',
-            marginRight: '6px',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
+        Object.assign(btnGroup.style, {
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '6px',
+            margin: '0 20px 15px',
+            paddingBottom: '10px',
+            borderBottom: '1px solid var(--border-color, #ccc)',
+            flexShrink: '0'
         });
 
-        const storageBtn = document.createElement('button');
-        storageBtn.id = 'tab-storage-btn';
-        storageBtn.className = 'tab-btn';
-        storageBtn.textContent = 'Lagerräume';
-        Object.assign(storageBtn.style, {
-            background: 'transparent',
-            color: 'var(--text-color, #000)',
-            padding: '6px 12px',
-            marginRight: '6px',
-            border: '1px solid var(--border-color, #ccc)',
-            borderRadius: '4px',
-            cursor: 'pointer',
-        });
+        const tabButtons = {};
 
-        btnGroup.appendChild(extBtn);
-        btnGroup.appendChild(storageBtn);
+        function createTabButton(id, text) {
+            const btn = document.createElement('button');
+
+            btn.id = id;
+            btn.className = 'tab-btn';
+            btn.type = 'button';
+            btn.textContent = text;
+
+            Object.assign(btn.style, {
+                background: 'transparent',
+                color: 'var(--text-color, #000)',
+                padding: '7px 14px',
+                border: '1px solid var(--border-color, #ccc)',
+                borderRadius: '4px',
+                cursor: 'pointer'
+            });
+
+            tabButtons[id] = btn;
+            btnGroup.appendChild(btn);
+
+            return btn;
+        }
+
+        const ownBtn = createTabButton(
+            'tab-own-btn',
+            'Eigene Wachen / Gebäude'
+        );
+
+        const storageBtn = createTabButton(
+            'tab-storage-btn',
+            'Lagerräume'
+        );
+
+        let allianceBtn = null;
+
+        if (allianceRights) {
+            allianceBtn = createTabButton(
+                'tab-alliance-btn',
+                'Verbandsgebäude'
+            );
+        }
+
         panel.appendChild(btnGroup);
 
-        // Container für Tab-Inhalte
+        // Tab-Inhalt
         const tabContent = document.createElement('div');
         tabContent.id = 'settings-tab-content';
-        tabContent.style.margin = '20px 0';
+
+        Object.assign(tabContent.style, {
+            flex: '1',
+            minHeight: '0',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: '0 20px',
+            margin: '0'
+        });
+
         panel.appendChild(tabContent);
+
+        panel.appendChild(tabContent);
+
+        function activateTab(button) {
+            Object.values(tabButtons).forEach(btn => {
+                Object.assign(btn.style, {
+                    background: 'transparent',
+                    color: 'var(--text-color, #000)',
+                    border: '1px solid var(--border-color, #ccc)'
+                });
+            });
+
+            if (button) {
+                Object.assign(button.style, {
+                    background: '#007bff',
+                    color: 'white',
+                    border: 'none'
+                });
+            }
+        }
 
         function createSpoilerLegend(text) {
             const legend = document.createElement('legend');
+
             Object.assign(legend.style, {
                 color: 'var(--text-color, #000)',
                 borderBottom: '1px solid var(--border-color, #ccc)',
@@ -846,7 +1165,7 @@
                 fontSize: '0.95em',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '6px'
             });
 
             const arrow = document.createElement('span');
@@ -862,61 +1181,64 @@
             return {legend, arrow};
         }
 
-        function createExtensionForm() {
-            const form = document.createElement('form');
+        function categoryHasExtensions(category) {
+            return Array.isArray(manualExtensions[category]) &&
+                manualExtensions[category].length > 0;
+        }
 
-            for (const category in buildingTypeNames) {
+        function categoryHasStorage(category) {
+            return Array.isArray(manualStorageRooms[category]) &&
+                manualStorageRooms[category].length > 0;
+        }
+
+        function createExtensionForm(categories, isAlliance = false) {
+            const form = document.createElement('form');
+            let visibleCategories = 0;
+
+            categories.forEach(category => {
+                const extensions = Array.isArray(manualExtensions[category])
+                ? manualExtensions[category]
+                : [];
+
+                if (extensions.length === 0) return;
+
                 const fieldset = document.createElement('fieldset');
                 fieldset.style.marginBottom = '12px';
 
-                const { legend, arrow } = createSpoilerLegend(
+                const {legend, arrow} = createSpoilerLegend(
                     buildingTypeNames[category] || category
                 );
 
                 const content = document.createElement('div');
-                content.style.display = 'none';
-                content.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
-                content.style.gap = '8px';
-                content.style.padding = '8px 0';
 
-                const extensions = manualExtensions[category] || [];
-
-                if (extensions.length === 0) {
-                    const noData = document.createElement('div');
-                    noData.textContent = 'Keine Erweiterungen vorhanden.';
-                    noData.style.opacity = '0.7';
-                    noData.style.fontStyle = 'italic';
-                    noData.style.padding = '6px 0';
-
-                    content.appendChild(noData);
-
-                    legend.addEventListener('click', () => {
-                        const open = content.style.display === 'grid';
-                        content.style.display = open ? 'none' : 'grid';
-                        arrow.textContent = open ? '▶' : '▼';
-                    });
-
-                    fieldset.appendChild(legend);
-                    fieldset.appendChild(content);
-                    form.appendChild(fieldset);
-
-                    continue;
-                }
+                Object.assign(content.style, {
+                    display: 'none',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: '8px',
+                    padding: '8px 0'
+                });
 
                 const allLabel = document.createElement('label');
-                allLabel.style.gridColumn = '1 / -1';
-                allLabel.style.display = 'flex';
-                allLabel.style.alignItems = 'center';
-                allLabel.style.gap = '6px';
-                allLabel.style.fontWeight = '500';
+
+                Object.assign(allLabel.style, {
+                    gridColumn: '1 / -1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: '500'
+                });
 
                 const selectAllCheckbox = document.createElement('input');
                 selectAllCheckbox.type = 'checkbox';
 
                 const selectAllText = document.createElement('span');
-                selectAllText.textContent = 'Alle Erweiterungen an-/abwählen';
-                selectAllText.style.fontWeight = 'bold';
-                selectAllText.style.color = 'var(--primary-color, #007bff)';
+                selectAllText.textContent =
+                    'Alle Erweiterungen an-/abwählen';
+
+                Object.assign(selectAllText.style, {
+                    fontWeight: 'bold',
+                    color: 'var(--primary-color, #007bff)'
+                });
 
                 allLabel.appendChild(selectAllCheckbox);
                 allLabel.appendChild(selectAllText);
@@ -938,12 +1260,19 @@
                     });
                 })
                     .forEach(ext => {
-                    const key = `${category}_${ext.id}`;
+                    const key = getExtensionSettingKey(
+                        category,
+                        ext.id,
+                        isAlliance
+                    );
 
                     const label = document.createElement('label');
-                    label.style.display = 'flex';
-                    label.style.alignItems = 'center';
-                    label.style.gap = '6px';
+
+                    Object.assign(label.style, {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                    });
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
@@ -978,6 +1307,7 @@
 
                 legend.addEventListener('click', () => {
                     const open = content.style.display === 'grid';
+
                     content.style.display = open ? 'none' : 'grid';
                     arrow.textContent = open ? '▶' : '▼';
                 });
@@ -985,48 +1315,64 @@
                 fieldset.appendChild(legend);
                 fieldset.appendChild(content);
                 form.appendChild(fieldset);
-            }
 
-            return form;
+                visibleCategories++;
+            });
+
+            return {
+                form,
+                visibleCategories
+            };
         }
 
-        function createStorageForm() {
+        function createStorageForm(categories, isAlliance = false) {
             const form = document.createElement('form');
+            let visibleCategories = 0;
 
-            for (const category in manualStorageRooms) {
-                const storageRooms = manualStorageRooms[category];
+            categories.forEach(category => {
+                const storageRooms = Array.isArray(manualStorageRooms[category])
+                ? manualStorageRooms[category]
+                : [];
 
-                if (!Array.isArray(storageRooms) || storageRooms.length === 0) {
-                    continue;
-                }
+                if (storageRooms.length === 0) return;
 
                 const fieldset = document.createElement('fieldset');
                 fieldset.style.marginBottom = '12px';
 
-                const { legend, arrow } = createSpoilerLegend(
+                const {legend, arrow} = createSpoilerLegend(
                     buildingTypeNames[category] || category
                 );
 
                 const content = document.createElement('div');
-                content.style.display = 'none';
-                content.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
-                content.style.gap = '8px';
-                content.style.padding = '8px 0';
+
+                Object.assign(content.style, {
+                    display: 'none',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: '8px',
+                    padding: '8px 0'
+                });
 
                 const allLabel = document.createElement('label');
-                allLabel.style.gridColumn = '1 / -1';
-                allLabel.style.display = 'flex';
-                allLabel.style.alignItems = 'center';
-                allLabel.style.gap = '6px';
-                allLabel.style.fontWeight = '500';
+
+                Object.assign(allLabel.style, {
+                    gridColumn: '1 / -1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: '500'
+                });
 
                 const selectAllCheckbox = document.createElement('input');
                 selectAllCheckbox.type = 'checkbox';
 
                 const selectAllText = document.createElement('span');
-                selectAllText.textContent = 'Alle Lagerräume an-/abwählen';
-                selectAllText.style.fontWeight = 'bold';
-                selectAllText.style.color = 'var(--primary-color, #007bff)';
+                selectAllText.textContent =
+                    'Alle Lagerräume an-/abwählen';
+
+                Object.assign(selectAllText.style, {
+                    fontWeight: 'bold',
+                    color: 'var(--primary-color, #007bff)'
+                });
 
                 allLabel.appendChild(selectAllCheckbox);
                 allLabel.appendChild(selectAllText);
@@ -1035,13 +1381,19 @@
                 const checkboxes = [];
 
                 storageRooms.forEach(room => {
-                    const key =
-                          `${category}_storage_${room.name.replace(/\s+/g, '_')}`;
+                    const key = getStorageSettingKey(
+                        category,
+                        room.id,
+                        isAlliance
+                    );
 
                     const label = document.createElement('label');
-                    label.style.display = 'flex';
-                    label.style.alignItems = 'center';
-                    label.style.gap = '6px';
+
+                    Object.assign(label.style, {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                    });
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
@@ -1076,6 +1428,7 @@
 
                 legend.addEventListener('click', () => {
                     const open = content.style.display === 'grid';
+
                     content.style.display = open ? 'none' : 'grid';
                     arrow.textContent = open ? '▶' : '▼';
                 });
@@ -1083,68 +1436,187 @@
                 fieldset.appendChild(legend);
                 fieldset.appendChild(content);
                 form.appendChild(fieldset);
-            }
 
-            return form;
+                visibleCategories++;
+            });
+
+            return {
+                form,
+                visibleCategories
+            };
         }
 
-        function setActiveTab(tabName) {
-            if (tabName === 'extensions') {
-                extBtn.classList.add('active');
-                Object.assign(extBtn.style, {background: '#007bff', color: 'white', border: 'none'});
-                storageBtn.classList.remove('active');
-                Object.assign(storageBtn.style, {background: 'transparent', color: 'var(--text-color, #000)', border: '1px solid var(--border-color, #ccc)'});
-                tabContent.innerHTML = '';
-                tabContent.appendChild(createExtensionForm());
-            } else {
-                storageBtn.classList.add('active');
-                Object.assign(storageBtn.style, {background: '#007bff', color: 'white', border: 'none'});
-                extBtn.classList.remove('active');
-                Object.assign(extBtn.style, {background: 'transparent', color: 'var(--text-color, #000)', border: '1px solid var(--border-color, #ccc)'});
-                tabContent.innerHTML = '';
-                tabContent.appendChild(createStorageForm());
-            }
+        function appendSectionHeading(text) {
+            const heading = document.createElement('h5');
+
+            Object.assign(heading.style, {
+                margin: '20px 0 10px',
+                paddingBottom: '6px',
+                borderBottom: '1px solid var(--border-color, #ccc)'
+            });
+
+            heading.textContent = text;
+            tabContent.appendChild(heading);
         }
 
-        extBtn.addEventListener('click', () => setActiveTab('extensions'));
-        storageBtn.addEventListener('click', () => setActiveTab('storage'));
-        setActiveTab('extensions');
+        function appendEmptyMessage(text) {
+            const message = document.createElement('div');
 
+            Object.assign(message.style, {
+                padding: '15px',
+                textAlign: 'center',
+                opacity: '0.7',
+                fontStyle: 'italic'
+            });
+
+            message.textContent = text;
+            tabContent.appendChild(message);
+        }
+
+        // Eigene Wachen / Gebäude
+        function createOwnTab() {
+            tabContent.innerHTML = '';
+            activateTab(ownBtn);
+
+            const categories = Object.keys(buildingTypeNames).filter(category => {
+                if (category === '16_normal') return false;
+
+                return categoryHasExtensions(category);
+            });
+
+            const result = createExtensionForm(categories, false);
+
+            if (result.visibleCategories === 0) {
+                appendEmptyMessage(
+                    'Für eigene Gebäude sind keine Erweiterungen konfigurierbar.'
+                );
+                return;
+            }
+
+            tabContent.appendChild(result.form);
+        }
+
+        // Eigene Lagerräume
+        function createStorageTab() {
+            tabContent.innerHTML = '';
+            activateTab(storageBtn);
+
+            const categories = Object.keys(buildingTypeNames).filter(category => {
+                if (category === '16_normal') return false;
+
+                return categoryHasStorage(category);
+            });
+
+            if (categories.length === 0) {
+                appendEmptyMessage(
+                    'Für eigene Gebäude sind keine Lagerräume konfigurierbar.'
+                );
+                return;
+            }
+
+            const result = createStorageForm(
+                categories,
+                false
+            );
+
+            tabContent.appendChild(result.form);
+        }
+
+        // Verbandsgebäude
+        function createAllianceTab() {
+            tabContent.innerHTML = '';
+            activateTab(allianceBtn);
+
+            if (!allianceRights) {
+                appendEmptyMessage(
+                    'Du besitzt keine Berechtigung zur Verwaltung von Verbandsgebäuden.'
+                );
+                return;
+            }
+
+            // Im Verbandsbereich ausschließlich Krankenhäuser, Schulen und Verbandszellen
+            const allianceCategories = [
+                '1_normal',
+                '3_normal',
+                '4_normal',
+                '8_normal',
+                '10_normal',
+                '16_normal'
+            ].filter(category => categoryHasExtensions(category));
+
+            const result = createExtensionForm(
+                allianceCategories,
+                true
+            );
+
+            if (result.visibleCategories === 0) {
+                appendEmptyMessage(
+                    'Für Verbandsgebäude sind keine Erweiterungen konfigurierbar.'
+                );
+                return;
+            }
+
+            tabContent.appendChild(result.form);
+        }
+
+        ownBtn.addEventListener('click', createOwnTab);
+        storageBtn.addEventListener('click', createStorageTab);
+
+        if (allianceBtn) {
+            allianceBtn.addEventListener('click', createAllianceTab);
+        }
+        createOwnTab();
+
+        // Buttons
         const buttonContainer = document.createElement('div');
+
         Object.assign(buttonContainer.style, {
             display: 'flex',
             justifyContent: 'center',
             gap: '10px',
-            marginTop: '20px',
+            padding: '12px 20px',
+            borderTop: '1px solid var(--border-color, #ccc)',
+            background: 'var(--background-color, #fff)',
+            flexShrink: '0'
         });
 
         const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
         saveBtn.textContent = 'Speichern';
+
         Object.assign(saveBtn.style, {
             background: '#28a745',
             color: 'white',
             padding: '6px 12px',
             border: 'none',
             borderRadius: '4px',
-            cursor: 'pointer',
+            cursor: 'pointer'
         });
+
         saveBtn.addEventListener('click', () => {
             saveExtensionSettings(settings);
-            alert('Deine Einstellungen wurden gespeichert. Die Seite wird neu geladen, um diese zu übernehmen.');
+
+            alert(
+                'Deine Einstellungen wurden gespeichert. Die Seite wird neu geladen, um diese zu übernehmen.'
+            );
+
             overlay.remove();
             location.reload();
         });
 
         const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
         closeBtn.textContent = 'Schließen';
+
         Object.assign(closeBtn.style, {
             backgroundColor: '#dc3545',
             color: '#fff',
             border: 'none',
             padding: '6px 12px',
             borderRadius: '4px',
-            cursor: 'pointer',
+            cursor: 'pointer'
         });
+
         closeBtn.addEventListener('click', () => overlay.remove());
 
         buttonContainer.appendChild(saveBtn);
@@ -1155,90 +1627,6 @@
         document.body.appendChild(overlay);
     }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    // Funktion zum Abrufen der Benutzereinstellungen vom API
-    async function getUserMode() {
-        try {
-            const response = await fetch('/api/settings');
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error("Fehler beim Abrufen der Einstellungen: ", error);
-            return null;
-        }
-    }
-
-    // Funktion zum Anwenden des Dark- oder Light-Modus basierend auf der API-Antwort
-    async function applyMode() {
-        const userSettings = await getUserMode();
-        if (!userSettings) {
-            return;
-        }
-
-        const mode = userSettings.design_mode;
-        // Warten auf das Lightbox-Element
-        const lightboxContent = document.getElementById('extension-lightbox-content');
-        if (!lightboxContent) {
-            return;
-        }
-
-        // Entferne alle möglichen Modus-Klassen
-        lightboxContent.classList.remove('dark', 'light');
-
-        // Modus anwenden
-        if (mode === 1 || mode === 4) {
-            lightboxContent.classList.add('dark');
-
-            // Dark Mode für Tabelle
-            document.documentElement.style.setProperty('--background-color', '#333');
-            document.documentElement.style.setProperty('--text-color', '#fff');
-            document.documentElement.style.setProperty('--border-color', '#444');
-        } else if (mode === 2 || mode === 3) {
-            lightboxContent.classList.add('light');
-
-            // Light Mode für Tabelle
-            document.documentElement.style.setProperty('--background-color', '#f2f2f2');
-            document.documentElement.style.setProperty('--text-color', '#000');
-            document.documentElement.style.setProperty('--border-color', '#ccc');
-        } else {
-            lightboxContent.classList.add('light');
-
-            // Standard Light Mode für Tabelle
-            document.documentElement.style.setProperty('--background-color', '#f2f2f2');
-            document.documentElement.style.setProperty('--text-color', '#000');
-            document.documentElement.style.setProperty('--border-color', '#ccc');
-        }
-    }
-
-    // Funktion zur Beobachtung der Lightbox auf Änderungen (für dynamisch geladene Elemente)
-    function observeLightbox() {
-        const lightboxContainer = document.getElementById('extension-lightbox');
-        if (!lightboxContainer) {
-            return;
-        }
-
-        const observer = new MutationObserver(() => {
-            // Überprüfe, ob das Content-Element in der Lightbox existiert
-            const lightboxContent = document.getElementById('extension-lightbox-content');
-            if (lightboxContent) {
-                applyMode();
-                observer.disconnect();
-            }
-        });
-
-        // Beobachte das Hinzufügen von neuen Kindelementen (wie die Lightbox-Inhalte)
-        observer.observe(lightboxContainer, { childList: true, subtree: true });
-    }
-
-    // Darkmode oder Whitemode anwenden
-    function applyTheme() {
-        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        lightboxContent.classList.toggle('dark', isDarkMode);
-        lightboxContent.classList.toggle('light', !isDarkMode);
-    }
-
-    // Event-Listener für Theme-Änderungen
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
     // Funktion zum Formatieren der Zahl
     function formatNumber(number) {
@@ -1254,10 +1642,12 @@
     // Button im Profilmenü hinzufügen
     function addMenuButton() {
         const profileMenu = document.querySelector('#menu_profile + .dropdown-menu');
+
         if (!profileMenu) {
             console.error('Profilmenü (#menu_profile + .dropdown-menu) nicht gefunden. Der Button konnte nicht hinzugefügt werden.');
             return;
         }
+
         if (profileMenu.querySelector('#open-extension-helper')) return;
 
         const menuButton = document.createElement('li');
@@ -1270,12 +1660,12 @@
 
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            document.getElementById('selected-credits').textContent = "0";
-            document.getElementById('selected-coins').textContent = "0";
+
+            document.getElementById('selected-credits').textContent = '0';
+            document.getElementById('selected-coins').textContent = '0';
 
             checkPremiumAndShowHint();
             loadManualDataFromLSSM();
-            applyTheme();
             checkPremiumStatus();
             getAllianceInfo();
             initAllianceUI();
@@ -1284,56 +1674,66 @@
             updateBuildSelectedButton();
             startConstructionCountdowns();
         });
+
         menuButton.appendChild(link);
 
-        // Einfügen vor Divider oder am Ende
         const divider = profileMenu.querySelector('li.divider');
+
         if (divider) {
             profileMenu.insertBefore(menuButton, divider);
         } else {
             profileMenu.appendChild(menuButton);
         }
+
+        const openBtn = document.getElementById('open-extension-settings');
+
+        if (openBtn) {
+            openBtn.addEventListener('click', () => {
+                openExtensionSettingsOverlay();
+            });
+        }
     }
 
     // Funktion, um den Premium-Status zu überprüfen
     function checkPremiumStatus() {
-        var scripts = document.getElementsByTagName('script');
-        for (var i = 0; i < scripts.length; i++) {
-            var scriptContent = scripts[i].textContent;
-            var premiumMatch = scriptContent.match(/user_premium\s*=\s*(true|false);/);
+        const scripts = document.getElementsByTagName('script');
+        for (const script of scripts) {
+            const scriptContent = script.textContent || '';
+            const premiumMatch = scriptContent.match(
+                /\buser_premium\s*=\s*(true|false)\s*;/
+            );
             if (premiumMatch) {
-                user_premium = (premiumMatch[1] === 'true');
-                break;
+                const premium = premiumMatch[1] === 'true';
+                return premium;
             }
         }
-        if (typeof user_premium === 'undefined') {
-            console.error("Die Variable 'user_premium' ist nicht definiert. Bitte prüfen Sie die HTML-Struktur.");
-            user_premium = false;
-        }
+        console.error(
+            "[Erweiterungs-Manager] 'user_premium' wurde im HTML nicht gefunden."
+        );
+
+        return false;
     }
 
     // Funktion zur Prüfung von Premium und Hinweis
     async function checkPremiumAndShowHint() {
-        const userSettings = await getUserMode();
-        const isDarkMode = userSettings && (userSettings.design_mode === 1 || userSettings.design_mode === 4);
-
-        function createCustomAlert(message, isDarkMode, callback) {
+        function createCustomAlert(message, callback) {
             const alertDiv = document.createElement('div');
-            alertDiv.style.position = 'fixed';
-            alertDiv.style.top = '50%';
-            alertDiv.style.left = '50%';
-            alertDiv.style.transform = 'translate(-50%, -50%)';
-            alertDiv.style.padding = '20px';
-            alertDiv.style.border = '1px solid';
-            alertDiv.style.borderRadius = '10px';
-            alertDiv.style.boxShadow = '0px 0px 10px rgba(0,0,0,0.2)';
-            alertDiv.style.width = '300px';
-            alertDiv.style.textAlign = 'center';
-            alertDiv.style.zIndex = '10002';
 
-            alertDiv.style.background = isDarkMode ? '#333' : '#fff';
-            alertDiv.style.color = isDarkMode ? '#fff' : '#000';
-            alertDiv.style.borderColor = isDarkMode ? '#444' : '#ccc';
+            Object.assign(alertDiv.style, {
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                padding: '20px',
+                border: '1px solid var(--border-color)',
+                borderRadius: '10px',
+                boxShadow: '0 0 10px rgba(0,0,0,0.2)',
+                width: '300px',
+                textAlign: 'center',
+                zIndex: '10002',
+                background: 'var(--background-color)',
+                color: 'var(--text-color)'
+            });
 
             const alertText = document.createElement('p');
             alertText.textContent = message;
@@ -1341,48 +1741,50 @@
 
             const closeButton = document.createElement('button');
             closeButton.textContent = 'OK';
-            closeButton.style.marginTop = '10px';
-            closeButton.style.padding = '5px 10px';
-            closeButton.style.border = 'none';
-            closeButton.style.cursor = 'pointer';
-            closeButton.style.borderRadius = '4px';
-            closeButton.style.backgroundColor = isDarkMode ? '#444' : '#007bff';
-            closeButton.style.color = isDarkMode ? '#fff' : '#fff';
+
+            Object.assign(closeButton.style, {
+                marginTop: '10px',
+                padding: '5px 10px',
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: '4px',
+                backgroundColor: 'var(--button-background-color)',
+                color: 'var(--button-text-color)'
+            });
+
             closeButton.onclick = () => {
-                document.body.removeChild(alertDiv);
+                alertDiv.remove();
                 callback();
             };
-            alertDiv.appendChild(closeButton);
 
+            alertDiv.appendChild(closeButton);
             document.body.appendChild(alertDiv);
         }
 
-        if (typeof user_premium !== 'undefined') {
+        const isPremium = checkPremiumStatus();
 
-            if (!user_premium) {
-                createCustomAlert("Du kannst dieses Script nur mit Einschränkungen nutzen da du keinen Premium-Account hast.", isDarkMode, () => {
+        if (!isPremium) {
+            createCustomAlert(
+                'Du kannst dieses Script nur mit Einschränkungen nutzen da du keinen Premium-Account hast.',
+                () => {
                     const lightbox = document.getElementById('extension-lightbox');
-                    lightbox.style.display = 'flex';
-                    fetchBuildingsAndRender();
-                });
-            } else {
-                const lightbox = document.getElementById('extension-lightbox');
-                lightbox.style.display = 'flex';
-                fetchBuildingsAndRender();
-            }
-        } else {
-            console.error("Die Variable 'user_premium' ist nicht definiert. Bitte prüfe, ob sie korrekt geladen wurde.");
-        }
-    }
 
-    // Funktion, um den Namen eines Gebäudes anhand der ID zu bekommen
-    function getBuildingCaption(buildingId) {
-        const building = buildingsData.find(b => String(b.id) === String(buildingId));
-        if (building) {
+                    if (lightbox) {
+                        lightbox.style.display = 'flex';
+                        fetchBuildingsAndRender();
+                    }
+                }
+            );
 
-            return building.caption;
+            return;
         }
-        return 'Unbekanntes Gebäude';
+
+        const lightbox = document.getElementById('extension-lightbox');
+
+        if (lightbox) {
+            lightbox.style.display = 'flex';
+            fetchBuildingsAndRender();
+        }
     }
 
     // Daten vom der LSSM API beziehen
@@ -1409,6 +1811,7 @@
         const extensionsData = {};
         const storageData = {};
         const levelsData = {};
+        const specializationsData = {};
 
         for (const [key, apiId] of Object.entries(buildingTypeApiMapping)) {
             const building = buildings[String(apiId)];
@@ -1480,29 +1883,10 @@
         Object.assign(manualLevels, levelsData);
     }
 
-    function buildDefaultExtensionSettings() {
-        const defaults = {};
-
-        // Erweiterungen
-        for (const category in manualExtensions) {
-            for (const ext of manualExtensions[category]) {
-                defaults[`${category}_${ext.id}`] = true;
-            }
-        }
-
-        // Lagerräume
-        for (const category in manualStorageRooms) {
-            for (const room of manualStorageRooms[category]) {
-                const key = `${category}_storage_${room.name.replace(/\s+/g, '_')}`;
-                defaults[key] = true;
-            }
-        }
-        return defaults;
-    }
-
     // Funktion um alle Daten zu sammeln
     async function fetchBuildingsAndRender() {
         const loadingText = document.getElementById('loading-text');
+        const loadingProgress = document.getElementById('loading-progress');
         const loadingContainer = document.getElementById('loading-container');
         const extensionList = document.getElementById('extension-list');
 
@@ -1510,10 +1894,20 @@
 
         function startLoadingAnimation() {
             let dots = 0;
-            loadingText.textContent = 'Lade die Daten, je nach Größe kann dies einen Augenblick dauern';
+
+            if (loadingText) {
+                loadingText.textContent =
+                    'Lade die Gebäudedaten, je nach Anzahl der Gebäude und Serverlast kann dies einen Augenblick dauern';
+            }
+
             dotInterval = setInterval(() => {
-                dots = (dots + 1) % 4; // 0 bis 3 Punkte
-                loadingText.textContent = 'Lade die Daten, je nach Anzahl der Gebäude und Serverlast kann dies einen Augenblick dauern' + '.'.repeat(dots);
+                dots = (dots + 1) % 4;
+
+                if (loadingText) {
+                    loadingText.textContent =
+                        'Lade die Gebäudedaten, je nach Anzahl der Gebäude und Serverlast kann dies einen Augenblick dauern' +
+                        '.'.repeat(dots);
+                }
             }, 500);
         }
 
@@ -1523,28 +1917,183 @@
 
         loadingContainer.style.display = 'block';
         extensionList.style.display = 'none';
+
+        if (loadingProgress) {
+            loadingProgress.textContent = '';
+        }
+
         startLoadingAnimation();
 
         try {
-            const response = await fetch('/api/buildings');
-            if (!response.ok) throw new Error('Fehler beim Abrufen der Daten');
-            const buildingsData = await response.json();
+            const limit = 1000;
+            let nextPage = `/api/v2/buildings?limit=${limit}`;
+            let expectedTotal = null;
 
-            buildingsData.forEach(building => getBuildingLevelInfo(building));
+            const allBuildings = [];
+
+            while (nextPage) {
+                let response = null;
+                const maxAttempts = 3;
+                let attempt = 0;
+
+                while (attempt < maxAttempts) {
+                    attempt++;
+
+                    try {
+                        response = await fetch(
+                            nextPage +
+                            (nextPage.includes('?') ? '&' : '?') +
+                            'ts=' + Date.now(),
+                            {
+                                credentials: 'same-origin',
+                                cache: 'no-store',
+                                headers: {
+                                    'Accept': 'application/json'
+                                }
+                            }
+                        );
+
+                        if (response && response.ok) {
+                            break;
+                        }
+                    } catch (err) {
+                        console.warn(
+                            `[Erweiterungs-Manager] Fehler beim Abrufen der Gebäudeseite (Versuch ${attempt}/${maxAttempts}):`,
+                            err
+                        );
+                    }
+
+                    if (attempt < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 400));
+                    }
+                }
+
+                if (!response || !response.ok) {
+                    throw new Error(
+                        'Fehler beim Abrufen der Gebäudedaten'
+                    );
+                }
+
+                const data = await response.json();
+
+                if (!data || !Array.isArray(data.result)) {
+                    throw new Error(
+                        'Ungültige Antwort der Gebäude-V2-API'
+                    );
+                }
+
+                // Gesamtanzahl aus der API übernehmen
+                if (
+                    expectedTotal === null &&
+                    data.paging?.count_total != null
+                ) {
+                    expectedTotal = Number(data.paging.count_total);
+                }
+
+                // Gebäude dieser Seite hinzufügen
+                allBuildings.push(...data.result);
+
+                // Separater Fortschritt unterhalb des normalen Ladetextes
+                if (loadingProgress) {
+                    if (expectedTotal !== null) {
+                        loadingProgress.textContent =
+                            `${allBuildings.length} von ${expectedTotal} Gebäuden geladen`;
+                    } else {
+                        loadingProgress.textContent =
+                            `${allBuildings.length} Gebäude geladen`;
+                    }
+                }
+
+                // Nächste Seite direkt von der API übernehmen
+                nextPage = data.paging?.next_page || null;
+            }
+
+            // Prüfen, ob tatsächlich alle Gebäude geladen wurden
+            if (
+                expectedTotal !== null &&
+                allBuildings.length !== expectedTotal
+            ) {
+                console.warn(
+                    `[Erweiterungs-Manager] Die API meldet ${expectedTotal} Gebäude, ` +
+                    `geladen wurden jedoch nur ${allBuildings.length}.`
+                );
+            }
+
+            // Vollständigen Datenbestand global speichern
+            buildingsData = allBuildings;
+            buildingsData.forEach(building => {
+                getBuildingLevelInfo(building);
+            });
+
             await initUserCredits();
             await renderMissingExtensions(buildingsData);
-            await initUserCredits();
+
             updateSelectedAmounts(buildingsData);
 
             stopLoadingAnimation();
+
             loadingContainer.style.display = 'none';
             extensionList.style.display = 'block';
 
         } catch (error) {
             stopLoadingAnimation();
+
             loadingContainer.style.display = 'none';
             extensionList.style.display = 'block';
-            extensionList.innerHTML = 'Fehler beim Laden der Gebäudedaten.';
+
+            if (loadingProgress) {
+                loadingProgress.textContent = '';
+            }
+
+            extensionList.innerHTML =
+                'Fehler beim Laden der Gebäudedaten.';
+
+            console.error(
+                '[Erweiterungs-Manager] Fehler beim Laden der Gebäudedaten:',
+                error
+            );
+        }
+    }
+
+    // Funktion um die aktuelle Credits und Coins des Users abzurufen
+    async function getUserCredits(forceRefresh = false) {
+        if (cachedUserInfo && !forceRefresh) {
+            return cachedUserInfo;
+        }
+
+        try {
+            const response = await fetch('/api/userinfo');
+
+            if (!response.ok) {
+                throw new Error('Fehler beim Abrufen der Userdaten');
+            }
+
+            const data = await response.json();
+
+            cachedUserInfo = {
+                credits: Number(data.credits_user_current) || 0,
+                coins: Number(data.coins_user_current) || 0,
+                premium: data.premium
+            };
+
+            return cachedUserInfo;
+        } catch (error) {
+            console.error('Fehler beim Abrufen der Userdaten:', error);
+            throw error;
+        }
+    }
+    async function initUserCredits(forceRefresh = false) {
+        try {
+            const data = await getUserCredits(forceRefresh);
+
+            currentCredits = data.credits;
+            currentCoins = data.coins;
+
+            document.getElementById('current-credits').textContent = currentCredits.toLocaleString();
+            document.getElementById('current-coins').textContent = currentCoins.toLocaleString();
+            updateSelectedAmounts();
+        } catch (error) {
+            console.error('Fehler beim Aktualisieren des Guthabens:', error);
         }
     }
 
@@ -1564,34 +2113,249 @@
         const levelData = manualLevels[key];
         if (!levelData) return null;
 
-        // currentLevel ist das Level im Gebäude-Objekt, >=0
-        const currentLevel = (typeof building.level === 'number' && building.level >= 0) ? building.level : -1;
+        const currentLevel = typeof building.level === 'number' && building.level >= 0
+        ? building.level
+        : -1;
 
-        // current = Stufe mit id == currentLevel, oder null falls Level -1
-        const current = currentLevel >= 0 ? levelData.find(l => l.id === currentLevel) : null;
-        // next = Level mit id currentLevel + 1, oder erstes Level wenn currentLevel -1 (noch kein Gebäude)
-        const next = currentLevel >= 0 ? levelData.find(l => l.id === currentLevel + 1) : levelData[0];
+        const current = currentLevel >= 0
+        ? levelData.find(l => Number(l.id) === currentLevel)
+        : null;
+
+        const next = currentLevel >= 0
+        ? levelData.find(l => Number(l.id) === currentLevel + 1)
+        : levelData[0];
 
         return { current, next, currentLevel };
     }
 
-    // Funktion um die aktuelle Credits und Coins des Users abzurufen
-    async function getUserCredits() {
-        try {
-            const response = await fetch('/api/userinfo');
-            if (!response.ok) {
-                throw new Error('Fehler beim Abrufen der Credits und Coins');
-            }
-            const data = await response.json();
-            return {
-                credits: data.credits_user_current,
-                coins: data.coins_user_current,
-                premium: data.premium // Fügen Sie diese Zeile hinzu, um den Premium-Status zurückzugeben
-            };
-        } catch (error) {
-            console.error('Fehler beim Abrufen der Credits und Coins:', error);
-            throw error;
+    // Funktion, um den Namen eines Gebäudes anhand der ID zu bekommen
+    function getBuildingCaption(buildingId) {
+        const building = buildingsData.find(b => String(b.id) === String(buildingId));
+        if (building) {
+
+            return building.caption;
         }
+        return 'Unbekanntes Gebäude';
+    }
+
+    // Funktion um die Building ID zu beziehen
+    function getBuildingTypeKey(building) {
+        return `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+    }
+
+    // Funktion zur Ermittlung von Wachen mit Spezialisierungen
+    function getAvailableSpecializations(building) {
+        if (
+            building.specialization?.active ||
+            building.specialization?.available === false
+        ) {
+            return [];
+        }
+
+        const buildingTypeKey =
+              `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+
+        const finishedExtensions = new Set(
+            (building.extensions || [])
+            .filter(extension =>
+                    extension.available === true &&
+                    extension.available_at == null
+                   )
+            .map(extension => Number(extension.type_id))
+        );
+
+        return Object.entries(specializationDefinitions)
+            .filter(([type, definition]) =>
+                    definition.buildingTypes.includes(buildingTypeKey) &&
+                    finishedExtensions.has(Number(definition.extensionId))
+                   )
+            .map(([type, definition]) => ({
+            type,
+            apiType: definition.apiType,
+            name: definition.name,
+            coins: definition.coins
+        }));
+    }
+
+    // Funktion für die Berechnung der Creditkosten für Spezialisierungen
+    function getSpecializationCount(buildings, specializationType) {
+        return buildings.filter(
+            building =>
+            building.specialization?.active === true &&
+            building.specialization.type === specializationType
+        ).length;
+    }
+
+    // Ermittelt die Credit-Kosten für die nächste Spezialisierung eines Gebäudes
+    function getSpecializationCreditCost(buildings, specializationType, building) {
+        const count =
+              getSpecializationCount(
+                  buildings,
+                  specializationType
+              ) + 1;
+
+        return getSpecializationCreditCostByCount(
+            count,
+            building.small_building
+        );
+    }
+
+    // Berechnet die Credit-Kosten anhand der bisherigen Anzahl an Spezialisierungen
+    function getSpecializationCreditCostByCount(count) {
+        let cost = count <= 3
+        ? 50000
+        : Math.round(
+            50000 +
+            100000 * Math.log2(count - 2)
+        );
+
+        // Event-Rabatt auf Spezialisierungen
+        const discount = getSpecializationCreditDiscount();
+        if (discount > 0) {
+            cost = Math.round(
+                cost * (1 - discount / 100)
+            );
+        }
+        return cost;
+    }
+
+    // Aktualisiert die angezeigten Spezialisierungspreise anhand der aktuellen Auswahl
+    function updateSpecializationPrices(buildings) {
+        if (!Array.isArray(buildings)) return;
+
+        const counts = {};
+        const rowsByType = {};
+
+        // Bereits gebaute Spezialisierungen zählen
+        buildings.forEach(building => {
+            const type = building.specialization?.type;
+
+            if (building.specialization?.active && type) {
+                counts[type] = (counts[type] || 0) + 1;
+            }
+        });
+
+        // Alle Spezialisierungszeilen nach Typ sammeln
+        document.querySelectorAll(
+            '.extension-checkbox[data-specialization-type]'
+        ).forEach(cb => {
+            const type = cb.dataset.apiType;
+
+            if (!type) return;
+
+            if (!rowsByType[type]) {
+                rowsByType[type] = [];
+            }
+
+            rowsByType[type].push(cb);
+        });
+
+        // Preise je Spezialisierungstyp berechnen
+        Object.entries(rowsByType).forEach(([type, checkboxes]) => {
+            const selected = checkboxes
+            .filter(cb => cb.checked)
+            .sort(
+                (a, b) =>
+                Number(a.dataset.selectionOrder || 0) -
+                Number(b.dataset.selectionOrder || 0)
+            );
+
+            let position = counts[type] || 0;
+
+            // Ausgewählte Spezialisierungen bekommen ihre feste Position
+            selected.forEach(cb => {
+                const building = buildings.find(
+                    b => String(b.id) === String(cb.dataset.buildingId)
+                );
+
+                if (!building) return;
+
+                position++;
+
+                const cost = getSpecializationCreditCostByCount(
+                    position,
+                    building.small_building
+                );
+
+                cb.dataset.creditCost = cost;
+
+                const row = cb.closest('tr');
+                const creditBtn = row?.querySelector('.credits-button');
+
+                if (!creditBtn) return;
+
+                creditBtn.textContent =
+                    `${formatNumber(cost)} Credits`;
+
+                const canAfford =
+                      Number(currentCredits ?? 0) >= cost;
+
+                creditBtn.disabled = !canAfford;
+                creditBtn.title = canAfford
+                    ? ''
+                : `Benötigt ${formatNumber(cost)} Credits`;
+            });
+
+            // Alle nicht ausgewählten Zeilen zeigen den nächsten Preis
+            const nextPosition = position + 1;
+
+            checkboxes
+                .filter(cb => !cb.checked)
+                .forEach(cb => {
+                const building = buildings.find(
+                    b => String(b.id) === String(cb.dataset.buildingId)
+                );
+
+                if (!building) return;
+
+                const cost = getSpecializationCreditCostByCount(
+                    nextPosition,
+                    building.small_building
+                );
+
+                cb.dataset.creditCost = cost;
+
+                const row = cb.closest('tr');
+                const creditBtn = row?.querySelector('.credits-button');
+
+                if (!creditBtn) return;
+
+                creditBtn.textContent =
+                    `${formatNumber(cost)} Credits`;
+
+                const canAfford =
+                      Number(currentCredits ?? 0) >= cost;
+
+                creditBtn.disabled = !canAfford;
+                creditBtn.title = canAfford
+                    ? ''
+                : `Benötigt ${formatNumber(cost)} Credits`;
+            });
+        });
+    }
+
+    // Ermittelt einen aktuell aktiven Event-Rabatt auf Spezialisierungen
+    function getSpecializationCreditDiscount() {
+        const events = document.querySelectorAll(
+            '[data-original-title], [title]'
+        );
+
+        for (const event of events) {
+            const title =
+                  event.getAttribute('data-original-title') ||
+                  event.getAttribute('title') ||
+                  '';
+
+            const match = title.match(
+                /Credits-Rabatt für Spezialisierungen:\s*-(\d+)%\s*auf Spezialisierungskosten/i
+            );
+
+            if (match) {
+                return Number(match[1]);
+            }
+        }
+
+        return 0;
     }
 
     // Funktion um fehlende Lagererweiterungen für eine Gebäudegruppe zu ermitteln
@@ -1610,7 +2374,7 @@
                 const id = opt.id;
                 if (current.has(id)) return;
 
-                const storageKey = `${baseKey}_storage_${opt.name.replace(/\s+/g, '_')}`;
+                const storageKey = getStorageSettingKey(baseKey, opt.id, currentView === 'alliance');
                 if (settings[storageKey] === false) return;
 
                 missingExtensions.push({
@@ -1627,1685 +2391,42 @@
         });
     }
 
-    // Funktion um die Tabellen mit Daten zu füllen
-    async function renderMissingExtensions(buildings) {
-        const userInfo = (typeof arguments[1] !== 'undefined' && arguments[1]) ? arguments[1] : await getUserCredits();
-        const list = document.getElementById('extension-list');
-        list.innerHTML = '';
+    // Prüft Erweiterungen anhand der Gesamtanzahl der Gebäude
+    function isBuildingCountLimitReached(buildings, building, extensionId) {
+        const buildingType = Number(building.building_type);
+        const extensionConfig =
+              buildingCountLimits[buildingType]?.[Number(extensionId)];
 
-        buildingGroups = {};
-        buildingsData = buildings;
-
-        buildings.sort((a, b) =>
-                       a.building_type === b.building_type
-                       ? a.caption.localeCompare(b.caption)
-                       : a.building_type - b.building_type
-                      );
-
-        const settings = getExtensionSettings();
-
-        // Gruppiere Gebäude nach Typ & filtere erlaubte Erweiterungen
-        buildings.forEach(building => {
-            const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const extensions = manualExtensions[baseKey];
-            const storageOptions = manualStorageRooms[baseKey];
-
-            const hasLevelUpgrade = !!getBuildingLevelInfo(building)?.next;
-            if (!extensions && !storageOptions && !hasLevelUpgrade) return;
-
-            const existingExtensions = new Set(building.extensions.map(e => e.type_id));
-            const existingStorages = new Set((building.storage_upgrades || []).map(u => Object.keys(u)[0]));
-
-            const allowedExtensions = (extensions || []).filter(ext => {
-                const key = `${baseKey}_${ext.id}`;
-                if (!settings[key] || isExtensionLimitReached(building, ext.id)) return false;
-
-                // Bereits gebaute Erweiterung ausblenden
-                if (existingExtensions.has(ext.id)) return false;
-
-                const isForbidden = (forbiddenIds) =>
-                forbiddenIds.some(id => existingExtensions.has(id)) && !forbiddenIds.includes(ext.id);
-
-                // Spezialfall: Klein-Feuerwache
-                if (building.building_type === 0 && building.small_building) {
-                    const limited = [0, 6, 8, 13, 14, 16, 18, 19, 25];
-                    const alwaysAllowed = [1, 2, 20, 21];
-
-                    // AB & Anhänger immer erlauben
-                    if (alwaysAllowed.includes(ext.id)) return true;
-
-                    // Limitierte Erweiterungen blocken, falls schon eine gebaut wurde
-                    return !isForbidden(limited);
-                }
-
-                // Spezialfall: Klein-Polizeiwache
-                if (building.building_type === 6 && building.small_building) {
-                    const limited = [10, 11, 12, 13];
-                    const alwaysAllowed = [0, 1];
-
-                    if (alwaysAllowed.includes(ext.id)) return true;
-
-                    // Limitierte Erweiterungen blocken, falls schon eine gebaut wurde
-                    return !isForbidden(limited);
-                }
-
-                return true;
-            });
-
-            const enabledStorages = (storageOptions || []).filter(opt => {
-                const key = `${baseKey}_storage_${opt.name.replace(/\s+/g, '_')}`;
-                return settings[key] !== false && !existingStorages.has(opt.id.toString());
-            });
-
-            if (allowedExtensions.length === 0 && enabledStorages.length === 0 && !hasLevelUpgrade) return;
-
-            buildingGroups[baseKey] = buildingGroups[baseKey] || [];
-            buildingGroups[baseKey].push({ building, missingExtensions: allowedExtensions });
-
-            if (enabledStorages.length > 0) {
-                prepareStorageGroup(baseKey, [{ building }], settings);
-            }
-        });
-
-        // Für jede Gruppe UI erzeugen
-        Object.entries(buildingGroups).forEach(([groupKey, group]) => {
-            const buildingType = buildingTypeNames[groupKey] || 'Unbekannt';
-
-            const header = createHeader(buildingType);
-            const buttons = createButtonContainer(groupKey, group, userInfo);
-            buttons.container.dataset.buildingType = groupKey;
-
-            const hasEnabledStorage = group.some(({ building }) => {
-                const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-                const options = manualStorageRooms[baseKey];
-                if (!options) return false;
-
-                return options.some(opt => {
-                    const key = `${baseKey}_storage_${opt.name.replace(/\s+/g, '_')}`;
-                    return settings[key] !== false;
-                });
-            });
-
-            if (buttons.lagerButton) {
-                buttons.lagerButton.disabled = !hasEnabledStorage;
-                buttons.lagerButton.style.opacity = hasEnabledStorage ? '1' : '0.5';
-                buttons.lagerButton.style.cursor = hasEnabledStorage ? 'pointer' : 'not-allowed';
-                if (!hasEnabledStorage) {
-                    buttons.lagerButton.title = 'Keine Lager-Erweiterung für diese Gruppe aktiviert';
-                }
-            }
-
-            const hasExtensions = group.some(({ missingExtensions }) => missingExtensions.length > 0);
-
-            if (buttons.spoilerButton) {
-                buttons.spoilerButton.disabled = !hasExtensions;
-                buttons.spoilerButton.style.opacity = hasExtensions ? '1' : '0.5';
-                buttons.spoilerButton.style.cursor = hasExtensions ? 'pointer' : 'not-allowed';
-                if (!hasExtensions) {
-                    buttons.spoilerButton.title = 'Keine Erweiterungen zum Ausbau oder ausgewählt';
-                }
-            }
-
-            const spoilerWrapper = (hasExtensions && buttons.spoilerButton)
-            ? createSpoilerContentWrapper(buttons.spoilerButton)
-            : null;
-
-            if (spoilerWrapper) {
-                const table = createExtensionTable(groupKey, group, userInfo, buttons.buildSelectedButton);
-                spoilerWrapper.appendChild(table);
-            }
-
-            const lagerWrapper = buttons.lagerButton && hasEnabledStorage
-            ? createLagerContentWrapper(buttons.lagerButton, group, userInfo, buttons.buildSelectedButton)
-            : null;
-
-            const hasLevelUpgrades = group.some(({ building }) => {
-                const levelInfo = getBuildingLevelInfo(building);
-                return levelInfo?.next;
-            });
-
-            let levelWrapper = null;
-            if (buttons.levelButton) {
-                buttons.levelButton.disabled = !hasLevelUpgrades;
-                buttons.levelButton.style.opacity = hasLevelUpgrades ? '1' : '0.5';
-                buttons.levelButton.style.cursor = hasLevelUpgrades ? 'pointer' : 'not-allowed';
-
-                if (!hasLevelUpgrades) {
-                    buttons.levelButton.title = 'Keine weiteren Ausbaustufen verfügbar';
-                } else {
-                    levelWrapper = createLevelContentWrapper(buttons.levelButton, group, userInfo);
-                }
-            }
-
-            list.append(header, buttons.container);
-            if (spoilerWrapper) list.appendChild(spoilerWrapper);
-            if (lagerWrapper) list.appendChild(lagerWrapper);
-            if (levelWrapper) list.appendChild(levelWrapper);
-
-            const wrappers = [spoilerWrapper, lagerWrapper, levelWrapper].filter(Boolean);
-            wrappers.forEach(wrapper => {
-                wrapper.otherWrappers = wrappers.filter(w => w !== wrapper);
-            });
-        });
-    }
-
-    // Funktion um den TabellenHeader zu erstellen
-    function createHeader(title) {
-        const h = document.createElement('h4');
-        h.textContent = title;
-        h.classList.add('building-header');
-        return h;
-    }
-
-    // Funktion um den ButtonContainer zu erstellen
-    function createButtonContainer(groupKey, group, userInfo) {
-        const container = document.createElement('div');
-        container.classList.add('button-container');
-
-        const spoilerButton = createButton('Erweiterungen', ['btn', 'spoiler-button']);
-
-        const showLevelButton = group.some(({ building }) => {
-            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            return allowedBuildings.has(key);
-        });
-
-        let levelButton = null;
-        if (showLevelButton) {
-            levelButton = createButton('Ausbaustufen', ['btn', 'level-button']);
+        if (!extensionConfig) {
+            return false;
         }
 
-        const canBuildStorage = group.some(({ building }) => {
-            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            return manualStorageRooms.hasOwnProperty(key);
-        });
+        const requiredBuildings =
+              Number(extensionConfig.requiredBuildings) || 0;
 
-        let lagerButton = null;
-        if (canBuildStorage) {
-            lagerButton = createButton('Lagerräume', ['btn', 'lager-button']);
+        if (requiredBuildings <= 0) {
+            return false;
         }
 
-        const buildSelectedButton = createButton('Ausgewählte Erweiterungen/Lager bauen', ['btn', 'build-selected-button']);
-        buildSelectedButton.disabled = true;
-        buildSelectedButton.onclick = () => buildSelectedExtensions();
-
-        const buildSelectedLevelsButton = createButton('Ausgewählte Stufen bauen', ['btn', 'build-selected-levels-button']);
-        buildSelectedLevelsButton.disabled = true;
-        buildSelectedLevelsButton.onclick = () => buildSelectedLevelsAll(buildingsData);
-
-        const buildAllButton = createButton('Sämtliche Erweiterungen/Lager bei allen Wachen bauen', ['btn', 'build-all-button']);
-        buildAllButton.onclick = () => showCurrencySelectionForAll(groupKey);
-
-        [spoilerButton, lagerButton, buildSelectedButton, levelButton, buildSelectedLevelsButton, buildAllButton]
-            .filter(Boolean)
-            .forEach(btn => container.appendChild(btn));
-
-        return {
-            container,
-            spoilerButton,
-            levelButton,
-            lagerButton,
-            buildSelectedLevelsButton,
-            buildSelectedButton,
-        };
-    }
-
-    // Funktion um die Buttons zu erstellen
-    function createButton(text, classes = []) {
-        const btn = document.createElement('button');
-        btn.textContent = text;
-        classes.forEach(cls => btn.classList.add(cls));
-        return btn;
-    }
-
-    // Funktion um die Spoiler-Inhalte zu erstellen (Erweiterung/Lager/Stufenausbau)
-    function resetButtonText(wrapper) {
-        if (!wrapper.associatedButton) return;
-        if (wrapper.classList.contains('spoiler-content')) {
-            wrapper.associatedButton.textContent = 'Erweiterungen';
-        } else if (wrapper.classList.contains('lager-wrapper')) {
-            wrapper.associatedButton.textContent = 'Lagerräume';
-        } else if (wrapper.classList.contains('level-wrapper')) {
-            wrapper.associatedButton.textContent = 'Ausbaustufen';
-        }
-    }
-    function createSpoilerContentWrapper(spoilerButton) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'spoiler-content';
-        wrapper.style.display = 'none';
-
-        spoilerButton.addEventListener('click', () => {
-            const show = wrapper.style.display !== 'block';
-
-            if (wrapper.otherWrappers) {
-                wrapper.otherWrappers.forEach(other => {
-                    other.style.display = 'none';
-                    if (other.associatedButton) {
-                        other.associatedButton.classList.remove('active-button');
-                        resetButtonText(other);
-                    }
-                });
-            }
-
-            wrapper.style.display = show ? 'block' : 'none';
-            spoilerButton.textContent = show ? 'Erweiterungen ausblenden' : 'Erweiterungen';
-            spoilerButton.classList.toggle('active-button', show);
-        });
-
-        wrapper.associatedButton = spoilerButton;
-        return wrapper;
-    }
-    function createLagerContentWrapper(lagerButton, group, userInfo, buildSelectedButton) {
-        const wrapper = document.createElement('div');
-        wrapper.classList.add('lager-wrapper');
-        wrapper.style.display = 'none';
-        wrapper.style.marginTop = '10px';
-
-        const lagerTable = createLagerTable(group, userInfo, buildSelectedButton);
-        wrapper.appendChild(lagerTable);
-
-        lagerButton.addEventListener('click', () => {
-            const show = wrapper.style.display !== 'block';
-
-            if (wrapper.otherWrappers) {
-                wrapper.otherWrappers.forEach(other => {
-                    other.style.display = 'none';
-                    if (other.associatedButton) {
-                        other.associatedButton.classList.remove('active-button');
-                        resetButtonText(other);
-                    }
-                });
-            }
-
-            wrapper.style.display = show ? 'block' : 'none';
-            lagerButton.textContent = show ? 'Lagerräume ausblenden' : 'Lagerräume';
-            lagerButton.classList.toggle('active-button', show);
-        });
-
-        wrapper.associatedButton = lagerButton;
-        return wrapper;
-    }
-    function createLevelContentWrapper(levelButton, group, userInfo, buildSelectedButton) {
-        const wrapper = document.createElement('div');
-        wrapper.classList.add('level-wrapper');
-        wrapper.style.display = 'none';
-        wrapper.style.marginTop = '10px';
-
-        const levelTable = createLevelTable(group, userInfo);
-        wrapper.appendChild(levelTable);
-
-        levelButton.addEventListener('click', () => {
-            const show = wrapper.style.display !== 'block';
-
-            if (wrapper.otherWrappers) {
-                wrapper.otherWrappers.forEach(other => {
-                    other.style.display = 'none';
-                    if (other.associatedButton) {
-                        other.associatedButton.classList.remove('active-button');
-                        resetButtonText(other);
-                    }
-                });
-            }
-            wrapper.style.display = show ? 'block' : 'none';
-            levelButton.textContent = show ? 'Ausbaustufen ausblenden' : 'Ausbaustufen';
-            levelButton.classList.toggle('active-button', show);
-        });
-
-        wrapper.associatedButton = levelButton;
-        return wrapper;
-    }
-
-    // Funktion zur Prüfung der richtigen Baureihenfolge von Lagerräumen
-    function canBuildStorageInOrder(buildingId, storageId) {
-        const building = buildingsData.find(b => String(b.id) === String(buildingId));
-        if (!building) return false;
-
-        const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-        const storageList = manualStorageRooms[buildingTypeKey] || [];
-        const indexToBuild = storageList.findIndex(s => s.id === storageId);
-        if (indexToBuild === -1) return true; // Lagerraum nicht in Liste => keine Einschränkung
-
-        const currentState = getCurrentStorageState(buildingId);
-
-        // Prüfen, ob alle vorherigen Lagerräume bereits gebaut sind
-        for (let i = 0; i < indexToBuild; i++) {
-            if (!currentState.includes(storageList[i].id)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    function canBuildAllSelectedInOrder(buildingId, selectedStorages) {
-        const building = buildingsData.find(b => String(b.id) === String(buildingId));
-        if (!building) return false;
-
-        // Welche Reihenfolge gilt für diese Wache?
-        const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-        const storageOrder = manualStorageRooms[buildingTypeKey]?.map(s => s.id) || [];
-
-        // Aktueller Zustand: fertig + im Bau + Queue
-        const builtStorages = new Set(getCurrentStorageState(buildingId));
-
-        // Prüfen für jede ausgewählte Erweiterung
-        for (let i = 0; i < selectedStorages.length; i++) {
-            const storageId = selectedStorages[i];
-            const requiredIndex = storageOrder.indexOf(storageId);
-            if (requiredIndex === -1) continue; // Lager nicht in der definierten Reihenfolge-Liste → ignorieren
-
-            // Alle vorherigen Lager müssen schon "gebaut oder im Bau" sein
-            const missing = storageOrder
-            .slice(0, requiredIndex)
-            .some(prevId => !builtStorages.has(prevId));
-
-            if (missing) {
-                return false; // Reihenfolge verletzt
-            }
-
-            // Nach Prüfung: so behandeln, als wäre dieser Lagerraum auch gebaut
-            builtStorages.add(storageId);
-        }
-
-        return true;
-    }
-
-    // Funktion um die Tabelle für Erweiterung, Lager und Ausbaustufen zu erstellen
-    function createExtensionTable(groupKey, group, userInfo, buildSelectedButton) {
-        const table = document.createElement('table');
-        table.innerHTML = `
-        <thead style="background-color: #f2f2f2; font-weight: bold; border-bottom: 2px solid #ccc;">
-            <tr>
-                <th style="padding: 10px; text-align: center;">Alle An- / Abwählen</th>
-                <th>Leitstelle</th>
-                <th>Wache/Gebäude</th>
-                <th>Baubare Erweiterungen</th>
-                <th>Bauen mit Credits</th>
-                <th>Bauen mit Coins</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    `;
-
-        const tbody = table.querySelector('tbody');
-        const filters = {};
-        const filterRow = document.createElement('tr');
-        const filterElements = {};
-
-        // Checkbox für „Alle auswählen“
-        const selectAllCell = document.createElement('th');
-        const selectAllCheckbox = document.createElement('input');
-        selectAllCheckbox.type = 'checkbox';
-        selectAllCheckbox.className = 'select-all-checkbox';
-        selectAllCheckbox.dataset.group = groupKey;
-        selectAllCell.appendChild(selectAllCheckbox);
-        filterRow.appendChild(selectAllCell);
-
-        // Hilfsfunktion für Dropdown-Filter
-        function createDropdownFilter(options, placeholder, colIndex) {
-            const th = document.createElement('th');
-            const select = document.createElement('select');
-            select.innerHTML = `<option value="">🔽 ${placeholder}</option>`;
-            [...new Set(options)].sort().forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                select.appendChild(option);
-            });
-
-            select.addEventListener('change', () => {
-                filters[colIndex] = select.value || undefined;
-                applyAllFilters();
-                updateSelectAllCheckboxState();
-            });
-
-            filterElements[colIndex] = select;
-            th.appendChild(select);
-            return th;
-        }
-
-        // Sammle Filteroptionen
-        const leitstellen = group.map(g => getLeitstelleName(g.building));
-        const wachen = group.map(g => g.building.caption);
-        const erweiterungen = group.flatMap(g => g.missingExtensions.map(e => e.name));
-
-        filterRow.appendChild(createDropdownFilter(leitstellen, 'Leitstelle', 1));
-        filterRow.appendChild(createDropdownFilter(wachen, 'Wache', 2));
-        filterRow.appendChild(createDropdownFilter(erweiterungen, 'Erweiterung', 3));
-
-        // Filter zurücksetzen
-        const resetCell = document.createElement('th');
-        const resetBtn = document.createElement('button');
-        resetBtn.textContent = 'Filter zurücksetzen';
-        resetBtn.classList.add('btn', 'btn-sm', 'btn-primary');
-        resetBtn.style.padding = '2px 6px';
-        resetBtn.style.fontSize = '0.8em';
-        resetBtn.onclick = () => {
-            Object.values(filterElements).forEach(select => select.selectedIndex = 0);
-            Object.keys(filters).forEach(k => delete filters[k]);
-            applyAllFilters();
-            updateSelectAllCheckboxState();
-        };
-        resetCell.appendChild(resetBtn);
-        filterRow.appendChild(resetCell);
-
-        const uncheckAllCell = document.createElement('th');
-        uncheckAllCell.style.textAlign = 'center';
-        uncheckAllCell.style.padding = '4px 8px';
-
-        const uncheckAllBtn = document.createElement('button');
-        uncheckAllBtn.textContent = 'Alle abwählen';
-        uncheckAllBtn.classList.add('btn', 'btn-sm', 'btn-warning');
-        uncheckAllBtn.style.padding = '2px 6px';
-        uncheckAllBtn.style.fontSize = '0.8em';
-
-        uncheckAllBtn.onclick = () => {
-            tbody.querySelectorAll('tr').forEach(row => {
-                if (row.style.display !== 'none') {
-                    const cb = row.querySelector('.extension-checkbox');
-                    if (cb && !cb.disabled) {
-                        cb.checked = false;
-                    }
-                }
-            });
-            updateBuildSelectedButton();
-            updateSelectAllCheckboxState();
-            updateSelectedAmounts(buildingsData);
-        };
-
-        uncheckAllCell.appendChild(uncheckAllBtn);
-        filterRow.appendChild(uncheckAllCell);
-
-        table.querySelector('thead').appendChild(filterRow);
-
-        selectAllCheckbox.addEventListener('change', (event) => {
-            const isChecked = selectAllCheckbox.checked;
-
-            let totalCredits = 0;
-            let totalCoins = 0;
-
-            const rows = tbody.querySelectorAll('tr');
-
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const cb = row.querySelector('.extension-checkbox');
-                    if (cb && !cb.disabled) {
-                        if (isChecked) {
-                            totalCredits += Number(cb.dataset.creditCost) || 0;
-                            totalCoins += Number(cb.dataset.coinCost) || 0;
-                        }
-                    }
-                }
-            });
-
-            const canPayAllWithCredits = currentCredits >= totalCredits;
-            const canPayAllWithCoins = currentCoins >= totalCoins;
-
-            if (!canPayAllWithCredits && !canPayAllWithCoins) {
-
-                const missingCredits = Math.max(0, totalCredits - currentCredits);
-                const missingCoins = Math.max(0, totalCoins - currentCoins);
-
-                let message = "Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n";
-
-                if (missingCredits > 0) {
-                    message += `Fehlende Credits: ${formatNumber(missingCredits)}\n`;
-                }
-
-                if (missingCoins > 0) {
-                    message += `Fehlende Coins: ${missingCoins}\n`;
-                }
-
-                alert(message);
-
-                // Checkbox zurücksetzen, da nicht erlaubt
-                selectAllCheckbox.checked = false;
-                return;
-            }
-
-            // Checkboxen setzen
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const cb = row.querySelector('.extension-checkbox');
-                    if (cb && !cb.disabled) {
-                        cb.checked = isChecked;
-                    }
-                }
-            });
-
-            updateBuildSelectedButton();
-            updateSelectAllCheckboxState();
-            updateSelectedAmounts(buildingsData);
-        });
-
-        group.forEach(({ building, missingExtensions }) => {
-            missingExtensions.forEach(extension => {
-                if (isExtensionLimitReached(building, extension.id)) return;
-
-                const row = document.createElement('tr');
-                row.classList.add(`row-${building.id}-${extension.id}`);
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'extension-checkbox';
-                checkbox.dataset.buildingId = building.id;
-                checkbox.dataset.extensionId = extension.id;
-                checkbox.dataset.creditCost = extension.cost;
-                checkbox.dataset.coinCost = extension.coins;
-
-                checkbox.disabled = userInfo.credits < extension.cost && userInfo.coins < extension.coins;
-                checkbox.addEventListener('change', () => {
-                    updateBuildSelectedButton();
-                    updateSelectedAmounts(buildingsData);
-                });
-
-                row.innerHTML = `
-                <td></td>
-                <td>${getLeitstelleName(building)}</td>
-                <td>${building.caption}</td>
-                <td>${extension.name}</td>
-            `;
-
-                row.children[0].appendChild(checkbox);
-
-                // Credits-Button
-                const creditCell = document.createElement('td');
-                const creditBtn = document.createElement('button');
-                creditBtn.textContent = `${formatNumber(extension.cost)} Credits`;
-                creditBtn.classList.add('btn', 'btn-xl', 'credit-button');
-                creditBtn.style.backgroundColor = '#28a745';
-                creditBtn.style.color = 'white';
-                creditBtn.disabled = userInfo.credits < extension.cost;
-                creditBtn.onclick = async () => {
-                    await buildExtension(building, extension.id, 'credits', extension.cost, row);
-
-                    // Auswahl für diese Erweiterung zurücksetzen
-                    const cb = row.querySelector('.extension-checkbox');
-                    if (cb) cb.checked = false;
-
-                    // Guthaben neu laden und anzeigen
-                    await initUserCredits();
-
-                    updateSelectedAmounts(buildingsData);
-                };
-
-                creditCell.appendChild(creditBtn);
-                row.appendChild(creditCell);
-
-                // Coins-Button
-                const coinsCell = document.createElement('td');
-                const coinBtn = document.createElement('button');
-                coinBtn.textContent = `${extension.coins} Coins`;
-                coinBtn.classList.add('btn', 'btn-xl', 'coins-button');
-                coinBtn.style.backgroundColor = '#dc3545';
-                coinBtn.style.color = 'white';
-                coinBtn.disabled = userInfo.coins < extension.coins;
-                coinBtn.onclick = async () => {
-                    await buildExtension(building, extension.id, 'coins', extension.coins, row);
-
-                    const cb = row.querySelector('.extension-checkbox');
-                    if (cb) cb.checked = false;
-
-                    await initUserCredits();
-
-                    updateSelectedAmounts(buildingsData);
-                };
-
-                coinsCell.appendChild(coinBtn);
-                row.appendChild(coinsCell);
-
-                tbody.appendChild(row);
-            });
-        });
-
-        function applyAllFilters() {
-            const rows = table.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                let visible = true;
-                Object.entries(filters).forEach(([i, val]) => {
-                    const text = row.children[i]?.textContent.toLowerCase().trim();
-                    if (val && text !== val.toLowerCase()) visible = false;
-                });
-                row.style.display = visible ? '' : 'none';
-            });
-        }
-
-        function updateSelectAllCheckboxState() {
-            const rows = tbody.querySelectorAll('tr');
-            let total = 0, checked = 0;
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const cb = row.querySelector('.extension-checkbox');
-                    if (cb && !cb.disabled) {
-                        total++;
-                        if (cb.checked) checked++;
-                    }
-                }
-            });
-            selectAllCheckbox.checked = total > 0 && total === checked;
-            selectAllCheckbox.indeterminate = checked > 0 && checked < total;
-        }
-
-        return table;
-    }
-    function createLagerTable(group, userInfo, buildSelectedButton, currentGroupKey) {
-        const settings = getExtensionSettings();
-        const liveBuiltStorages = {};  // Live-Tracking der gebauten Lager pro Gebäude
-
-        // Initialisiere liveBuiltStorages mit aktuellen Upgrades
-        group.forEach(({ building }) => {
-            liveBuiltStorages[building.id] = new Set(
-                (building.storage_upgrades || []).map(u => u.type_id)
-            );
-        });
-
-        const table = document.createElement('table');
-        table.innerHTML = `
-            <thead style="background-color: #f2f2f2; font-weight: bold; border-bottom: 2px solid #ccc;">
-                <tr>
-                    <th style="padding: 10px; text-align: center;">Alle An- / Abwählen</th>
-                    <th>Leitstelle</th>
-                    <th>Wache</th>
-                    <th>Baubare Lager</th>
-                    <th>Lagerkapazität</th>
-                    <th>Credits</th>
-                    <th>Coins</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-            `;
-
-
-        const tbody = table.querySelector('tbody');
-        const filters = {};
-        const filterElements = {};
-        const filterRow = document.createElement('tr');
-
-        const selectAllCell = document.createElement('th');
-        const selectAllCheckbox = document.createElement('input');
-        selectAllCheckbox.type = 'checkbox';
-        selectAllCheckbox.className = 'select-all-checkbox-lager';
-        selectAllCell.appendChild(selectAllCheckbox);
-        filterRow.appendChild(selectAllCell);
-
-        function createDropdownFilter(options, placeholder, colIndex) {
-            const th = document.createElement('th');
-            const select = document.createElement('select');
-            select.innerHTML = `<option value="">🔽 ${placeholder}</option>`;
-            [...new Set(options)].sort().forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                select.appendChild(option);
-            });
-
-            select.addEventListener('change', () => {
-                filters[colIndex] = select.value || undefined;
-                applyAllFilters();
-                updateSelectAllCheckboxState();
-            });
-
-            filterElements[colIndex] = select;
-            th.appendChild(select);
-            return th;
-        }
-
-        const leitstellen = [];
-        const wachen = [];
-        const lagerArten = [];
-
-        group.forEach(({ building }) => {
-            const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const options = manualStorageRooms[baseKey];
-            if (!options) return;
-
-            // Hier liveBuiltStorages für das Gebäude verwenden
-            const current = liveBuiltStorages[building.id];
-
-            options.forEach(opt => {
-                const id = opt.id;
-
-                if (current.has(id)) return; // Bereits gebaut, nicht anzeigen
-
-                const storageKey = `${baseKey}_storage_${opt.name.replace(/\s+/g, '_')}`;
-                if (settings[storageKey] === false) return;
-
-                leitstellen.push(getLeitstelleName(building));
-                wachen.push(building.caption);
-                lagerArten.push(opt.name);
-
-                const row = document.createElement('tr');
-                row.classList.add(`storage-row-${building.id}-${id}`);
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'storage-checkbox';
-                checkbox.dataset.buildingId = building.id;
-                checkbox.dataset.storageType = id;
-                checkbox.dataset.creditCost = opt.cost;
-                checkbox.dataset.coinCost = opt.coins;
-                checkbox.disabled = userInfo.credits < opt.cost && userInfo.coins < opt.coins;
-                checkbox.addEventListener('change', () => {
-                    updateBuildSelectedButton();
-                    updateSelectedAmounts(buildingsData);
-                });
-
-                const checkboxCell = document.createElement('td');
-                checkboxCell.appendChild(checkbox);
-                row.appendChild(checkboxCell);
-
-                [getLeitstelleName(building), building.caption, opt.name, `+${opt.additionalStorage}`].forEach(text => {
-                    const td = document.createElement('td');
-                    td.textContent = text;
-                    row.appendChild(td);
-                });
-
-                const creditCell = document.createElement('td');
-                const creditBtn = document.createElement('button');
-                creditBtn.textContent = `${formatNumber(opt.cost)} Credits`;
-                creditBtn.classList.add('btn', 'btn-xl', 'credit-button');
-                creditBtn.style.backgroundColor = '#28a745';
-                creditBtn.style.color = 'white';
-                creditBtn.disabled = userInfo.credits < opt.cost;
-                creditBtn.onclick = async () => {
-                    const built = [...liveBuiltStorages[building.id]];
-
-                    if (!canBuildStorageInOrder(building.id, id)) {   // ✅ Korrekte Parameter
-                        alert("Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n4. 3te zusätzlicher Lagerraum\n5. 4te zusätzlicher Lagerraum\n6. 5te zusätzlicher Lagerraum\n7. 6te zusätzlicher Lagerraum\n8. 7te zusätzlicher Lagerraum");
-                        return;
-                    }
-
-
-                    await buildStorage(building, id, 'credits', opt.cost, row);
-
-                    liveBuiltStorages[building.id].add(id);
-
-                    creditBtn.disabled = true;
-                    coinBtn.disabled = true;
-                    checkbox.disabled = true;
-
-                    await initUserCredits();
-                    updateBuildSelectedButton();
-                    updateSelectedAmounts(buildingsData);
-                };
-
-                creditCell.appendChild(creditBtn);
-                row.appendChild(creditCell);
-
-                const coinsCell = document.createElement('td');
-                const coinBtn = document.createElement('button');
-                coinBtn.textContent = `${opt.coins} Coins`;
-                coinBtn.classList.add('btn', 'btn-xl', 'coins-button');
-                coinBtn.style.backgroundColor = '#dc3545';
-                coinBtn.style.color = 'white';
-                coinBtn.disabled = userInfo.coins < opt.coins;
-                coinBtn.onclick = () => {
-                    const built = [...liveBuiltStorages[building.id]];
-
-                    if (!canBuildStorageInOrder(building.id, id)) {   // ✅ Korrekte Parameter
-                        alert("Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n4. 3te zusätzlicher Lagerraum\n5. 4te zusätzlicher Lagerraum\n6. 5te zusätzlicher Lagerraum\n7. 6te zusätzlicher Lagerraum\n8. 7te zusätzlicher Lagerraum");
-                        return;
-                    }
-
-
-                    buildStorage(building, id, 'coins', opt.coins, row);
-
-                    liveBuiltStorages[building.id].add(id);
-
-                    creditBtn.disabled = true;
-                    coinBtn.disabled = true;
-                    checkbox.disabled = true;
-
-                    initUserCredits();
-                    updateBuildSelectedButton();
-                    updateSelectedAmounts(buildingsData);
-                };
-
-                coinsCell.appendChild(coinBtn);
-                row.appendChild(coinsCell);
-
-                tbody.appendChild(row);
-            });
-        });
-
-        // Filterzeile ergänzen
-        filterRow.appendChild(createDropdownFilter(leitstellen, 'Leitstelle', 1));
-        filterRow.appendChild(createDropdownFilter(wachen, 'Wache', 2));
-        filterRow.appendChild(createDropdownFilter(lagerArten, 'Erweiterung', 3));
-
-        const resetCell = document.createElement('th');
-        const resetBtn = document.createElement('button');
-        resetBtn.textContent = 'Filter zurücksetzen';
-        resetBtn.classList.add('btn', 'btn-sm', 'btn-primary');
-        resetBtn.style.padding = '2px 6px';
-        resetBtn.style.fontSize = '0.8em';
-        resetBtn.onclick = () => {
-            Object.values(filterElements).forEach(select => select.selectedIndex = 0);
-            Object.keys(filters).forEach(k => delete filters[k]);
-            applyAllFilters();
-            updateSelectAllCheckboxState();
-        };
-        resetCell.appendChild(resetBtn);
-        filterRow.appendChild(resetCell);
-
-        // Leere Spalte "Bauen mit Coins" ersetzen durch einen globalen Abwähl-Button
-        const uncheckAllCell = document.createElement('th');
-        uncheckAllCell.style.textAlign = 'center';
-        uncheckAllCell.style.padding = '4px 8px';
-
-        const uncheckAllBtn = document.createElement('button');
-        uncheckAllBtn.textContent = 'Alle abwählen';
-        uncheckAllBtn.classList.add('btn', 'btn-sm', 'btn-warning');
-        uncheckAllBtn.style.padding = '2px 6px';
-        uncheckAllBtn.style.fontSize = '0.8em';
-
-        uncheckAllBtn.onclick = () => {
-            tbody.querySelectorAll('tr').forEach(row => {
-                if (row.style.display !== 'none') {
-                    const cb = row.querySelector('.storage-checkbox');
-                    if (cb && !cb.disabled) {
-                        cb.checked = false;
-                    }
-                }
-            });
-            updateBuildSelectedButton();
-            updateSelectAllCheckboxState();
-            updateSelectedAmounts(buildingsData);
-        };
-
-        uncheckAllCell.appendChild(uncheckAllBtn);
-        filterRow.appendChild(uncheckAllCell);
-
-        table.querySelector('thead').appendChild(filterRow);
-
-        selectAllCheckbox.addEventListener('change', (event) => {
-            const isChecked = selectAllCheckbox.checked;
-
-            let totalCredits = 0;
-            let totalCoins = 0;
-
-            const rows = tbody.querySelectorAll('tr');
-
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const cb = row.querySelector('.storage-checkbox');
-                    if (cb && !cb.disabled) {
-                        if (isChecked) {
-                            totalCredits += Number(cb.dataset.creditCost) || 0;
-                            totalCoins += Number(cb.dataset.coinCost) || 0;
-                        }
-                    }
-                }
-            });
-
-            const canPayAllWithCredits = currentCredits >= totalCredits;
-            const canPayAllWithCoins = currentCoins >= totalCoins;
-
-            if (!canPayAllWithCredits && !canPayAllWithCoins) {
-
-                const missingCredits = Math.max(0, totalCredits - currentCredits);
-                const missingCoins = Math.max(0, totalCoins - currentCoins);
-
-                let message = "Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n";
-
-                if (missingCredits > 0) {
-                    message += `Fehlende Credits: ${formatNumber(missingCredits)}\n`;
-                }
-
-                if (missingCoins > 0) {
-                    message += `Fehlende Coins: ${missingCoins}\n`;
-                }
-
-                alert(message);
-
-                selectAllCheckbox.checked = false;
-                return;
-            }
-
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const cb = row.querySelector('.storage-checkbox');
-                    if (cb && !cb.disabled) {
-                        cb.checked = isChecked;
-                    }
-                }
-            });
-
-            updateSelectAllCheckboxState();
-            updateBuildSelectedButton();
-            updateSelectedAmounts(buildingsData);
-        });
-
-        function applyAllFilters() {
-            const rows = tbody.querySelectorAll('tr');
-            rows.forEach(row => {
-                let visible = true;
-                Object.entries(filters).forEach(([i, val]) => {
-                    const text = row.children[i]?.textContent.toLowerCase().trim();
-                    if (val && text !== val.toLowerCase()) visible = false;
-                });
-                row.style.display = visible ? '' : 'none';
-            });
-        }
-
-        function updateSelectAllCheckboxState() {
-            const visibleRows = [...tbody.querySelectorAll('tr')].filter(row => row.style.display !== 'none');
-            if (visibleRows.length === 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-                selectAllCheckbox.disabled = true;
-                return;
-            }
-            selectAllCheckbox.disabled = false;
-            const allChecked = visibleRows.every(row => row.querySelector('.storage-checkbox').checked || row.querySelector('.storage-checkbox').disabled);
-            const noneChecked = visibleRows.every(row => !row.querySelector('.storage-checkbox').checked);
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
-        }
-
-        updateSelectAllCheckboxState();
-
-        // Speichere die Lagerdaten für die Bau-Funktion (das bleibt unverändert)
-        if (!storageGroups[currentGroupKey]) storageGroups[currentGroupKey] = [];
-
-        group.forEach(({ building }) => {
-            const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const options = manualStorageRooms[baseKey];
-            if (!options) return;
-
-            const current = new Set((building.storage_upgrades || []).map(u => Object.keys(u)[0]));
-
-            const missingExtensions = [];
-
-            options.forEach(opt => {
-                const id = opt.id;
-                if (current.has(id)) return;
-
-                const storageKey = `${baseKey}_storage_${opt.name.replace(/\s+/g, '_')}`;
-                if (getExtensionSettings()[storageKey] === false) return;
-
-                missingExtensions.push({
-                    id,
-                    cost: opt.cost,
-                    coins: opt.coins,
-                    isStorage: true
-                });
-            });
-
-            if (missingExtensions.length > 0) {
-                storageGroups[currentGroupKey].push({ building, missingExtensions });
-            }
-        });
-
-        return table;
-    }
-    function createLevelTable(group, userInfo) {
-        function updateBuildButtons(building, selectedLevelId, creditCell, coinCell, levelList, currentLevel) {
-            let totalCredits = 0;
-            let totalCoins = 0;
-
-            if (selectedLevelId === null) {
-                creditCell.innerHTML = '';
-                coinCell.innerHTML = '';
-
-                const creditBtn = document.createElement('button');
-                creditBtn.textContent = '0 Credits';
-                creditBtn.classList.add('btn', 'btn-sm');
-                creditBtn.style.backgroundColor = '#28a745';
-                creditBtn.style.color = 'white';
-                creditBtn.disabled = true;
-                creditCell.appendChild(creditBtn);
-
-                const coinBtn = document.createElement('button');
-                coinBtn.textContent = '0 Coins';
-                coinBtn.classList.add('btn', 'btn-sm');
-                coinBtn.style.backgroundColor = '#dc3545';
-                coinBtn.style.color = 'white';
-                coinBtn.disabled = true;
-                coinCell.appendChild(coinBtn);
-                return;
-            }
-
-            if (selectedLevelId >= currentLevel) {
-                for (let levelId = currentLevel + 1; levelId <= selectedLevelId; levelId++) {
-                    const stufe = levelList.find(level => level.id === levelId);
-                    if (!stufe) continue;
-
-                    totalCredits += stufe.cost || 0;
-                    totalCoins += stufe.coins || 0;
-                }
-            } else {
-                totalCredits = 0;
-                totalCoins = 0;
-            }
-
-            creditCell.innerHTML = '';
-            const creditBtn = document.createElement('button');
-            creditBtn.textContent = `${totalCredits.toLocaleString()} Credits`;
-            creditBtn.classList.add('btn', 'btn-sm');
-            creditBtn.style.backgroundColor = '#28a745';
-            creditBtn.style.color = 'white';
-            creditBtn.disabled = userInfo.credits < totalCredits || totalCredits === 0;
-            creditBtn.onclick = async () => {
-                if (userInfo.credits < totalCredits) {
-                    alert('Nicht genug Credits!');
-                    return;
-                }
-                try {
-                    await buildLevel(building.id, 'credits', selectedLevelId);
-                    for (const b of group) {
-                        const currentLevel = getBuildingLevelInfo(b.building)?.currentLevel ?? 0;
-                        selectedLevels[b.building.id] = currentLevel;
-                    }
-                    fetchBuildingsAndRender();
-                    updateSelectedAmounts(buildingsData);
-                    updateBuildSelectedLevelsButtonState(group);
-                } catch {
-                    alert('Fehler beim Bauen mit Credits.');
-                }
-            };
-            creditCell.appendChild(creditBtn);
-
-            coinCell.innerHTML = '';
-            const coinBtn = document.createElement('button');
-            coinBtn.textContent = `${totalCoins.toLocaleString()} Coins`;
-            coinBtn.classList.add('btn', 'btn-sm');
-            coinBtn.style.backgroundColor = '#dc3545';
-            coinBtn.style.color = 'white';
-            coinBtn.disabled = userInfo.coins < totalCoins || totalCoins === 0;
-            coinBtn.onclick = async () => {
-                if (userInfo.coins < totalCoins) {
-                    alert('Nicht genug Coins!');
-                    return;
-                }
-                try {
-                    await buildLevel(building.id, 'coins', selectedLevelId);
-                    for (const b of group) {
-                        const currentLevel = getBuildingLevelInfo(b.building)?.currentLevel ?? 0;
-                        selectedLevels[b.building.id] = currentLevel;
-                    }
-                    fetchBuildingsAndRender();
-                    updateSelectedAmounts(buildingsData);
-                    updateBuildSelectedLevelsButtonState(group);
-                } catch {
-                    alert('Fehler beim Bauen mit Coins.');
-                }
-            };
-            coinCell.appendChild(coinBtn);
-        }
-
-        const isDarkMode = () => document.body.classList.contains('dark');
-        const updateButtonColors = (container) => {
-            container.querySelectorAll('button').forEach(btn => {
-                if (btn.dataset.active === 'true') {
-                    btn.style.backgroundColor = '#28a745';
-                    btn.style.color = '#fff';
-                } else {
-                    if (isDarkMode()) {
-                        btn.style.backgroundColor = '#444';
-                        btn.style.color = '#fff';
-                    } else {
-                        btn.style.backgroundColor = '#e0e0e0';
-                        btn.style.color = '#000';
-                    }
-                }
-            });
-        };
-
-        // --- Tabelle mit Head und Body ---
-        const table = document.createElement('table');
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
-        table.innerHTML = `
-        <thead style="background-color: #f2f2f2; font-weight: bold; border-bottom: 2px solid #ccc;">
-            <tr>
-                <th style="padding: 10px; text-align: center;">Leitstelle</th>
-                <th style="padding: 10px; text-align: center;">Wache</th>
-                <th style="padding: 10px; text-align: center;">Stufe</th>
-                <th style="padding: 10px; text-align: center;">Ausbaustufe wählen</th>
-                <th style="padding: 10px; text-align: center;">Bauen mit Credits</th>
-                <th style="padding: 10px; text-align: center;">Bauen mit Coins</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    `;
-        const tbody = table.querySelector('tbody');
-        const thead = table.querySelector('thead');
-
-        // --- Filter-Row bauen ---
-        const filterRow = document.createElement('tr');
-        // Zellen für Filter (Leitstelle + Wache) + Leer für Rest + Reset-Button am Ende
-        const leitstelleOptions = [...new Set(group.map(({ building }) => getLeitstelleName(building)))].sort();
-        const wacheOptions = [...new Set(group.map(({ building }) => building.caption || '-'))].sort();
-        const stufeOptions = [...new Set(
-            group
-            .filter(({ building }) => {
-                const info = getBuildingLevelInfo(building);
-                if (!info) return false;
-                const type = building.building_type;
-                const size = building.small_building ? 'small' : 'normal';
-                const key = `${type}_${size}`;
-                const levelList = manualLevels[key];
-                if (!levelList) return false;
-
-                // Nur Gebäude, die nicht komplett ausgebaut sind
-                return info.currentLevel < levelList.length;
-            })
-            .map(({ building }) => {
-                const info = getBuildingLevelInfo(building);
-                return info ? info.currentLevel.toString() : null;
-            })
-            .filter(x => x !== null && x !== '-1')
-        )].sort((a, b) => Number(a) - Number(b));
-
-
-        function createFilterCell(options, placeholder) {
-            const th = document.createElement('th');
-            th.style.padding = '4px 8px';
-            const select = document.createElement('select');
-            select.style.width = '100%';
-            select.innerHTML = `<option value="">🔽 ${placeholder}</option>`;
-            options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                select.appendChild(option);
-            });
-            th.appendChild(select);
-            return { th, select };
-        }
-
-        const leitstelleFilter = createFilterCell(leitstelleOptions, 'Leitstellen');
-        const wacheFilter = createFilterCell(wacheOptions, 'Wachen');
-        const ausbaustufeFilter = createFilterCell(stufeOptions, 'Stufe');
-
-        filterRow.appendChild(leitstelleFilter.th);
-        filterRow.appendChild(wacheFilter.th);
-        filterRow.appendChild(ausbaustufeFilter.th);
-
-        // --- Neuer globaler "Stufenauswahl löschen" Button + Dropdown für alle sichtbaren ---
-        const clearLevelsTh = document.createElement('th');
-        clearLevelsTh.style.textAlign = 'center';
-        clearLevelsTh.style.padding = '4px 8px';
-
-        // --- Dein Original-Button (unverändert) ---
-        const clearLevelsBtn = document.createElement('button');
-        clearLevelsBtn.textContent = 'Stufenauswahl löschen';
-        clearLevelsBtn.classList.add('btn', 'btn-sm', 'btn-danger');
-        clearLevelsBtn.style.padding = '2px 6px';
-        clearLevelsBtn.style.fontSize = '0.8em';
-        clearLevelsBtn.style.marginRight = '6px';
-        clearLevelsBtn.onclick = () => {
-            // Alle Auswahl zurücksetzen
-            for (const id in selectedLevels) {
-                selectedLevels[id] = null;
-            }
-            // Alle Buttons zurücksetzen
-            tbody.querySelectorAll('tr').forEach(row => {
-                if (row.style.display === 'none') return; // nur sichtbare
-                const levelChoiceCell = row.children[3];
-                if (levelChoiceCell) {
-                    levelChoiceCell.querySelectorAll('button').forEach(btn => btn.dataset.active = 'false');
-                    updateButtonColors(levelChoiceCell);
-                }
-                // buildingId direkt aus row holen
-                const buildingId = row.dataset.buildingId;
-                const buildingData = group.find(g => g.building.id == buildingId);
-                if (buildingData) {
-                    const levelInfo = getBuildingLevelInfo(buildingData.building);
-                    const key = `${buildingData.building.building_type}_${buildingData.building.small_building ? 'small' : 'normal'}`;
-                    const levelList = manualLevels[key];
-                    updateBuildButtons(buildingData.building, null, row.children[4], row.children[5], levelList, levelInfo.currentLevel);
-                }
-            });
-            updateSelectedAmounts(buildingsData);
-            updateBuildSelectedLevelsButtonState(group);
-        };
-
-        // --- Neues Dropdown: "Alle sichtbaren auf Stufe setzen" ---
-        const globalLevelSelect = document.createElement('select');
-        globalLevelSelect.classList.add('btn', 'btn-sm', 'btn-secondary');
-        globalLevelSelect.style.fontSize = '0.8em';
-        globalLevelSelect.style.padding = '2px 6px';
-        globalLevelSelect.style.verticalAlign = 'middle';
-        globalLevelSelect.style.cursor = 'pointer';
-
-        // Alle möglichen Stufen bestimmen
-        const allLevelIds = new Set();
-
-        group.forEach(({ building }) => {
-            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const levelList = manualLevels[key];
-
-            if (levelList) {
-                levelList.forEach(level => allLevelIds.add(level.id));
-            }
-        });
-
-        const sortedLevels = [...allLevelIds].sort((a, b) => a - b);
-
-        globalLevelSelect.innerHTML =
-            `<option value="">🔽 Globale Stufenauswahl</option>`;
-
-        sortedLevels.forEach(levelId => {
-            const opt = document.createElement('option');
-
-            opt.value = levelId;
-            opt.textContent = `Stufe ${levelId}`;
-
-            globalLevelSelect.appendChild(opt);
-        });
-
-        globalLevelSelect.addEventListener('change', () => {
-            const selectedLevelId = globalLevelSelect.value === '' ? null : Number(globalLevelSelect.value);
-            if (selectedLevelId === null) return;
-
-            tbody.querySelectorAll('tr').forEach(row => {
-                if (row.style.display === 'none') return; // nur sichtbare
-                const buildingId = row.dataset.buildingId;
-                const buildingData = group.find(g => g.building.id == buildingId);
-                if (!buildingData) return;
-
-                const levelInfo = getBuildingLevelInfo(buildingData.building);
-                const key = `${buildingData.building.building_type}_${buildingData.building.small_building ? 'small' : 'normal'}`;
-                const levelList = manualLevels[key];
-                if (!levelList) return;
-
-                // Nur setzen, wenn Stufe gültig ist
-                if (selectedLevelId <= levelList.length && selectedLevelId > levelInfo.currentLevel) {
-                    selectedLevels[buildingData.building.id] = selectedLevelId;
-
-                    const levelChoiceCell = row.children[3];
-                    levelChoiceCell.querySelectorAll('button').forEach(btn => {
-                        btn.dataset.active = btn.getAttribute('level') == selectedLevelId ? 'true' : 'false';
-                    });
-                    updateButtonColors(levelChoiceCell);
-                    updateBuildButtons(buildingData.building, selectedLevelId, row.children[4], row.children[5], levelList, levelInfo.currentLevel);
-                }
-            });
-
-            updateSelectedAmounts(buildingsData);
-            updateBuildSelectedLevelsButtonState(group);
-            globalLevelSelect.selectedIndex = 0; // Zurücksetzen auf Platzhalter
-        });
-
-        // --- Zusammen in die Tabellenzelle ---
-        clearLevelsTh.appendChild(clearLevelsBtn);
-        clearLevelsTh.appendChild(globalLevelSelect);
-
-        // In Zeile einfügen
-        filterRow.appendChild(clearLevelsTh);
-        filterRow.appendChild(document.createElement('th'));
-
-
-        // Reset Button
-        const resetTh = document.createElement('th');
-        resetTh.style.textAlign = 'center';
-        resetTh.style.padding = '4px 8px';
-        const resetBtn = document.createElement('button');
-        resetBtn.textContent = 'Filter zurdücksetzen';
-        resetBtn.classList.add('btn', 'btn-sm', 'btn-primary');
-        resetBtn.style.padding = '2px 6px';
-        resetBtn.style.fontSize = '0.8em';
-        resetBtn.onclick = () => {
-            leitstelleFilter.select.selectedIndex = 0;
-            wacheFilter.select.selectedIndex = 0;
-            ausbaustufeFilter.select.selectedIndex = 0;
-            applyFilters();
-        };
-        resetTh.appendChild(resetBtn);
-        filterRow.appendChild(resetTh);
-
-        thead.appendChild(filterRow);
-
-        // --- Filterfunktion ---
-        function applyFilters() {
-            const selectedLeitstelle = leitstelleFilter.select.value;
-            const selectedWache = wacheFilter.select.value;
-            const selectedStufe = ausbaustufeFilter.select.value;
-
-            tbody.querySelectorAll('tr').forEach(row => {
-                const leitstelleText = row.children[0].textContent;
-                const wacheText = row.children[1].textContent;
-                const stufeText = row.children[2].textContent;
-
-                const matchLeitstelle = !selectedLeitstelle || leitstelleText === selectedLeitstelle;
-                const matchWache = !selectedWache || wacheText === selectedWache;
-                const matchStufe = !selectedStufe || stufeText === selectedStufe;
-
-                row.style.display = (matchLeitstelle && matchWache && matchStufe) ? '' : 'none';
-            });
-        }
-
-        // --- Tabellenzeilen aufbauen (dein Originalcode vereinfacht) ---
-        group.forEach(({ building }) => {
-            const levelInfo = getBuildingLevelInfo(building);
-            if (!levelInfo) return;
-
-            const leitstelleName = getLeitstelleName(building);
-            const wache = building.caption || '-';
-            const currentLevel = levelInfo.currentLevel;
-
-            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const levelList = manualLevels[key];
-            if (!levelList) return;
-
-            const maxLevel = levelList.length;
-            if (currentLevel >= maxLevel) return;
-
-            selectedLevels[building.id] = null;
-
-            const row = document.createElement('tr');
-            row.style.borderBottom = '1px solid #ddd';
-            row.dataset.buildingId = building.id; // ← Hier speichern wir die ID
-
-            function createCell(text, center = true) {
-                const td = document.createElement('td');
-                td.style.padding = '8px';
-                if (center) td.style.textAlign = 'center';
-                td.textContent = text;
-                return td;
-            }
-
-            const leitstelleCell = createCell(leitstelleName);
-            const wacheCell = createCell(wache);
-            const currentLevelCell = createCell(currentLevel.toString());
-
-            const levelChoiceCell = document.createElement('td');
-            levelChoiceCell.style.padding = '8px';
-            levelChoiceCell.style.textAlign = 'center';
-
-            const creditCell = document.createElement('td');
-            creditCell.style.textAlign = 'center';
-            const coinCell = document.createElement('td');
-            coinCell.style.textAlign = 'center';
-
-            row.appendChild(leitstelleCell);
-            row.appendChild(wacheCell);
-            row.appendChild(currentLevelCell);
-            row.appendChild(levelChoiceCell);
-            row.appendChild(creditCell);
-            row.appendChild(coinCell);
-
-            // Credit- und Coin-Buttons initial auf 0 setzen
-            updateBuildButtons(building, null, creditCell, coinCell, levelList, currentLevel);
-
-            if (!levelInfo) return;
-
-            const nextLevel = levelInfo.next;
-
-            levelChoiceCell.style.padding = '8px';
-            levelChoiceCell.style.textAlign = 'center';
-            creditCell.style.textAlign = 'center';
-            coinCell.style.textAlign = 'center';
-
-            row.appendChild(leitstelleCell);
-            row.appendChild(wacheCell);
-            row.appendChild(currentLevelCell);
-            row.appendChild(levelChoiceCell);
-            row.appendChild(creditCell);
-            row.appendChild(coinCell);
-
-            updateBuildButtons(
-                building,
-                null,
-                creditCell,
-                coinCell,
-                levelList,
-                currentLevel
-            );
-
-            // Level-Auswahl
-            levelList.forEach(stufe => {
-                // Bereits erreichte Stufen niemals anzeigen
-                if (stufe.id <= currentLevel) return;
-
-                const lvlBtn = document.createElement('button');
-
-                lvlBtn.textContent = stufe.id.toString();
-                lvlBtn.className = 'expand_direct';
-                lvlBtn.setAttribute('level', stufe.id.toString());
-                lvlBtn.style.display = 'inline-block';
-                lvlBtn.style.padding = '2px 6px';
-                lvlBtn.style.margin = '0 2px';
-                lvlBtn.style.fontSize = '11px';
-                lvlBtn.style.borderRadius = '12px';
-                lvlBtn.style.border = 'none';
-                lvlBtn.style.cursor = 'pointer';
-                lvlBtn.style.fontWeight = 'bold';
-                lvlBtn.style.transition = 'background-color 0.2s, color 0.2s';
-                lvlBtn.dataset.active = 'false';
-
-                lvlBtn.addEventListener('mouseenter', () => {
-                    if (lvlBtn.dataset.active !== 'true') {
-                        lvlBtn.style.backgroundColor = isDarkMode() ? '#666' : '#ccc';
-                    }
-                });
-
-                lvlBtn.addEventListener('mouseleave', () => {
-                    if (lvlBtn.dataset.active !== 'true') {
-                        updateButtonColors(levelChoiceCell);
-                    }
-                });
-
-                lvlBtn.onclick = () => {
-                    let totalCredits = 0;
-                    let totalCoins = 0;
-
-                    for (
-                        let levelId = currentLevel + 1;
-                        levelId <= stufe.id;
-                        levelId++
-                    ) {
-                        const s = levelList.find(level => level.id === levelId);
-                        if (!s) continue;
-
-                        totalCredits += s.cost || 0;
-                        totalCoins += s.coins || 0;
-                    }
-
-                    const canPayWithCredits =
-                          userInfo.credits >= totalCredits && totalCredits > 0;
-
-                    const canPayWithCoins =
-                          userInfo.coins >= totalCoins && totalCoins > 0;
-
-                    if (!canPayWithCredits && !canPayWithCoins) {
-                        alert('Nicht genug Credits oder Coins für diese Stufe!');
-                        return;
-                    }
-
-                    levelChoiceCell
-                        .querySelectorAll('button')
-                        .forEach(btn => {
-                        btn.dataset.active = 'false';
-                    });
-
-                    lvlBtn.dataset.active = 'true';
-
-                    updateButtonColors(levelChoiceCell);
-
-                    selectedLevels[building.id] = stufe.id;
-
-                    updateBuildButtons(
-                        building,
-                        stufe.id,
-                        creditCell,
-                        coinCell,
-                        levelList,
-                        currentLevel
-                    );
-
-                    updateSelectedAmounts(buildingsData);
-                    updateBuildSelectedLevelsButtonState(group);
-                };
-
-                levelChoiceCell.appendChild(lvlBtn);
-            });
-
-            // Reset-Button pro Zeile
-            const trashBtn = document.createElement('button');
-            trashBtn.innerHTML = '🗑️';
-            trashBtn.title = 'Auswahl zurücksetzen';
-            trashBtn.classList.add('btn', 'btn-sm', 'btn-danger');
-            trashBtn.style.display = 'inline-block';
-            trashBtn.style.padding = '2px 6px';
-            trashBtn.style.margin = '0 2px';
-            trashBtn.style.fontSize = '11px';
-            trashBtn.style.borderRadius = '12px';
-            trashBtn.style.border = 'none';
-            trashBtn.style.cursor = 'pointer';
-            trashBtn.style.fontWeight = 'bold';
-            trashBtn.onclick = () => {
-                selectedLevels[building.id] = null;
-                levelChoiceCell.querySelectorAll('button').forEach(btn => btn.dataset.active = 'false');
-                updateButtonColors(levelChoiceCell);
-                updateBuildButtons(building, null, creditCell, coinCell, levelList, currentLevel);
-                updateSelectedAmounts(buildingsData);
-                updateBuildSelectedLevelsButtonState(group);
-            };
-
-            levelChoiceCell.appendChild(trashBtn);
-            updateButtonColors(levelChoiceCell);
-
-            tbody.appendChild(row);
-        });
-
-
-        // --- Eventlistener auf Filter setzen ---
-        leitstelleFilter.select.addEventListener('change', applyFilters);
-        wacheFilter.select.addEventListener('change', applyFilters);
-        ausbaustufeFilter.select.addEventListener('change', applyFilters);
-
-        return table;
-    }
-
-    // Funktion um aktuelle Credtis/Coins in den Header einzufügen
-    async function initUserCredits() {
-        try {
-            const data = await getUserCredits();
-            currentCredits = data.credits;
-            currentCoins = data.coins;
-            // Hier könntest du die Werte auch anzeigen, z.B.:
-            document.getElementById('current-credits').textContent = currentCredits.toLocaleString();
-            document.getElementById('current-coins').textContent = currentCoins.toLocaleString();
-        } catch (e) {
-            // Fehlerbehandlung
-            //alert("Konnte Guthaben nicht laden.");
-        }
-    }
-
-    // Funktion zur Gesamtkostenberechnung
-    function updateSelectedAmounts(buildingsData) {
-        if (!Array.isArray(buildingsData)) {
-            return;
-        }
-
-        let totalCredits = 0;
-        let totalCoins = 0;
-
-        // Kosten der Erweiterungen und Lager
-        document.querySelectorAll('.extension-checkbox:checked, .storage-checkbox:checked').forEach(cb => {
-            totalCredits += Number(cb.dataset.creditCost) || 0;
-            totalCoins += Number(cb.dataset.coinCost) || 0;
-        });
-
-        // Alle Gebäude durchgehen (Level-Auswahl)
-        buildingsData.forEach(building => {
-            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const levelList = manualLevels[key];
-            if (!levelList) return;
-
-            const currentLevel = getBuildingLevelInfo(building)?.currentLevel ?? -1;
-            const selectedLevel = selectedLevels[building.id] ?? null;
-
-            if (selectedLevel === null || selectedLevel <= currentLevel) return;
-
-            // Vom aktuellen Level bis zum ausgewählten Level alle Kosten addieren
-            for (let levelId = currentLevel + 1; levelId <= selectedLevel; levelId++) {
-                const stufe = levelList.find(l => l.id === levelId);
-                if (!stufe) continue;
-                totalCredits += stufe.cost || 0;
-                totalCoins += stufe.coins || 0;
-            }
-        });
-
-        // Elemente
-        const selectedCreditsSpan = document.getElementById('selected-credits');
-        const selectedCoinsSpan = document.getElementById('selected-coins');
-        const selectedAllianceCreditsSpan = document.getElementById('selected-alliance-credits');
-
-        // Je nach View nur das eine Feld füllen und das andere zurücksetzen
-        if (currentView === 'alliance') {
-            if (selectedAllianceCreditsSpan) selectedAllianceCreditsSpan.textContent = totalCredits.toLocaleString();
-            if (selectedCreditsSpan) selectedCreditsSpan.textContent = '0';
-
-            if (selectedCoinsSpan) selectedCoinsSpan.textContent = totalCoins.toLocaleString();
-
-            // Prüfen auf Verbands-Credits (AllianceInfo verwenden)
-            const allianceCreditsAvailable = allianceInfo ? Number(allianceInfo.credits_current || 0) : 0;
-            const canPayAllWithAllianceCredits = allianceCreditsAvailable >= totalCredits;
-            const canPayAllWithCoins = currentCoins >= totalCoins; // Coins evtl. weiterhin personal
-
-            // Optional: Button-Disabling / Warnung (wie vorher)
-            if (!canPayAllWithAllianceCredits && !canPayAllWithCoins) {
-                const missingAlliance = Math.max(0, totalCredits - allianceCreditsAvailable);
-                const missingCoins = Math.max(0, totalCoins - currentCoins);
-
-                let message = "Deine Auswahl übersteigt das Verbandsguthaben bzw. deine Coins.\n\n";
-                if (missingAlliance > 0) message += `Fehlende Verbands-Credits: ${formatNumber(missingAlliance)}\n`;
-                if (missingCoins > 0) message += `Fehlende Coins: ${formatNumber(missingCoins)}\n`;
-                // Nur Hinweis, kein Block (so wie vorher)
-                alert(message);
-            }
-        } else {
-            // personal view
-            if (selectedCreditsSpan) selectedCreditsSpan.textContent = totalCredits.toLocaleString();
-            if (selectedAllianceCreditsSpan) selectedAllianceCreditsSpan.textContent = '0';
-            if (selectedCoinsSpan) selectedCoinsSpan.textContent = totalCoins.toLocaleString();
-
-            const canPayAllWithCredits = currentCredits >= totalCredits;
-            const canPayAllWithCoins = currentCoins >= totalCoins;
-
-            if (!canPayAllWithCredits && !canPayAllWithCoins) {
-                const missingCredits = Math.max(0, totalCredits - currentCredits);
-                const missingCoins = Math.max(0, totalCoins - currentCoins);
-
-                let message = "Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n";
-                if (missingCredits > 0) message += `Fehlende Credits: ${formatNumber(missingCredits)}\n`;
-                if (missingCoins > 0) message += `Fehlende Coins: ${formatNumber(missingCoins)}\n`;
-                alert(message);
-            }
-        }
-    }
-
-    // Filterfunktion über Dropdowns
-    function filterTableByDropdown(table, columnIndex, filterValue) {
-        const tbody = table.querySelector('tbody');
-        const rows = tbody.querySelectorAll('tr');
-        rows.forEach(row => {
-            const cell = row.children[columnIndex];
-            const cellText = cell?.textContent.toLowerCase() || '';
-            const match = !filterValue || cellText === filterValue.toLowerCase();
-            row.style.display = match ? '' : 'none';
-        });
-    }
-
-    // Funktion zur Filterungen der Tabelleninhalten
-    function filterTable(tbody, searchTerm) {
-        const rows = tbody.querySelectorAll("tr");
-
-        rows.forEach(row => {
-            const leitstelle = row.cells[1]?.textContent.toLowerCase() || "";
-            const wachenName = row.cells[2]?.textContent.toLowerCase() || "";
-            const erweiterung = row.cells[3]?.textContent.toLowerCase() || "";
-            const isBuilt = row.classList.contains("built");
-
-            if (isBuilt) {
-                row.style.display = "none";
-            } else if (leitstelle.includes(searchTerm) || wachenName.includes(searchTerm) || erweiterung.includes(searchTerm)) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
-        });
+        const countSmallBuildings =
+              extensionConfig.countSmallBuildings !== false;
+
+        const buildingCount = buildings.filter(b =>
+                                               Number(b.building_type) === buildingType &&
+                                               (countSmallBuildings || !b.small_building)
+                                              ).length;
+
+        const allowedCount = Math.floor(
+            buildingCount / requiredBuildings
+        );
+
+        const alreadyBuiltCount = buildings.reduce((count, b) => {
+            return count + (b.extensions || []).filter(ext =>
+                                                       Number(ext.type_id) === Number(extensionId)
+                                                      ).length;
+        }, 0);
+
+        return alreadyBuiltCount >= allowedCount;
     }
 
     // Funktion zur Unterscheidung der Erweiterungswarteschlange zwischen Premium und Nicht Premium User
@@ -3322,7 +2443,7 @@
         const KhAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Alle Krankenhaus-Erweiterungen
 
         // Falls Premium aktiv ist, gibt es keine Einschränkungen für THW, B-Pol, Schulen und Pol-Sondereinheit
-        if (typeof !user_premium !== "undefined" && user_premium) {
+        if (typeof user_premium !== "undefined" && user_premium) {
             return false; // Keine Einschränkungen für Premium-Nutzer
         }
 
@@ -3417,6 +2538,2541 @@
         return false;
     }
 
+    // Prüft Gebäude auf Spezialisierungsausbau
+    function isSpecializationBuilding(building) {
+        return specializationBuildings.has(getBuildingTypeKey(building));
+    }
+
+    // Funktion um die Tabellen mit Daten zu füllen
+    async function renderMissingExtensions(buildings, userInfoOverride = null) {
+        const isAllianceView = currentView === 'alliance';
+        const userInfo = userInfoOverride
+        ? userInfoOverride
+        : isAllianceView
+        ? {
+            credits: Number(allianceInfo?.credits_current || 0),
+            coins: 0,
+            premium: false
+        }
+        : await getUserCredits();
+
+        const list = document.getElementById('extension-list');
+        if (!list) return;
+
+        list.innerHTML = '';
+        buildingGroups = {};
+        buildingsData = buildings;
+
+        const settings = getExtensionSettings();
+        const allianceInfo = isAllianceView ? await getAllianceInfo() : null;
+
+        // Verbandsrechte prüfen
+        if (isAllianceView && !hasAllianceBuildingRights()) {
+            list.innerHTML = '<div style="padding:15px;text-align:center;opacity:.7;">Keine Berechtigung für Verbandsgebäude.</div>';
+            return;
+        }
+
+        buildings.sort((a, b) =>
+                       a.building_type === b.building_type
+                       ? a.caption.localeCompare(b.caption)
+                       : a.building_type - b.building_type
+                      );
+
+        buildings.forEach(building => {
+            const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+
+            // Verbandszellen nur im Verbandsbereich
+            if (baseKey === '16_normal' && !isAllianceView) return;
+
+            const extensions = Array.isArray(manualExtensions[baseKey])
+            ? manualExtensions[baseKey]
+            : [];
+            const storageOptions = Array.isArray(manualStorageRooms[baseKey])
+            ? manualStorageRooms[baseKey]
+            : [];
+            const ignoresLevelUpgrade = ignoreLevels.includes(baseKey);
+            const hasLevelUpgrade =
+                  !isAllianceView &&
+                  !ignoresLevelUpgrade &&
+                  !!getBuildingLevelInfo(building)?.next;
+
+            const existingExtensions = new Set(
+                (building.extensions || []).map(e => Number(e.type_id))
+            );
+            const existingStorages = new Set(
+                (building.storage_upgrades || []).map(u => {
+                    if (u.type_id !== undefined) return String(u.type_id);
+                    const key = Object.keys(u)[0];
+                    return key !== undefined ? String(key) : '';
+                })
+            );
+
+            // Erweiterungen filtern
+            const allowedExtensions = extensions.filter(ext => {
+                const key = getExtensionSettingKey(baseKey, ext.id, isAllianceView);
+                if (settings[key] === false) return false;
+                if (isExtensionLimitReached(building, ext.id)) return false;
+                if (existingExtensions.has(Number(ext.id))) return false;
+
+                const isForbidden = ids =>
+                ids.some(id => existingExtensions.has(Number(id))) &&
+                      !ids.includes(Number(ext.id));
+
+                if (building.building_type === 0 && building.small_building) {
+                    const limited = [0, 6, 8, 13, 14, 16, 18, 19, 25];
+                    const alwaysAllowed = [1, 2, 20, 21];
+                    if (alwaysAllowed.includes(Number(ext.id))) return true;
+                    return !isForbidden(limited);
+                }
+
+                if (building.building_type === 6 && building.small_building) {
+                    const limited = [10, 11, 12, 13];
+                    const alwaysAllowed = [0, 1];
+                    if (alwaysAllowed.includes(Number(ext.id))) return true;
+                    return !isForbidden(limited);
+                }
+
+                return true;
+            });
+
+            // Lagerräume filtern
+            const enabledStorages = storageOptions.filter(opt => {
+                const key = getStorageSettingKey(baseKey, opt.id, isAllianceView);
+                return settings[key] !== false && !existingStorages.has(String(opt.id));
+            });
+
+            // Gebäude nur aufnehmen, wenn mindestens ein Bereich relevant ist
+            const hasSpecialization =
+                  isSpecializationBuilding(building) &&
+                  getAvailableSpecializations(building).length > 0;
+
+            if (
+                allowedExtensions.length === 0 &&
+                enabledStorages.length === 0 &&
+                !hasLevelUpgrade &&
+                !hasSpecialization
+            ) return;
+
+            buildingGroups[baseKey] = buildingGroups[baseKey] || [];
+            buildingGroups[baseKey].push({
+                building,
+                missingExtensions: allowedExtensions,
+                enabledStorages
+            });
+        });
+
+        // UI erzeugen
+        Object.entries(buildingGroups).forEach(([groupKey, group]) => {
+            const buildingType = buildingTypeNames[groupKey] || 'Unbekannt';
+            const header = createHeader(buildingType);
+            const buttons = createButtonContainer(groupKey, group, userInfo);
+
+            buttons.container.dataset.buildingType = groupKey;
+
+            // Lager prüfen
+            const hasEnabledStorage = group.some(
+                ({ enabledStorages }) =>
+                Array.isArray(enabledStorages) && enabledStorages.length > 0
+            );
+
+            if (buttons.lagerButton) {
+                buttons.lagerButton.disabled = !hasEnabledStorage;
+                buttons.lagerButton.style.opacity = hasEnabledStorage ? '1' : '0.5';
+                buttons.lagerButton.style.cursor = hasEnabledStorage ? 'pointer' : 'not-allowed';
+                buttons.lagerButton.title = hasEnabledStorage
+                    ? ''
+                : 'Keine aktivierten Lagerräume verfügbar';
+            }
+
+            // Erweiterungen prüfen
+            const hasExtensions = group.some(
+                ({ missingExtensions }) =>
+                Array.isArray(missingExtensions) && missingExtensions.length > 0
+            );
+
+            if (buttons.spoilerButton) {
+                buttons.spoilerButton.disabled = !hasExtensions;
+                buttons.spoilerButton.style.opacity = hasExtensions ? '1' : '0.5';
+                buttons.spoilerButton.style.cursor = hasExtensions ? 'pointer' : 'not-allowed';
+                buttons.spoilerButton.title = hasExtensions
+                    ? ''
+                : 'Keine aktivierten Erweiterungen verfügbar';
+            }
+
+            let spoilerWrapper = null;
+
+            if (buttons.spoilerButton && hasExtensions) {
+                spoilerWrapper = createSpoilerContentWrapper(buttons.spoilerButton);
+
+                const table = createExtensionTable(
+                    groupKey,
+                    group,
+                    userInfo,
+                    buttons.buildSelectedButton,
+                    isAllianceView,
+                    allianceInfo,
+                    buildings
+                );
+
+                spoilerWrapper.appendChild(table);
+            }
+
+            // Lager
+            const lagerWrapper =
+                  buttons.lagerButton && hasEnabledStorage
+            ? createLagerContentWrapper(
+                buttons.lagerButton,
+                group,
+                userInfo,
+                buttons.buildSelectedButton
+            )
+            : null;
+
+            // Ausbaustufen
+            const ignoresLevelUpgrade = ignoreLevels.includes(groupKey);
+            const hasLevelUpgrades =
+                  !isAllianceView &&
+                  !ignoresLevelUpgrade &&
+                  group.some(({ building }) => !!getBuildingLevelInfo(building)?.next);
+
+            let levelWrapper = null;
+
+            if (buttons.levelButton) {
+                buttons.levelButton.disabled = !hasLevelUpgrades;
+                buttons.levelButton.style.opacity = hasLevelUpgrades ? '1' : '0.5';
+                buttons.levelButton.style.cursor = hasLevelUpgrades ? 'pointer' : 'not-allowed';
+                buttons.levelButton.title = hasLevelUpgrades
+                    ? ''
+                : 'Keine weiteren Ausbaustufen verfügbar';
+
+                if (hasLevelUpgrades) {
+                    levelWrapper = createLevelContentWrapper(
+                        buttons.levelButton,
+                        group,
+                        userInfo
+                    );
+                }
+            }
+
+            // Spezialisierungen
+            const hasSpecializations = group.some(
+                ({ building }) =>
+                isSpecializationBuilding(building) &&
+                getAvailableSpecializations(building).length > 0
+            );
+
+            if (buttons.specialButton) {
+                buttons.specialButton.disabled = !hasSpecializations;
+                buttons.specialButton.style.opacity = hasSpecializations ? '1' : '0.5';
+                buttons.specialButton.style.cursor = hasSpecializations ? 'pointer' : 'not-allowed';
+                buttons.specialButton.title = hasSpecializations
+                    ? ''
+                : 'Keine Spezialisierungen verfügbar';
+            }
+
+            const specialWrapper =
+                  buttons.specialButton && hasSpecializations
+            ? createSpecialContentWrapper(
+                buttons.specialButton,
+                group,
+                userInfo,
+                buildings
+            )
+            : null;
+
+            // Alles einfügen
+            list.append(header, buttons.container);
+            if (spoilerWrapper) list.appendChild(spoilerWrapper);
+            if (lagerWrapper) list.appendChild(lagerWrapper);
+            if (levelWrapper) list.appendChild(levelWrapper);
+            if (specialWrapper) list.appendChild(specialWrapper);
+
+            // Wrapper gegenseitig bekannt machen
+            const wrappers = [
+                spoilerWrapper,
+                lagerWrapper,
+                levelWrapper,
+                specialWrapper
+            ].filter(Boolean);
+
+            wrappers.forEach(wrapper => {
+                wrapper.otherWrappers = wrappers.filter(
+                    other => other !== wrapper
+                );
+            });
+        });
+    }
+
+    // Funktion um den TabellenHeader zu erstellen
+    function createHeader(title) {
+        const h = document.createElement('h4');
+        h.textContent = title;
+        h.classList.add('building-header');
+        return h;
+    }
+
+    // Funktion um den ButtonContainer zu erstellen
+    function createButtonContainer(groupKey, group, userInfo) {
+        const container = document.createElement('div');
+        container.classList.add('button-container');
+
+        const spoilerButton = createButton('Erweiterungen', ['btn', 'spoiler-button']);
+
+        const showLevelButton = group.some(({ building }) => {
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            return allowedBuildings.has(key);
+        });
+
+        let levelButton = null;
+        if (showLevelButton) levelButton = createButton('Ausbaustufen', ['btn', 'level-button']);
+
+        const canBuildStorage = group.some(({ building }) => {
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            return manualStorageRooms.hasOwnProperty(key);
+        });
+
+        let lagerButton = null;
+        if (canBuildStorage) lagerButton = createButton('Lagerräume', ['btn', 'lager-button']);
+
+        const buildSelectedButton = createButton(
+            'Ausgewählte Erweiterungen/Lager bauen',
+            ['btn', 'build-selected-button']
+        );
+        buildSelectedButton.disabled = true;
+        buildSelectedButton.onclick = () => buildSelectedExtensions();
+
+        const buildSelectedLevelsButton = createButton(
+            'Ausgewählte Stufen bauen',
+            ['btn', 'build-selected-levels-button']
+        );
+        buildSelectedLevelsButton.disabled = true;
+        buildSelectedLevelsButton.onclick = () => buildSelectedLevelsAll(buildingsData);
+
+        const hasSpecializationBuildings = group.some(({ building }) =>
+                                                      isSpecializationBuilding(building)
+                                                     );
+
+        let specialButton = null;
+        let buildSelectedSpecialButton = null;
+
+        if (hasSpecializationBuildings) {
+            specialButton = createButton('Spezialisierung', ['btn', 'special-button']);
+
+            buildSelectedSpecialButton = createButton(
+                'Ausgewählte Spezialisierungen bauen',
+                ['btn', 'special-button', 'build-selected-special-button']
+            );
+            buildSelectedSpecialButton.disabled = true;
+            buildSelectedSpecialButton.onclick = () =>
+            buildSelectedSpecializations(buildingsData);
+        }
+
+        const buildAllButton = createButton(
+            'Konfiguration bei allen Wachen bauen',
+            ['btn', 'build-all-button']
+        );
+        buildAllButton.onclick = () => showCurrencySelectionForAll(groupKey);
+
+        [
+            spoilerButton,
+            lagerButton,
+            buildSelectedButton,
+            levelButton,
+            buildSelectedLevelsButton,
+            specialButton,
+            buildSelectedSpecialButton,
+            buildAllButton
+        ]
+            .filter(Boolean)
+            .forEach(btn => container.appendChild(btn));
+
+        return {
+            container,
+            spoilerButton,
+            levelButton,
+            lagerButton,
+            buildSelectedLevelsButton,
+            specialButton,
+            buildSelectedSpecialButton,
+            buildSelectedButton
+        };
+    }
+
+    // Funktion um die Buttons zu erstellen
+    function createButton(text, classes = []) {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        classes.forEach(cls => btn.classList.add(cls));
+        return btn;
+    }
+
+    // Funktion um die Spoiler-Inhalte zu erstellen (Erweiterung/Lager/Stufenausbau)
+    function createSpoilerContentWrapper(spoilerButton) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'spoiler-content';
+        wrapper.style.display = 'none';
+
+        spoilerButton.addEventListener('click', () => {
+            const show = wrapper.style.display !== 'block';
+
+            if (wrapper.otherWrappers) {
+                wrapper.otherWrappers.forEach(other => {
+                    other.style.display = 'none';
+                    if (other.associatedButton) {
+                        other.associatedButton.classList.remove('active-button');
+                        resetButtonText(other);
+                    }
+                });
+            }
+
+            wrapper.style.display = show ? 'block' : 'none';
+            spoilerButton.textContent = show ? 'Erweiterungen ausblenden' : 'Erweiterungen';
+            spoilerButton.classList.toggle('active-button', show);
+        });
+
+        wrapper.associatedButton = spoilerButton;
+        return wrapper;
+    }
+    function createLagerContentWrapper(lagerButton, group, userInfo, buildSelectedButton) {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('lager-wrapper');
+        wrapper.style.display = 'none';
+        wrapper.style.marginTop = '10px';
+
+        const lagerTable = createLagerTable(group, userInfo, buildSelectedButton);
+        wrapper.appendChild(lagerTable);
+
+        lagerButton.addEventListener('click', () => {
+            const show = wrapper.style.display !== 'block';
+
+            if (wrapper.otherWrappers) {
+                wrapper.otherWrappers.forEach(other => {
+                    other.style.display = 'none';
+                    if (other.associatedButton) {
+                        other.associatedButton.classList.remove('active-button');
+                        resetButtonText(other);
+                    }
+                });
+            }
+
+            wrapper.style.display = show ? 'block' : 'none';
+            lagerButton.textContent = show ? 'Lagerräume ausblenden' : 'Lagerräume';
+            lagerButton.classList.toggle('active-button', show);
+        });
+
+        wrapper.associatedButton = lagerButton;
+        return wrapper;
+    }
+    function createLevelContentWrapper(levelButton, group, userInfo, buildSelectedButton) {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('level-wrapper');
+        wrapper.style.display = 'none';
+        wrapper.style.marginTop = '10px';
+
+        const levelTable = createLevelTable(group, userInfo);
+        wrapper.appendChild(levelTable);
+
+        levelButton.addEventListener('click', () => {
+            const show = wrapper.style.display !== 'block';
+
+            if (wrapper.otherWrappers) {
+                wrapper.otherWrappers.forEach(other => {
+                    other.style.display = 'none';
+                    if (other.associatedButton) {
+                        other.associatedButton.classList.remove('active-button');
+                        resetButtonText(other);
+                    }
+                });
+            }
+            wrapper.style.display = show ? 'block' : 'none';
+            levelButton.textContent = show ? 'Ausbaustufen ausblenden' : 'Ausbaustufen';
+            levelButton.classList.toggle('active-button', show);
+        });
+
+        wrapper.associatedButton = levelButton;
+        return wrapper;
+    }
+    function createSpecialContentWrapper(specialButton, group, userInfo, buildings) {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('special-wrapper');
+        Object.assign(wrapper.style, {
+            display: 'none',
+            marginTop: '10px'
+        });
+
+        wrapper.appendChild(
+            createSpecialTable(group, userInfo, buildings)
+        );
+
+        specialButton.addEventListener('click', () => {
+            if (specialButton.disabled) return;
+
+            const show = wrapper.style.display !== 'block';
+
+            if (wrapper.otherWrappers) {
+                wrapper.otherWrappers.forEach(other => {
+                    other.style.display = 'none';
+
+                    if (other.associatedButton) {
+                        other.associatedButton.classList.remove('active-button');
+                        resetButtonText(other);
+                    }
+                });
+            }
+
+            wrapper.style.display = show ? 'block' : 'none';
+            specialButton.textContent =
+                show ? 'Spezialisierung ausblenden' : 'Spezialisierung';
+            specialButton.classList.toggle('active-button', show);
+        });
+
+        wrapper.associatedButton = specialButton;
+        return wrapper;
+    }
+
+    // Funktion für den Buttontext
+    function resetButtonText(wrapper) {
+        if (!wrapper.associatedButton) return;
+
+        if (wrapper.classList.contains('spoiler-content')) {
+            wrapper.associatedButton.textContent = 'Erweiterungen';
+
+        } else if (wrapper.classList.contains('lager-wrapper')) {
+            wrapper.associatedButton.textContent = 'Lagerräume';
+
+        } else if (wrapper.classList.contains('level-wrapper')) {
+            wrapper.associatedButton.textContent = 'Ausbaustufen';
+
+        } else if (wrapper.classList.contains('special-wrapper')) {
+            wrapper.associatedButton.textContent = 'Spezialisierung';
+        }
+    }
+
+    // Funktion um die Tabelle für Erweiterung, Lager und Ausbaustufen zu erstellen
+    function createExtensionTable(groupKey, group, userInfo, buildSelectedButton, isAlliance = false, allianceInfo = null, buildings = []) {
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.backgroundColor = 'var(--background-color)';
+        table.style.color = 'var(--text-color)';
+
+        table.innerHTML = `
+        <thead>
+            <tr>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Alle An- / Abwählen</th>
+                <th style="border-bottom:2px solid var(--border-color);">Leitstelle</th>
+                <th style="border-bottom:2px solid var(--border-color);">Wache/Gebäude</th>
+                <th style="border-bottom:2px solid var(--border-color);">Baubare Erweiterungen</th>
+                <th style="border-bottom:2px solid var(--border-color);">Bauen mit Credits</th>
+                <th style="border-bottom:2px solid var(--border-color);">Bauen mit Coins</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+
+        const tbody = table.querySelector('tbody');
+        const thead = table.querySelector('thead');
+        const filters = {};
+        const filterElements = {};
+        let manualSearchTerm = '';
+
+        function applyCellStyle(cell) {
+            cell.style.borderColor = 'var(--border-color)';
+            cell.style.color = 'var(--text-color)';
+        }
+
+        function createDropdownFilter(options, placeholder, colIndex) {
+            const th = document.createElement('th');
+            th.style.padding = '4px 8px';
+            applyCellStyle(th);
+
+            const select = document.createElement('select');
+            select.classList.add('btn', 'btn-sm');
+            select.style.width = '100%';
+            select.style.fontSize = '0.8em';
+            select.style.padding = '2px 6px';
+            select.style.verticalAlign = 'middle';
+            select.style.cursor = 'pointer';
+            select.style.backgroundColor = 'var(--background-color)';
+            select.style.color = 'var(--text-color)';
+            select.style.border = '1px solid var(--border-color)';
+            select.innerHTML = `<option value="">🔽 ${placeholder}</option>`;
+
+            [...new Set(options)].sort().forEach(optionText => {
+                const option = document.createElement('option');
+                option.value = optionText;
+                option.textContent = optionText;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', () => {
+                filters[colIndex] = select.value || undefined;
+                applyAllFilters();
+                updateSelectAllCheckboxState();
+            });
+
+            filterElements[colIndex] = select;
+            th.appendChild(select);
+            return th;
+        }
+
+        const currentSettings = getExtensionSettings();
+
+        function isExtensionEnabledByConfig(building, extension) {
+            const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const storageOptions = manualStorageRooms[baseKey];
+
+            if (Array.isArray(storageOptions)) {
+                const storage = storageOptions.find(opt =>
+                                                    String(opt.id) === String(extension.id)
+                                                   );
+
+                if (storage) {
+                    const storageKey = getStorageSettingKey(
+                        baseKey,
+                        storage.id,
+                        isAlliance
+                    );
+
+                    return currentSettings[storageKey] !== false;
+                }
+            }
+
+            const extensionKey = getExtensionSettingKey(
+                groupKey,
+                extension.id,
+                isAlliance
+            );
+
+            return currentSettings[extensionKey] !== false;
+        }
+
+        const activeGroup = group
+        .map(g => {
+            const activeExtensions = Array.isArray(g.missingExtensions)
+            ? g.missingExtensions.filter(extension => {
+                if (!isExtensionEnabledByConfig(g.building, extension)) {
+                    return false;
+                }
+
+                if (isExtensionLimitReached(g.building, extension.id)) {
+                    return false;
+                }
+
+                if (isBuildingCountLimitReached(buildings, g.building, extension.id)) {
+                    return false;
+                }
+
+                return true;
+            })
+            : [];
+
+            return {
+                ...g,
+                missingExtensions: activeExtensions
+            };
+        })
+        .filter(g => g.missingExtensions.length > 0);
+
+        const leitstellen = activeGroup.map(g => getLeitstelleName(g.building));
+        const wachen = activeGroup.map(g => g.building.caption);
+        const erweiterungen = activeGroup.flatMap(g =>
+                                                  g.missingExtensions.map(e => e.name)
+                                                 );
+
+        const filterRow = document.createElement('tr');
+        filterRow.classList.add('lss-manager-filter-row');
+
+        const selectAllCell = document.createElement('th');
+        selectAllCell.style.padding = '4px 8px';
+        applyCellStyle(selectAllCell);
+
+        const selectAllCheckbox = document.createElement('input');
+        selectAllCheckbox.type = 'checkbox';
+        selectAllCheckbox.className = 'select-all-checkbox';
+        selectAllCheckbox.dataset.group = groupKey;
+
+        selectAllCell.appendChild(selectAllCheckbox);
+        filterRow.appendChild(selectAllCell);
+        filterRow.appendChild(createDropdownFilter(leitstellen, 'Leitstelle', 1));
+        filterRow.appendChild(createDropdownFilter(wachen, 'Wache', 2));
+        filterRow.appendChild(createDropdownFilter(erweiterungen, 'Erweiterung', 3));
+
+        const resetCell = document.createElement('th');
+        resetCell.style.padding = '4px 8px';
+        resetCell.style.textAlign = 'center';
+        applyCellStyle(resetCell);
+
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = 'Filter zurücksetzen';
+        resetBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+        resetBtn.style.padding = '2px 6px';
+        resetBtn.style.fontSize = '0.8em';
+
+        resetCell.appendChild(resetBtn);
+        filterRow.appendChild(resetCell);
+
+        const uncheckAllCell = document.createElement('th');
+        uncheckAllCell.style.textAlign = 'center';
+        uncheckAllCell.style.padding = '4px 8px';
+        applyCellStyle(uncheckAllCell);
+
+        const uncheckAllBtn = document.createElement('button');
+        uncheckAllBtn.textContent = 'Alle abwählen';
+        uncheckAllBtn.classList.add('btn', 'btn-sm', 'btn-warning');
+        uncheckAllBtn.style.padding = '2px 6px';
+        uncheckAllBtn.style.fontSize = '0.8em';
+
+        uncheckAllCell.appendChild(uncheckAllBtn);
+        filterRow.appendChild(uncheckAllCell);
+
+        const searchRow = document.createElement('tr');
+        const searchCell = document.createElement('th');
+        searchCell.colSpan = 6;
+        searchCell.style.padding = '6px 10px';
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'form-control';
+        searchInput.placeholder = 'Manuelle Suche: Leitstelle, Wache/Gebäude oder Erweiterung...';
+        searchInput.autocomplete = 'off';
+        searchInput.style.width = '100%';
+        searchInput.style.backgroundColor = 'var(--background-color)';
+        searchInput.style.color = 'var(--text-color)';
+        searchInput.style.border = '1px solid var(--border-color)';
+
+        searchInput.addEventListener('input', () => {
+            manualSearchTerm = searchInput.value.toLowerCase().trim();
+            applyAllFilters();
+            updateSelectAllCheckboxState();
+        });
+
+        searchCell.appendChild(searchInput);
+        searchRow.appendChild(searchCell);
+        thead.appendChild(searchRow);
+        thead.appendChild(filterRow);
+
+        resetBtn.onclick = () => {
+            Object.values(filterElements).forEach(select => select.selectedIndex = 0);
+            Object.keys(filters).forEach(key => delete filters[key]);
+            manualSearchTerm = '';
+            searchInput.value = '';
+            applyAllFilters();
+            updateSelectAllCheckboxState();
+        };
+
+        uncheckAllBtn.onclick = () => {
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const checkbox = row.querySelector('.extension-checkbox');
+                if (checkbox && !checkbox.disabled) checkbox.checked = false;
+            });
+
+            updateBuildSelectedButton();
+            updateSelectAllCheckboxState();
+            updateSelectedAmounts(buildingsData);
+        };
+
+        selectAllCheckbox.addEventListener('change', () => {
+            const isChecked = selectAllCheckbox.checked;
+
+            if (!isChecked) {
+                tbody.querySelectorAll('tr').forEach(row => {
+                    if (row.style.display === 'none') return;
+
+                    const checkbox = row.querySelector('.extension-checkbox');
+                    if (checkbox && !checkbox.disabled) checkbox.checked = false;
+                });
+
+                updateBuildSelectedButton();
+                updateSelectAllCheckboxState();
+                updateSelectedAmounts(buildingsData);
+                return;
+            }
+
+            let totalCredits = 0;
+            let totalCoins = 0;
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const checkbox = row.querySelector('.extension-checkbox');
+                if (!checkbox || checkbox.disabled) return;
+
+                totalCredits += Number(checkbox.dataset.creditCost) || 0;
+
+                if (!isAlliance) {
+                    totalCoins += Number(checkbox.dataset.coinCost) || 0;
+                }
+            });
+
+            let canPayAll = false;
+            let missingCredits = 0;
+            let missingCoins = 0;
+
+            if (isAlliance) {
+                const availableCredits = Number(allianceInfo?.credits_current || 0);
+                canPayAll = availableCredits >= totalCredits;
+                missingCredits = Math.max(0, totalCredits - availableCredits);
+            } else {
+                const availableCredits = Number(userInfo?.credits || 0);
+                const availableCoins = Number(userInfo?.coins || 0);
+                const canPayWithCredits = availableCredits >= totalCredits;
+                const canPayWithCoins = availableCoins >= totalCoins;
+
+                canPayAll = canPayWithCredits || canPayWithCoins;
+                missingCredits = Math.max(0, totalCredits - availableCredits);
+                missingCoins = Math.max(0, totalCoins - availableCoins);
+            }
+
+            if (!canPayAll) {
+                let message;
+
+                if (isAlliance) {
+                    const availableCredits = Number(allianceInfo?.credits_current || 0);
+
+                    message =
+                        'Die Auswahl übersteigt das verfügbare Verbandsguthaben.\n\n' +
+                        `Benötigte Verbands-Credits: ${formatNumber(totalCredits)}\n` +
+                        `Verfügbare Verbands-Credits: ${formatNumber(availableCredits)}\n` +
+                        `Fehlende Verbands-Credits: ${formatNumber(missingCredits)}`;
+                } else {
+                    message = 'Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n';
+
+                    if (missingCredits > 0) {
+                        message += `Fehlende Credits: ${formatNumber(missingCredits)}\n`;
+                    }
+
+                    if (missingCoins > 0) {
+                        message += `Fehlende Coins: ${formatNumber(missingCoins)}\n`;
+                    }
+                }
+
+                alert(message);
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+                return;
+            }
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const checkbox = row.querySelector('.extension-checkbox');
+                if (checkbox && !checkbox.disabled) checkbox.checked = true;
+            });
+
+            updateBuildSelectedButton();
+            updateSelectAllCheckboxState();
+            updateSelectedAmounts(buildingsData);
+        });
+
+        activeGroup.forEach(({ building, missingExtensions }) => {
+            missingExtensions.forEach(extension => {
+                if (isExtensionLimitReached(building, extension.id)) return;
+
+                const buildingCountLimitReached =
+                      isBuildingCountLimitReached(buildings, building, extension.id);
+
+                const row = document.createElement('tr');
+
+                row.classList.add(`row-${building.id}-${extension.id}`);
+                row.style.borderBottom = '1px solid var(--border-color)';
+
+                if (buildingCountLimitReached) {
+                    row.style.opacity = '0.55';
+                    row.title = 'Gebäudeanzahl-Limit für diese Erweiterung erreicht';
+                }
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'extension-checkbox';
+                checkbox.dataset.buildingId = building.id;
+                checkbox.dataset.extensionId = extension.id;
+                checkbox.dataset.creditCost = Number(extension.cost) || 0;
+                checkbox.dataset.coinCost = isAlliance ? 0 : Number(extension.coins) || 0;
+
+                if (buildingCountLimitReached) {
+                    checkbox.disabled = true;
+                    checkbox.title = 'Gebäudeanzahl-Limit für diese Erweiterung erreicht';
+                } else if (isAlliance) {
+                    checkbox.disabled =
+                        Number(allianceInfo?.credits_current || 0) <
+                        Number(extension.cost || 0);
+                } else {
+                    checkbox.disabled =
+                        Number(userInfo?.credits || 0) < Number(extension.cost || 0) &&
+                        Number(userInfo?.coins || 0) < Number(extension.coins || 0);
+                }
+
+                checkbox.addEventListener('change', () => {
+                    updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
+                    updateSelectAllCheckboxState();
+                });
+
+                const checkboxCell = document.createElement('td');
+                checkboxCell.appendChild(checkbox);
+
+                const leitstelleCell = document.createElement('td');
+                leitstelleCell.textContent = getLeitstelleName(building);
+
+                const buildingCell = document.createElement('td');
+                buildingCell.textContent = building.caption;
+
+                const extensionCell = document.createElement('td');
+                extensionCell.textContent = extension.name;
+
+                [checkboxCell, leitstelleCell, buildingCell, extensionCell].forEach(cell => {
+                    cell.style.borderColor = 'var(--border-color)';
+                    cell.style.color = 'var(--text-color)';
+                });
+
+                row.appendChild(checkboxCell);
+                row.appendChild(leitstelleCell);
+                row.appendChild(buildingCell);
+                row.appendChild(extensionCell);
+
+                const creditCell = document.createElement('td');
+                creditCell.style.textAlign = 'center';
+
+                const creditBtn = document.createElement('button');
+                creditBtn.textContent = `${formatNumber(extension.cost)} Credits`;
+                creditBtn.classList.add('btn', 'btn-xl', 'credit-button');
+                creditBtn.style.backgroundColor = '#28a745';
+                creditBtn.style.color = 'white';
+
+                if (buildingCountLimitReached) {
+                    creditBtn.disabled = true;
+                    creditBtn.title = 'Gebäudeanzahl-Limit für diese Erweiterung erreicht';
+                } else if (isAlliance) {
+                    creditBtn.disabled =
+                        Number(allianceInfo?.credits_current || 0) <
+                        Number(extension.cost || 0);
+                } else {
+                    creditBtn.disabled =
+                        Number(userInfo?.credits || 0) <
+                        Number(extension.cost || 0);
+                }
+
+                creditBtn.onclick = async () => {
+                    await buildExtension(
+                        building,
+                        extension.id,
+                        'credits',
+                        extension.cost,
+                        row,
+                        isAlliance
+                    );
+
+                    const cb = row.querySelector('.extension-checkbox');
+                    if (cb) cb.checked = false;
+
+                    if (isAlliance) {
+                        allianceInfo = await getAllianceInfo();
+                    } else {
+                        await initUserCredits();
+                    }
+
+                    updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
+                    updateSelectAllCheckboxState();
+                };
+
+                creditCell.appendChild(creditBtn);
+                row.appendChild(creditCell);
+
+                const coinsCell = document.createElement('td');
+                coinsCell.style.textAlign = 'center';
+
+                if (isAlliance) {
+                    coinsCell.textContent = 'Nicht verfügbar';
+                    coinsCell.style.opacity = '0.6';
+                } else {
+                    const coinBtn = document.createElement('button');
+                    coinBtn.textContent = `${formatNumber(extension.coins)} Coins`;
+                    coinBtn.classList.add('btn', 'btn-xl', 'coins-button');
+                    coinBtn.style.backgroundColor = '#dc3545';
+                    coinBtn.style.color = 'white';
+
+                    if (buildingCountLimitReached) {
+                        coinBtn.disabled = true;
+                        coinBtn.title = 'Gebäudeanzahl-Limit für diese Erweiterung erreicht';
+                    } else {
+                        coinBtn.disabled =
+                            Number(userInfo?.coins || 0) <
+                            Number(extension.coins || 0);
+                    }
+
+                    coinBtn.onclick = async () => {
+                        await buildExtension(
+                            building,
+                            extension.id,
+                            'coins',
+                            extension.coins,
+                            row,
+                            false
+                        );
+
+                        const cb = row.querySelector('.extension-checkbox');
+                        if (cb) cb.checked = false;
+
+                        await initUserCredits();
+
+                        updateBuildSelectedButton();
+                        updateSelectedAmounts(buildingsData);
+                        updateSelectAllCheckboxState();
+                    };
+
+                    coinsCell.appendChild(coinBtn);
+                }
+
+                coinsCell.style.borderColor = 'var(--border-color)';
+                coinsCell.style.color = 'var(--text-color)';
+                row.appendChild(coinsCell);
+
+                tbody.appendChild(row);
+            });
+        });
+
+        function applyAllFilters() {
+            tbody.querySelectorAll('tr').forEach(row => {
+                const filterMatch = Object.entries(filters).every(([index, value]) =>
+                                                                  !value ||
+                                                                  row.children[index]?.textContent.trim().toLowerCase() ===
+                                                                  value.toLowerCase()
+                                                                 );
+
+                const searchMatch =
+                      !manualSearchTerm ||
+                      [1, 2, 3].some(index =>
+                                     row.children[index]?.textContent
+                                     .toLowerCase()
+                                     .includes(manualSearchTerm)
+                                    );
+
+                row.style.display = filterMatch && searchMatch ? '' : 'none';
+            });
+        }
+
+        function updateSelectAllCheckboxState() {
+            let total = 0;
+            let checked = 0;
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const checkbox = row.querySelector('.extension-checkbox');
+
+                if (checkbox && !checkbox.disabled) {
+                    total++;
+
+                    if (checkbox.checked) {
+                        checked++;
+                    }
+                }
+            });
+
+            selectAllCheckbox.checked = total > 0 && total === checked;
+            selectAllCheckbox.indeterminate = checked > 0 && checked < total;
+            selectAllCheckbox.disabled = total === 0;
+        }
+
+        updateSelectAllCheckboxState();
+
+        return table;
+    }
+    function createLagerTable(group, userInfo, buildSelectedButton, currentGroupKey) {
+        const settings = getExtensionSettings();
+        const liveBuiltStorages = {};
+        const currentCredits = Number(userInfo?.credits || 0);
+        const currentCoins = Number(userInfo?.coins || 0);
+
+        group.forEach(({ building }) => {
+            liveBuiltStorages[building.id] = new Set(
+                (building.storage_upgrades || []).map(u => {
+                    if (u.type_id !== undefined) return String(u.type_id);
+                    const key = Object.keys(u)[0];
+                    return key !== undefined ? String(key) : '';
+                })
+            );
+        });
+
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.backgroundColor = 'var(--background-color)';
+        table.style.color = 'var(--text-color)';
+
+        table.innerHTML = `
+        <thead>
+            <tr>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Alle An- / Abwählen</th>
+                <th style="border-bottom:2px solid var(--border-color);">Leitstelle</th>
+                <th style="border-bottom:2px solid var(--border-color);">Wache</th>
+                <th style="border-bottom:2px solid var(--border-color);">Baubare Lager</th>
+                <th style="border-bottom:2px solid var(--border-color);">Lagerkapazität</th>
+                <th style="border-bottom:2px solid var(--border-color);">Credits</th>
+                <th style="border-bottom:2px solid var(--border-color);">Coins</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+
+        const tbody = table.querySelector('tbody');
+        const thead = table.querySelector('thead');
+        const filters = {};
+        const filterElements = {};
+        let manualSearchTerm = '';
+
+        function createDropdownFilter(options, placeholder, colIndex) {
+            const th = document.createElement('th');
+            th.style.padding = '4px 8px';
+            th.style.borderColor = 'var(--border-color)';
+            th.style.color = 'var(--text-color)';
+
+            const select = document.createElement('select');
+            select.classList.add('btn', 'btn-sm');
+            select.style.width = '100%';
+            select.style.fontSize = '0.8em';
+            select.style.padding = '2px 6px';
+            select.style.verticalAlign = 'middle';
+            select.style.cursor = 'pointer';
+            select.style.backgroundColor = 'var(--background-color)';
+            select.style.color = 'var(--text-color)';
+            select.style.border = '1px solid var(--border-color)';
+            select.innerHTML = `<option value="">🔽 ${placeholder}</option>`;
+
+            [...new Set(options)].sort().forEach(optionText => {
+                const option = document.createElement('option');
+                option.value = optionText;
+                option.textContent = optionText;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', () => {
+                filters[colIndex] = select.value || undefined;
+                applyAllFilters();
+                updateSelectAllCheckboxState();
+            });
+
+            filterElements[colIndex] = select;
+            th.appendChild(select);
+            return th;
+        }
+
+        const leitstellen = [];
+        const wachen = [];
+        const lagerArten = [];
+
+        group.forEach(({ building }) => {
+            const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const options = manualStorageRooms[baseKey];
+            if (!options) return;
+
+            const current = liveBuiltStorages[building.id];
+
+            options.forEach(opt => {
+                const id = String(opt.id);
+                if (current.has(id)) return;
+
+                const storageKey = getStorageSettingKey(baseKey, opt.id, currentView === 'alliance');
+                if (getExtensionSettings()[storageKey] === false) return;
+
+                leitstellen.push(getLeitstelleName(building));
+                wachen.push(building.caption);
+                lagerArten.push(opt.name);
+
+                const row = document.createElement('tr');
+                row.classList.add(`storage-row-${building.id}-${opt.id}`);
+                row.style.borderBottom = '1px solid var(--border-color)';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'storage-checkbox';
+                checkbox.dataset.buildingId = building.id;
+                checkbox.dataset.storageType = opt.id;
+                checkbox.dataset.creditCost = Number(opt.cost) || 0;
+                checkbox.dataset.coinCost = Number(opt.coins) || 0;
+                checkbox.disabled = currentCredits < Number(opt.cost || 0) && currentCoins < Number(opt.coins || 0);
+
+                checkbox.addEventListener('change', () => {
+                    updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
+                    updateSelectAllCheckboxState();
+                });
+
+                const checkboxCell = document.createElement('td');
+                checkboxCell.appendChild(checkbox);
+                row.appendChild(checkboxCell);
+
+                const cells = [
+                    getLeitstelleName(building),
+                    building.caption,
+                    opt.name,
+                    `+${opt.additionalStorage}`
+                ];
+
+                cells.forEach(text => {
+                    const td = document.createElement('td');
+                    td.textContent = text;
+                    td.style.borderColor = 'var(--border-color)';
+                    td.style.color = 'var(--text-color)';
+                    row.appendChild(td);
+                });
+
+                const creditCell = document.createElement('td');
+                creditCell.style.textAlign = 'center';
+
+                const creditBtn = document.createElement('button');
+                creditBtn.textContent = `${formatNumber(opt.cost)} Credits`;
+                creditBtn.classList.add('btn', 'btn-xl', 'credit-button');
+                creditBtn.style.backgroundColor = '#28a745';
+                creditBtn.style.color = 'white';
+                creditBtn.disabled = currentCredits < Number(opt.cost || 0);
+
+                creditBtn.onclick = async () => {
+                    if (!canBuildStorageInOrder(building.id, opt.id)) {
+                        alert(
+                            "Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\n" +
+                            "Reihenfolge:\n" +
+                            "1. Lagerraum\n" +
+                            "2. 1te zusätzlicher Lagerraum\n" +
+                            "3. 2te zusätzlicher Lagerraum\n" +
+                            "4. 3te zusätzlicher Lagerraum\n" +
+                            "5. 4te zusätzlicher Lagerraum\n" +
+                            "6. 5te zusätzlicher Lagerraum\n" +
+                            "7. 6te zusätzlicher Lagerraum\n" +
+                            "8. 7te zusätzlicher Lagerraum"
+                        );
+                        return;
+                    }
+
+                    await buildStorage(building, opt.id, 'credits', opt.cost, row);
+                    liveBuiltStorages[building.id].add(String(opt.id));
+
+                    creditBtn.disabled = true;
+                    coinBtn.disabled = true;
+                    checkbox.disabled = true;
+
+                    await initUserCredits();
+                    updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
+                    updateSelectAllCheckboxState();
+                };
+
+                creditCell.appendChild(creditBtn);
+                row.appendChild(creditCell);
+
+                const coinsCell = document.createElement('td');
+                coinsCell.style.textAlign = 'center';
+
+                const coinBtn = document.createElement('button');
+                coinBtn.textContent = `${formatNumber(opt.coins)} Coins`;
+                coinBtn.classList.add('btn', 'btn-xl', 'coins-button');
+                coinBtn.style.backgroundColor = '#dc3545';
+                coinBtn.style.color = 'white';
+                coinBtn.disabled = currentCoins < Number(opt.coins || 0);
+
+                coinBtn.onclick = async () => {
+                    if (!canBuildStorageInOrder(building.id, opt.id)) {
+                        alert(
+                            "Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\n" +
+                            "Reihenfolge:\n" +
+                            "1. Lagerraum\n" +
+                            "2. 1te zusätzlicher Lagerraum\n" +
+                            "3. 2te zusätzlicher Lagerraum\n" +
+                            "4. 3te zusätzlicher Lagerraum\n" +
+                            "5. 4te zusätzlicher Lagerraum\n" +
+                            "6. 5te zusätzlicher Lagerraum\n" +
+                            "7. 6te zusätzlicher Lagerraum\n" +
+                            "8. 7te zusätzlicher Lagerraum"
+                        );
+                        return;
+                    }
+
+                    await buildStorage(building, opt.id, 'coins', opt.coins, row);
+                    liveBuiltStorages[building.id].add(String(opt.id));
+
+                    creditBtn.disabled = true;
+                    coinBtn.disabled = true;
+                    checkbox.disabled = true;
+
+                    await initUserCredits();
+                    updateBuildSelectedButton();
+                    updateSelectedAmounts(buildingsData);
+                    updateSelectAllCheckboxState();
+                };
+
+                coinsCell.appendChild(coinBtn);
+                row.appendChild(coinsCell);
+                tbody.appendChild(row);
+            });
+        });
+
+        const filterRow = document.createElement('tr');
+
+        const selectAllCell = document.createElement('th');
+        selectAllCell.style.padding = '4px 8px';
+
+        const selectAllCheckbox = document.createElement('input');
+        selectAllCheckbox.type = 'checkbox';
+        selectAllCheckbox.className = 'select-all-checkbox-lager';
+
+        selectAllCell.appendChild(selectAllCheckbox);
+        filterRow.appendChild(selectAllCell);
+        filterRow.appendChild(createDropdownFilter(leitstellen, 'Leitstelle', 1));
+        filterRow.appendChild(createDropdownFilter(wachen, 'Wache', 2));
+        filterRow.appendChild(createDropdownFilter(lagerArten, 'Lager', 3));
+
+        const resetCell = document.createElement('th');
+        resetCell.style.textAlign = 'center';
+        resetCell.style.padding = '4px 8px';
+
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = 'Filter zurücksetzen';
+        resetBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+        resetBtn.style.padding = '2px 6px';
+        resetBtn.style.fontSize = '0.8em';
+
+        resetCell.appendChild(resetBtn);
+        filterRow.appendChild(resetCell);
+
+        const uncheckAllCell = document.createElement('th');
+        uncheckAllCell.style.textAlign = 'center';
+        uncheckAllCell.style.padding = '4px 8px';
+
+        const uncheckAllBtn = document.createElement('button');
+        uncheckAllBtn.textContent = 'Alle abwählen';
+        uncheckAllBtn.classList.add('btn', 'btn-sm', 'btn-warning');
+        uncheckAllBtn.style.padding = '2px 6px';
+        uncheckAllBtn.style.fontSize = '0.8em';
+
+        uncheckAllCell.appendChild(uncheckAllBtn);
+        filterRow.appendChild(uncheckAllCell);
+        const searchRow = document.createElement('tr');
+        const searchCell = document.createElement('th');
+        searchCell.colSpan = 7;
+        searchCell.style.padding = '6px 10px';
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'form-control';
+        searchInput.placeholder = 'Manuelle Suche: Leitstelle, Wache oder Lager...';
+        searchInput.autocomplete = 'off';
+        searchInput.style.width = '100%';
+        searchInput.style.backgroundColor = 'var(--background-color)';
+        searchInput.style.color = 'var(--text-color)';
+        searchInput.style.border = '1px solid var(--border-color)';
+
+        searchInput.addEventListener('input', () => {
+            manualSearchTerm = searchInput.value.toLowerCase().trim();
+            applyAllFilters();
+            updateSelectAllCheckboxState();
+        });
+
+        searchCell.appendChild(searchInput);
+        searchRow.appendChild(searchCell);
+        thead.appendChild(searchRow);
+        thead.appendChild(filterRow);
+
+        resetBtn.onclick = () => {
+            Object.values(filterElements).forEach(select => select.selectedIndex = 0);
+            Object.keys(filters).forEach(key => delete filters[key]);
+            manualSearchTerm = '';
+            searchInput.value = '';
+            applyAllFilters();
+            updateSelectAllCheckboxState();
+        };
+
+        uncheckAllBtn.onclick = () => {
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const cb = row.querySelector('.storage-checkbox');
+                if (cb && !cb.disabled) cb.checked = false;
+            });
+
+            updateBuildSelectedButton();
+            updateSelectAllCheckboxState();
+            updateSelectedAmounts(buildingsData);
+        };
+
+        selectAllCheckbox.addEventListener('change', () => {
+            const isChecked = selectAllCheckbox.checked;
+            let totalCredits = 0;
+            let totalCoins = 0;
+            const rows = tbody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const cb = row.querySelector('.storage-checkbox');
+                if (!cb || cb.disabled) return;
+
+                if (isChecked) {
+                    totalCredits += Number(cb.dataset.creditCost) || 0;
+                    totalCoins += Number(cb.dataset.coinCost) || 0;
+                }
+            });
+
+            if (isChecked) {
+                const canPayAllWithCredits = currentCredits >= totalCredits;
+                const canPayAllWithCoins = currentCoins >= totalCoins;
+
+                if (!canPayAllWithCredits && !canPayAllWithCoins) {
+                    const missingCredits = Math.max(0, totalCredits - currentCredits);
+                    const missingCoins = Math.max(0, totalCoins - currentCoins);
+
+                    let message = 'Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n';
+
+                    if (missingCredits > 0) {
+                        message += `Fehlende Credits: ${formatNumber(missingCredits)}\n`;
+                    }
+
+                    if (missingCoins > 0) {
+                        message += `Fehlende Coins: ${formatNumber(missingCoins)}\n`;
+                    }
+
+                    alert(message);
+                    selectAllCheckbox.checked = false;
+                    return;
+                }
+            }
+
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const cb = row.querySelector('.storage-checkbox');
+                if (cb && !cb.disabled) cb.checked = isChecked;
+            });
+
+            updateSelectAllCheckboxState();
+            updateBuildSelectedButton();
+            updateSelectedAmounts(buildingsData);
+        });
+
+        function applyAllFilters() {
+            tbody.querySelectorAll('tr').forEach(row => {
+                const filterMatch = Object.entries(filters).every(([index, value]) =>
+                                                                  !value || row.children[index]?.textContent.trim().toLowerCase() === value.toLowerCase()
+                                                                 );
+
+                const searchMatch = !manualSearchTerm || [1, 2, 3].some(index =>
+                                                                        row.children[index]?.textContent.toLowerCase().includes(manualSearchTerm)
+                                                                       );
+
+                row.style.display = filterMatch && searchMatch ? '' : 'none';
+            });
+        }
+
+        function updateSelectAllCheckboxState() {
+            const visibleRows = [...tbody.querySelectorAll('tr')].filter(row => row.style.display !== 'none');
+
+            if (visibleRows.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.disabled = true;
+                return;
+            }
+
+            const selectableRows = visibleRows.filter(row => {
+                const cb = row.querySelector('.storage-checkbox');
+                return cb && !cb.disabled;
+            });
+
+            if (selectableRows.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.disabled = true;
+                return;
+            }
+
+            selectAllCheckbox.disabled = false;
+
+            const allChecked = selectableRows.every(row => row.querySelector('.storage-checkbox').checked);
+            const noneChecked = selectableRows.every(row => !row.querySelector('.storage-checkbox').checked);
+
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+        }
+
+        updateSelectAllCheckboxState();
+
+        if (!storageGroups[currentGroupKey]) {
+            storageGroups[currentGroupKey] = [];
+        }
+
+        group.forEach(({ building }) => {
+            const baseKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const options = manualStorageRooms[baseKey];
+            if (!options) return;
+
+            const current = new Set(
+                (building.storage_upgrades || []).map(u => {
+                    if (u.type_id !== undefined) return String(u.type_id);
+                    const key = Object.keys(u)[0];
+                    return key !== undefined ? String(key) : '';
+                })
+            );
+
+            const missingExtensions = [];
+
+            options.forEach(opt => {
+                const id = String(opt.id);
+                if (current.has(id)) return;
+
+                const storageKey = getStorageSettingKey(baseKey, opt.id, currentView === 'alliance');
+                if (getExtensionSettings()[storageKey] === false) return;
+
+                missingExtensions.push({
+                    id: opt.id,
+                    cost: opt.cost,
+                    coins: opt.coins,
+                    isStorage: true
+                });
+            });
+
+            if (missingExtensions.length > 0) {
+                storageGroups[currentGroupKey].push({ building, missingExtensions });
+            }
+        });
+
+        return table;
+    }
+    function createLevelTable(group, userInfo) {
+        function updateBuildButtons(building, selectedLevelId, creditCell, coinCell, levelList, currentLevel) {
+            let totalCredits = 0;
+            let totalCoins = 0;
+
+            if (selectedLevelId === null) {
+                creditCell.innerHTML = '';
+                coinCell.innerHTML = '';
+
+                const creditBtn = document.createElement('button');
+                creditBtn.textContent = '0 Credits';
+                creditBtn.classList.add('btn', 'btn-sm');
+                creditBtn.style.backgroundColor = '#28a745';
+                creditBtn.style.color = 'white';
+                creditBtn.disabled = true;
+                creditCell.appendChild(creditBtn);
+
+                const coinBtn = document.createElement('button');
+                coinBtn.textContent = '0 Coins';
+                coinBtn.classList.add('btn', 'btn-sm');
+                coinBtn.style.backgroundColor = '#dc3545';
+                coinBtn.style.color = 'white';
+                coinBtn.disabled = true;
+                coinCell.appendChild(coinBtn);
+                return;
+            }
+
+            if (selectedLevelId >= currentLevel) {
+                for (let levelId = currentLevel + 1; levelId <= selectedLevelId; levelId++) {
+                    const stufe = levelList.find(level => level.id === levelId);
+                    if (!stufe) continue;
+
+                    totalCredits += stufe.cost || 0;
+                    totalCoins += stufe.coins || 0;
+                }
+            }
+
+            creditCell.innerHTML = '';
+
+            const creditBtn = document.createElement('button');
+            creditBtn.textContent = `${totalCredits.toLocaleString()} Credits`;
+            creditBtn.classList.add('btn', 'btn-sm');
+            creditBtn.style.backgroundColor = '#28a745';
+            creditBtn.style.color = 'white';
+            creditBtn.disabled = userInfo.credits < totalCredits || totalCredits === 0;
+
+            creditBtn.onclick = async () => {
+                if (userInfo.credits < totalCredits) {
+                    alert('Nicht genug Credits!');
+                    return;
+                }
+
+                try {
+                    await buildLevel(building.id, 'credits', selectedLevelId);
+
+                    for (const b of group) {
+                        const currentLevel = getBuildingLevelInfo(b.building)?.currentLevel ?? 0;
+                        selectedLevels[b.building.id] = currentLevel;
+                    }
+
+                    fetchBuildingsAndRender();
+                    updateSelectedAmounts(buildingsData);
+                    updateBuildSelectedLevelsButtonState(group);
+                } catch {
+                    alert('Fehler beim Bauen mit Credits.');
+                }
+            };
+
+            creditCell.appendChild(creditBtn);
+
+            coinCell.innerHTML = '';
+
+            const coinBtn = document.createElement('button');
+            coinBtn.textContent = `${totalCoins.toLocaleString()} Coins`;
+            coinBtn.classList.add('btn', 'btn-sm');
+            coinBtn.style.backgroundColor = '#dc3545';
+            coinBtn.style.color = 'white';
+            coinBtn.disabled = userInfo.coins < totalCoins || totalCoins === 0;
+
+            coinBtn.onclick = async () => {
+                if (userInfo.coins < totalCoins) {
+                    alert('Nicht genug Coins!');
+                    return;
+                }
+
+                try {
+                    await buildLevel(building.id, 'coins', selectedLevelId);
+
+                    for (const b of group) {
+                        const currentLevel = getBuildingLevelInfo(b.building)?.currentLevel ?? 0;
+                        selectedLevels[b.building.id] = currentLevel;
+                    }
+
+                    fetchBuildingsAndRender();
+                    updateSelectedAmounts(buildingsData);
+                    updateBuildSelectedLevelsButtonState(group);
+                } catch {
+                    alert('Fehler beim Bauen mit Coins.');
+                }
+            };
+
+            coinCell.appendChild(coinBtn);
+        }
+
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.backgroundColor = 'var(--background-color)';
+        table.style.color = 'var(--text-color)';
+
+        table.innerHTML = `
+        <thead>
+            <tr>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Leitstelle</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Wache</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Stufe</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Ausbaustufe wählen</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Bauen mit Credits</th>
+                <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Bauen mit Coins</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+
+        const tbody = table.querySelector('tbody');
+        const thead = table.querySelector('thead');
+
+        const leitstelleOptions = [...new Set(
+            group.map(({ building }) => getLeitstelleName(building))
+        )].sort();
+
+        const wacheOptions = [...new Set(
+            group.map(({ building }) => building.caption || '-')
+        )].sort();
+
+        const stufeOptions = [...new Set(
+            group.filter(({ building }) => {
+                const info = getBuildingLevelInfo(building);
+                if (!info) return false;
+
+                const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+                const levelList = manualLevels[key];
+                if (!levelList) return false;
+
+                return info.currentLevel < levelList.length;
+            }).map(({ building }) => {
+                const info = getBuildingLevelInfo(building);
+                return info ? info.currentLevel.toString() : null;
+            }).filter(x => x !== null && x !== '-1')
+        )].sort((a, b) => Number(a) - Number(b));
+
+        function createFilterCell(options, placeholder) {
+            const th = document.createElement('th');
+            th.style.padding = '4px 8px';
+
+            const select = document.createElement('select');
+            select.classList.add('btn', 'btn-sm');
+            select.style.width = '100%';
+            select.style.fontSize = '0.8em';
+            select.style.padding = '2px 6px';
+            select.style.verticalAlign = 'middle';
+            select.style.cursor = 'pointer';
+            select.style.backgroundColor = 'var(--background-color)';
+            select.style.color = 'var(--text-color)';
+            select.style.border = '1px solid var(--border-color)';
+            select.innerHTML = `<option value="">🔽 ${placeholder}</option>`;
+
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                select.appendChild(option);
+            });
+
+            th.appendChild(select);
+            return { th, select };
+        }
+
+        const leitstelleFilter = createFilterCell(leitstelleOptions, 'Leitstellen');
+        const wacheFilter = createFilterCell(wacheOptions, 'Wachen');
+        const ausbaustufeFilter = createFilterCell(stufeOptions, 'Stufe');
+
+        const filterRow = document.createElement('tr');
+        filterRow.appendChild(leitstelleFilter.th);
+        filterRow.appendChild(wacheFilter.th);
+        filterRow.appendChild(ausbaustufeFilter.th);
+
+        const clearLevelsTh = document.createElement('th');
+        clearLevelsTh.style.textAlign = 'center';
+        clearLevelsTh.style.padding = '4px 8px';
+
+        const clearLevelsBtn = document.createElement('button');
+        clearLevelsBtn.textContent = 'Stufenauswahl löschen';
+        clearLevelsBtn.classList.add('btn', 'btn-sm', 'btn-danger');
+        clearLevelsBtn.style.padding = '2px 6px';
+        clearLevelsBtn.style.fontSize = '0.8em';
+        clearLevelsBtn.style.marginRight = '6px';
+
+        const globalLevelSelect = document.createElement('select');
+        globalLevelSelect.classList.add('btn', 'btn-sm');
+        globalLevelSelect.style.fontSize = '0.8em';
+        globalLevelSelect.style.padding = '2px 6px';
+        globalLevelSelect.style.verticalAlign = 'middle';
+        globalLevelSelect.style.cursor = 'pointer';
+        globalLevelSelect.style.backgroundColor = 'var(--background-color)';
+        globalLevelSelect.style.color = 'var(--text-color)';
+        globalLevelSelect.style.border = '1px solid var(--border-color)';
+
+        const allLevelIds = new Set();
+
+        group.forEach(({ building }) => {
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const levelList = manualLevels[key];
+
+            if (levelList) {
+                levelList.forEach(level => allLevelIds.add(level.id));
+            }
+        });
+
+        const sortedLevels = [...allLevelIds].sort((a, b) => a - b);
+        globalLevelSelect.innerHTML = `<option value="">🔽 Globale Stufenauswahl</option>`;
+
+        sortedLevels.forEach(levelId => {
+            const opt = document.createElement('option');
+            opt.value = levelId;
+            opt.textContent = `Stufe ${levelId}`;
+            globalLevelSelect.appendChild(opt);
+        });
+
+        clearLevelsTh.appendChild(clearLevelsBtn);
+        clearLevelsTh.appendChild(globalLevelSelect);
+        filterRow.appendChild(clearLevelsTh);
+        filterRow.appendChild(document.createElement('th'));
+
+        const resetTh = document.createElement('th');
+        resetTh.style.textAlign = 'center';
+        resetTh.style.padding = '4px 8px';
+
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = 'Filter zurücksetzen';
+        resetBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+        resetBtn.style.padding = '2px 6px';
+        resetBtn.style.fontSize = '0.8em';
+
+        resetTh.appendChild(resetBtn);
+        filterRow.appendChild(resetTh);
+
+        const searchRow = document.createElement('tr');
+        const searchCell = document.createElement('th');
+        searchCell.colSpan = 6;
+        searchCell.style.padding = '6px 10px';
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'form-control';
+        searchInput.placeholder = 'Manuelle Suche: Leitstelle, Wache oder Stufe...';
+        searchInput.autocomplete = 'off';
+        searchInput.style.width = '100%';
+        searchInput.style.backgroundColor = 'var(--background-color)';
+        searchInput.style.color = 'var(--text-color)';
+        searchInput.style.border = '1px solid var(--border-color)';
+
+        searchInput.addEventListener('input', () => {
+            manualSearchTerm = searchInput.value.toLowerCase().trim();
+            applyFilters();
+        });
+
+        searchCell.appendChild(searchInput);
+        searchRow.appendChild(searchCell);
+        thead.appendChild(searchRow);
+        thead.appendChild(filterRow);
+
+        function applyFilters() {
+            const selectedLeitstelle = leitstelleFilter.select.value;
+            const selectedWache = wacheFilter.select.value;
+            const selectedStufe = ausbaustufeFilter.select.value;
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                const leitstelle = row.children[0]?.textContent.trim() || '';
+                const wache = row.children[1]?.textContent.trim() || '';
+                const stufe = row.children[2]?.textContent.trim() || '';
+
+                const matchFilter =
+                      (!selectedLeitstelle || leitstelle === selectedLeitstelle) &&
+                      (!selectedWache || wache === selectedWache) &&
+                      (!selectedStufe || stufe === selectedStufe);
+
+                const matchSearch = !manualSearchTerm ||
+                      leitstelle.toLowerCase().includes(manualSearchTerm) ||
+                      wache.toLowerCase().includes(manualSearchTerm) ||
+                      stufe.toLowerCase().includes(manualSearchTerm);
+
+                row.style.display = matchFilter && matchSearch ? '' : 'none';
+            });
+        }
+
+        leitstelleFilter.select.addEventListener('change', applyFilters);
+        wacheFilter.select.addEventListener('change', applyFilters);
+        ausbaustufeFilter.select.addEventListener('change', applyFilters);
+
+        resetBtn.onclick = () => {
+            leitstelleFilter.select.selectedIndex = 0;
+            wacheFilter.select.selectedIndex = 0;
+            ausbaustufeFilter.select.selectedIndex = 0;
+            manualSearchTerm = '';
+            searchInput.value = '';
+            applyFilters();
+        };
+
+        clearLevelsBtn.onclick = () => {
+            for (const id in selectedLevels) {
+                selectedLevels[id] = null;
+            }
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const levelChoiceCell = row.children[3];
+
+                if (levelChoiceCell) {
+                    levelChoiceCell.querySelectorAll('button').forEach(btn => {
+                        btn.dataset.active = 'false';
+                    });
+                }
+
+                const buildingId = row.dataset.buildingId;
+                const buildingData = group.find(g => g.building.id == buildingId);
+                if (!buildingData) return;
+
+                const levelInfo = getBuildingLevelInfo(buildingData.building);
+                const key = `${buildingData.building.building_type}_${buildingData.building.small_building ? 'small' : 'normal'}`;
+                const levelList = manualLevels[key];
+
+                if (!levelInfo || !levelList) return;
+
+                updateBuildButtons(
+                    buildingData.building,
+                    null,
+                    row.children[4],
+                    row.children[5],
+                    levelList,
+                    levelInfo.currentLevel
+                );
+            });
+
+            updateSelectedAmounts(buildingsData);
+            updateBuildSelectedLevelsButtonState(group);
+        };
+
+        globalLevelSelect.addEventListener('change', () => {
+            const selectedLevelId = globalLevelSelect.value === '' ? null : Number(globalLevelSelect.value);
+            if (selectedLevelId === null) return;
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const buildingId = row.dataset.buildingId;
+                const buildingData = group.find(g => g.building.id == buildingId);
+                if (!buildingData) return;
+
+                const levelInfo = getBuildingLevelInfo(buildingData.building);
+                if (!levelInfo) return;
+
+                const key = `${buildingData.building.building_type}_${buildingData.building.small_building ? 'small' : 'normal'}`;
+                const levelList = manualLevels[key];
+                if (!levelList) return;
+
+                const maxLevel = Math.max(...levelList.map(level => Number(level.id)));
+
+                if (selectedLevelId <= maxLevel && selectedLevelId > levelInfo.currentLevel) {
+                    selectedLevels[buildingData.building.id] = selectedLevelId;
+
+                    const levelChoiceCell = row.children[3];
+
+                    levelChoiceCell.querySelectorAll('button').forEach(btn => {
+                        btn.dataset.active = btn.getAttribute('level') == selectedLevelId ? 'true' : 'false';
+                    });
+
+                    updateBuildButtons(
+                        buildingData.building,
+                        selectedLevelId,
+                        row.children[4],
+                        row.children[5],
+                        levelList,
+                        levelInfo.currentLevel
+                    );
+                }
+            });
+
+            updateSelectedAmounts(buildingsData);
+            updateBuildSelectedLevelsButtonState(group);
+            globalLevelSelect.selectedIndex = 0;
+        });
+
+        group.forEach(({ building }) => {
+            const levelInfo = getBuildingLevelInfo(building);
+            if (!levelInfo) return;
+
+            const leitstelleName = getLeitstelleName(building);
+            const wache = building.caption || '-';
+            const currentLevel = levelInfo.currentLevel;
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const levelList = manualLevels[key];
+
+            if (!levelList) return;
+
+            const maxLevel = Math.max(...levelList.map(level => Number(level.id)));
+            if (currentLevel >= maxLevel) return;
+
+            selectedLevels[building.id] = null;
+
+            const row = document.createElement('tr');
+            row.dataset.buildingId = building.id;
+            row.style.borderBottom = '1px solid var(--border-color)';
+
+            function createCell(text, center = true) {
+                const td = document.createElement('td');
+                td.style.padding = '8px';
+                td.style.borderColor = 'var(--border-color)';
+                td.style.color = 'var(--text-color)';
+                if (center) td.style.textAlign = 'center';
+                td.textContent = text;
+                return td;
+            }
+
+            const leitstelleCell = createCell(leitstelleName);
+            const wacheCell = createCell(wache);
+            const currentLevelCell = createCell(currentLevel.toString());
+
+            const levelChoiceCell = document.createElement('td');
+            levelChoiceCell.style.padding = '8px';
+            levelChoiceCell.style.textAlign = 'center';
+            levelChoiceCell.style.borderColor = 'var(--border-color)';
+
+            const creditCell = document.createElement('td');
+            creditCell.style.textAlign = 'center';
+            creditCell.style.borderColor = 'var(--border-color)';
+
+            const coinCell = document.createElement('td');
+            coinCell.style.textAlign = 'center';
+            coinCell.style.borderColor = 'var(--border-color)';
+
+            row.appendChild(leitstelleCell);
+            row.appendChild(wacheCell);
+            row.appendChild(currentLevelCell);
+            row.appendChild(levelChoiceCell);
+            row.appendChild(creditCell);
+            row.appendChild(coinCell);
+
+            updateBuildButtons(building, null, creditCell, coinCell, levelList, currentLevel);
+
+            levelList.forEach(stufe => {
+                if (stufe.id <= currentLevel) return;
+
+                const lvlBtn = document.createElement('button');
+                lvlBtn.textContent = stufe.id.toString();
+                lvlBtn.className = 'expand_direct level-choice-button';
+                lvlBtn.setAttribute('level', stufe.id.toString());
+                lvlBtn.dataset.active = 'false';
+
+                lvlBtn.onclick = () => {
+                    let totalCredits = 0;
+                    let totalCoins = 0;
+
+                    for (let levelId = currentLevel + 1; levelId <= stufe.id; levelId++) {
+                        const s = levelList.find(level => level.id === levelId);
+                        if (!s) continue;
+
+                        totalCredits += s.cost || 0;
+                        totalCoins += s.coins || 0;
+                    }
+
+                    const canPayWithCredits = userInfo.credits >= totalCredits && totalCredits > 0;
+                    const canPayWithCoins = userInfo.coins >= totalCoins && totalCoins > 0;
+
+                    if (!canPayWithCredits && !canPayWithCoins) {
+                        alert('Nicht genug Credits oder Coins für diese Stufe!');
+                        return;
+                    }
+
+                    levelChoiceCell.querySelectorAll('button').forEach(btn => {
+                        btn.dataset.active = 'false';
+                    });
+
+                    lvlBtn.dataset.active = 'true';
+
+                    selectedLevels[building.id] = stufe.id;
+
+                    updateBuildButtons(
+                        building,
+                        stufe.id,
+                        creditCell,
+                        coinCell,
+                        levelList,
+                        currentLevel
+                    );
+
+                    updateSelectedAmounts(buildingsData);
+                    updateBuildSelectedLevelsButtonState(group);
+                };
+
+                levelChoiceCell.appendChild(lvlBtn);
+            });
+
+            const trashBtn = document.createElement('button');
+            trashBtn.innerHTML = '🗑️';
+            trashBtn.title = 'Auswahl zurücksetzen';
+            trashBtn.classList.add('btn', 'btn-sm', 'btn-danger');
+            trashBtn.style.display = 'inline-block';
+            trashBtn.style.padding = '2px 6px';
+            trashBtn.style.margin = '0 2px';
+            trashBtn.style.fontSize = '11px';
+            trashBtn.style.borderRadius = '12px';
+            trashBtn.style.border = 'none';
+            trashBtn.style.cursor = 'pointer';
+            trashBtn.style.fontWeight = 'bold';
+
+            trashBtn.onclick = () => {
+                selectedLevels[building.id] = null;
+
+                levelChoiceCell.querySelectorAll('button').forEach(btn => {
+                    btn.dataset.active = 'false';
+                });
+
+                updateBuildButtons(building, null, creditCell, coinCell, levelList, currentLevel);
+                updateSelectedAmounts(buildingsData);
+                updateBuildSelectedLevelsButtonState(group);
+            };
+
+            levelChoiceCell.appendChild(trashBtn);
+            tbody.appendChild(row);
+        });
+
+        return table;
+    }
+    function createSpecialTable(group, userInfo, buildings) {
+        const table = document.createElement('table');
+        Object.assign(table.style, {
+            width: '100%',
+            borderCollapse: 'collapse',
+            backgroundColor: 'var(--background-color)',
+            color: 'var(--text-color)'
+        });
+
+        table.innerHTML = `
+        <thead><tr>
+            <th style="padding:10px;text-align:center;border-bottom:2px solid var(--border-color);">Alle An- / Abwählen</th>
+            <th style="border-bottom:2px solid var(--border-color);">Leitstelle</th>
+            <th style="border-bottom:2px solid var(--border-color);">Wache</th>
+            <th style="border-bottom:2px solid var(--border-color);">Spezialisierung</th>
+            <th style="border-bottom:2px solid var(--border-color);">Bauen mit Credits</th>
+            <th style="border-bottom:2px solid var(--border-color);">Bauen mit Coins</th>
+        </tr></thead>
+        <tbody></tbody>`;
+
+        const tbody = table.querySelector('tbody');
+        const thead = table.querySelector('thead');
+        const filters = {}, filterElements = {};
+        let manualSearchTerm = '';
+
+        function applyCellStyle(cell) {
+            cell.style.borderColor = 'var(--border-color)';
+            cell.style.color = 'var(--text-color)';
+        }
+
+        function createDropdownFilter(options, placeholder, colIndex) {
+            const th = document.createElement('th');
+            Object.assign(th.style, { padding: '4px 8px' });
+            applyCellStyle(th);
+
+            const select = document.createElement('select');
+            select.classList.add('btn', 'btn-sm');
+            Object.assign(select.style, {
+                width: '100%',
+                fontSize: '0.8em',
+                padding: '2px 6px',
+                verticalAlign: 'middle',
+                cursor: 'pointer',
+                backgroundColor: 'var(--background-color)',
+                color: 'var(--text-color)',
+                border: '1px solid var(--border-color)'
+            });
+
+            select.innerHTML = `<option value="">🔽 ${placeholder}</option>`;
+            [...new Set(options)]
+                .sort((a, b) => String(a).localeCompare(String(b)))
+                .forEach(option => {
+                const element = document.createElement('option');
+                element.value = element.textContent = option;
+                select.appendChild(element);
+            });
+
+            select.addEventListener('change', () => {
+                filters[colIndex] = select.value || undefined;
+                applyAllFilters();
+                updateSelectAllCheckboxState();
+            });
+
+            filterElements[colIndex] = select;
+            th.appendChild(select);
+            return th;
+        }
+
+        const specializationRows = [];
+
+        group
+            .map(item => item?.building)
+            .filter(building => building && isSpecializationBuilding(building))
+            .forEach(building => {
+            getAvailableSpecializations(building).forEach(specialization => {
+                specializationRows.push({
+                    building,
+                    leitstelle: getLeitstelleName(building),
+                    wache: building.caption || '-',
+                    specialization
+                });
+            });
+        });
+
+        if (!specializationRows.length) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            Object.assign(cell.style, {
+                padding: '15px',
+                textAlign: 'center',
+                opacity: '0.7',
+                color: 'var(--text-color)'
+            });
+            cell.colSpan = 6;
+            cell.textContent = 'Keine baubaren Spezialisierungen vorhanden.';
+            row.appendChild(cell);
+            tbody.appendChild(row);
+            return table;
+        }
+
+        const filterRow = document.createElement('tr');
+        filterRow.classList.add('lss-manager-filter-row');
+
+        const selectAllCell = document.createElement('th');
+        selectAllCell.style.padding = '4px 8px';
+        applyCellStyle(selectAllCell);
+
+        const selectAllCheckbox = Object.assign(
+            document.createElement('input'),
+            {
+                type: 'checkbox',
+                className: 'select-all-checkbox'
+            }
+        );
+        selectAllCheckbox.dataset.group = 'specializations';
+        selectAllCell.appendChild(selectAllCheckbox);
+        filterRow.appendChild(selectAllCell);
+
+        [
+            [specializationRows.map(r => r.leitstelle), 'Leitstelle', 1],
+            [specializationRows.map(r => r.wache), 'Wache', 2],
+            [specializationRows.map(r => r.specialization.name), 'Spezialisierung', 3]
+        ].forEach(args => filterRow.appendChild(createDropdownFilter(...args)));
+
+        const resetCell = document.createElement('th');
+        Object.assign(resetCell.style, {
+            padding: '4px 8px',
+            textAlign: 'center'
+        });
+        applyCellStyle(resetCell);
+
+        const resetBtn = document.createElement('button');
+        resetBtn.textContent = 'Filter zurücksetzen';
+        resetBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+        Object.assign(resetBtn.style, {
+            padding: '2px 6px',
+            fontSize: '0.8em'
+        });
+        resetCell.appendChild(resetBtn);
+        filterRow.appendChild(resetCell);
+
+        const uncheckCell = document.createElement('th');
+        Object.assign(uncheckCell.style, {
+            padding: '4px 8px',
+            textAlign: 'center'
+        });
+        applyCellStyle(uncheckCell);
+
+        const uncheckBtn = document.createElement('button');
+        uncheckBtn.textContent = 'Alle abwählen';
+        uncheckBtn.classList.add('btn', 'btn-sm', 'btn-warning');
+        Object.assign(uncheckBtn.style, {
+            padding: '2px 6px',
+            fontSize: '0.8em'
+        });
+        uncheckCell.appendChild(uncheckBtn);
+        filterRow.appendChild(uncheckCell);
+
+        const searchRow = document.createElement('tr');
+        const searchCell = document.createElement('th');
+        searchCell.colSpan = 6;
+        searchCell.style.padding = '6px 10px';
+
+        const searchInput = Object.assign(
+            document.createElement('input'),
+            {
+                type: 'text',
+                className: 'form-control',
+                placeholder: 'Manuelle Suche: Leitstelle, Wache oder Spezialisierung...',
+                autocomplete: 'off'
+            }
+        );
+
+        Object.assign(searchInput.style, {
+            width: '100%',
+            backgroundColor: 'var(--background-color)',
+            color: 'var(--text-color)',
+            border: '1px solid var(--border-color)'
+        });
+
+        searchInput.addEventListener('input', () => {
+            manualSearchTerm = searchInput.value.toLowerCase().trim();
+            applyAllFilters();
+            updateSelectAllCheckboxState();
+        });
+
+        searchCell.appendChild(searchInput);
+        searchRow.appendChild(searchCell);
+        thead.append(searchRow, filterRow);
+
+        resetBtn.onclick = () => {
+            Object.values(filterElements).forEach(select => select.selectedIndex = 0);
+            Object.keys(filters).forEach(key => delete filters[key]);
+            manualSearchTerm = '';
+            searchInput.value = '';
+            applyAllFilters();
+            updateSelectAllCheckboxState();
+        };
+
+        uncheckBtn.onclick = () => {
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+                const cb = row.querySelector('.extension-checkbox');
+                if (cb && !cb.disabled) cb.checked = false;
+            });
+
+            updateSpecializationPrices(buildings);
+            updateSelectedAmounts(buildings);
+            updateBuildSelectedButton();
+            updateSelectedSpecializationButton();
+            updateSelectAllCheckboxState();
+        };
+
+        selectAllCheckbox.addEventListener('change', () => {
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+                const cb = row.querySelector('.extension-checkbox');
+                if (cb && !cb.disabled) cb.checked = selectAllCheckbox.checked;
+            });
+
+            updateSpecializationPrices(buildings);
+            updateSelectedAmounts(buildings);
+            updateBuildSelectedButton();
+            updateSelectedSpecializationButton();
+            updateSelectAllCheckboxState();
+        });
+
+        specializationRows.forEach(({ building, leitstelle, wache, specialization }) => {
+            const creditCost = getSpecializationCreditCost(
+                buildings,
+                specialization.apiType,
+                building
+            );
+
+            const row = document.createElement('tr');
+            row.dataset.buildingId = building.id;
+            row.dataset.specializationType = specialization.apiType;
+            row.style.borderBottom = '1px solid var(--border-color)';
+
+            const checkbox = Object.assign(
+                document.createElement('input'),
+                {
+                    type: 'checkbox',
+                    className: 'extension-checkbox'
+                }
+            );
+
+            Object.assign(checkbox.dataset, {
+                buildingId: building.id,
+                specializationType: specialization.type,
+                apiType: specialization.apiType,
+                creditCost,
+                coinCost: Number(specialization.coins) || 0
+            });
+
+            const checkboxCell = document.createElement('td');
+            checkboxCell.style.textAlign = 'center';
+            checkboxCell.appendChild(checkbox);
+
+            const cells = [checkboxCell];
+
+            [leitstelle, wache, specialization.name].forEach(text => {
+                const cell = document.createElement('td');
+                cell.textContent = text;
+                applyCellStyle(cell);
+                cells.push(cell);
+            });
+
+            const createCurrencyButton = (currency, cost, color, className) => {
+                const btn = document.createElement('button');
+                btn.textContent = `${formatNumber(cost)} ${currency === 'credits' ? 'Credits' : 'Coins'}`;
+                btn.classList.add('btn', 'btn-xl', className);
+                Object.assign(btn.style, {
+                    backgroundColor: color,
+                    color: 'white'
+                });
+
+                const balance = Number(userInfo?.[currency] || 0);
+                btn.disabled = balance < cost;
+
+                if (btn.disabled) {
+                    btn.title = `Benötigt ${formatNumber(cost)} ${currency === 'credits' ? 'Credits' : 'Coins'}`;
+                }
+
+                btn.onclick = async () => {
+                    const currentCost =
+                          currency === 'credits'
+                    ? Number(checkbox.dataset.creditCost) || cost
+                    : cost;
+
+                    const currentBalance = Number(userInfo?.[currency] || 0);
+
+                    if (currentBalance < currentCost) {
+                        alert(
+                            `Du benötigst ${formatNumber(currentCost)} ${currency === 'credits' ? 'Credits' : 'Coins'} für diese Spezialisierung.`
+                        );
+                        return;
+                    }
+
+                    btn.disabled = true;
+
+                    const success = await buildSpecialization(
+                        building,
+                        specialization.apiType,
+                        currentCost,
+                        currency
+                    );
+
+                    if (!success) {
+                        btn.disabled =
+                            Number(userInfo?.[currency] || 0) < currentCost;
+                        return;
+                    }
+
+                    await initUserCredits();
+                    row.remove();
+                    updateSelectedAmounts(buildings);
+                    updateBuildSelectedButton();
+                    updateSelectAllCheckboxState();
+                };
+
+                return btn;
+            };
+
+            cells.forEach(applyCellStyle);
+
+            const creditCell = document.createElement('td');
+            creditCell.style.textAlign = 'center';
+            applyCellStyle(creditCell);
+            creditCell.appendChild(
+                createCurrencyButton(
+                    'credits',
+                    creditCost,
+                    '#28a745',
+                    'credits-button'
+                )
+            );
+
+            const coinCost = Number(specialization.coins) || 0;
+            const coinsCell = document.createElement('td');
+            coinsCell.style.textAlign = 'center';
+            applyCellStyle(coinsCell);
+            coinsCell.appendChild(
+                createCurrencyButton(
+                    'coins',
+                    coinCost,
+                    '#dc3545',
+                    'coins-button'
+                )
+            );
+
+            row.append(...cells, creditCell, coinsCell);
+
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    if (!checkbox.dataset.selectionOrder) {
+                        checkbox.dataset.selectionOrder =
+                            ++specializationSelectionCounter;
+                    }
+                } else {
+                    delete checkbox.dataset.selectionOrder;
+                }
+
+                updateSpecializationPrices(buildings);
+                updateSelectedAmounts(buildings);
+                updateBuildSelectedButton();
+                updateSelectedSpecializationButton();
+                updateSelectAllCheckboxState();
+            });
+
+            tbody.appendChild(row);
+        });
+
+        function applyAllFilters() {
+            tbody.querySelectorAll('tr').forEach(row => {
+                const filterMatch = Object.entries(filters).every(
+                    ([index, value]) =>
+                    !value ||
+                    row.children[index]?.textContent
+                    .trim()
+                    .toLowerCase() === value.toLowerCase()
+                );
+
+                const searchMatch =
+                      !manualSearchTerm ||
+                      [1, 2, 3].some(index =>
+                                     row.children[index]?.textContent
+                                     .toLowerCase()
+                                     .includes(manualSearchTerm)
+                                    );
+
+                row.style.display =
+                    filterMatch && searchMatch ? '' : 'none';
+            });
+        }
+
+        function updateSelectAllCheckboxState() {
+            let total = 0, checked = 0;
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                if (row.style.display === 'none') return;
+
+                const cb = row.querySelector('.extension-checkbox');
+
+                if (cb && !cb.disabled) {
+                    total++;
+                    if (cb.checked) checked++;
+                }
+            });
+
+            selectAllCheckbox.checked = total > 0 && total === checked;
+            selectAllCheckbox.indeterminate = checked > 0 && checked < total;
+            selectAllCheckbox.disabled = total === 0;
+        }
+
+        updateSelectedAmounts(buildings);
+        updateSelectAllCheckboxState();
+
+        return table;
+    }
+
+    // Funktion zur Prüfung der richtigen Baureihenfolge von Lagerräumen
+    function canBuildStorageInOrder(buildingId, storageId) {
+        const building = buildingsData.find(b => String(b.id) === String(buildingId));
+        if (!building) return false;
+
+        const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+        const storageList = manualStorageRooms[buildingTypeKey] || [];
+        const indexToBuild = storageList.findIndex(s => s.id === storageId);
+        if (indexToBuild === -1) return true; // Lagerraum nicht in Liste => keine Einschränkung
+
+        const currentState = getCurrentStorageState(buildingId);
+
+        // Prüfen, ob alle vorherigen Lagerräume bereits gebaut sind
+        for (let i = 0; i < indexToBuild; i++) {
+            if (!currentState.includes(storageList[i].id)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    function canBuildAllSelectedInOrder(buildingId, selectedStorages) {
+        const building = buildingsData.find(b => String(b.id) === String(buildingId));
+        if (!building) return false;
+
+        const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+        const storageOrder = manualStorageRooms[buildingTypeKey]?.map(s => s.id) || [];
+        const builtStorages = new Set(getCurrentStorageState(buildingId));
+
+        for (let i = 0; i < selectedStorages.length; i++) {
+            const storageId = selectedStorages[i];
+            const requiredIndex = storageOrder.indexOf(storageId);
+            if (requiredIndex === -1) continue;
+
+            const missing = storageOrder
+            .slice(0, requiredIndex)
+            .some(prevId => !builtStorages.has(prevId));
+
+            if (missing) {
+                return false;
+            }
+            builtStorages.add(storageId);
+        }
+        return true;
+    }
+
+    // Filterfunktion über Dropdowns
+    function filterTableByDropdown(table, columnIndex, filterValue) {
+        const tbody = table.querySelector('tbody');
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cell = row.children[columnIndex];
+            const cellText = cell?.textContent.toLowerCase() || '';
+            const match = !filterValue || cellText === filterValue.toLowerCase();
+            row.style.display = match ? '' : 'none';
+        });
+    }
+
+    // Funktion zur Filterungen der Tabelleninhalten
+    function filterTable(tbody, searchTerm) {
+        const rows = tbody.querySelectorAll("tr");
+
+        rows.forEach(row => {
+            const leitstelle = row.cells[1]?.textContent.toLowerCase() || "";
+            const wachenName = row.cells[2]?.textContent.toLowerCase() || "";
+            const erweiterung = row.cells[3]?.textContent.toLowerCase() || "";
+            const isBuilt = row.classList.contains("built");
+
+            if (isBuilt) {
+                row.style.display = "none";
+            } else if (leitstelle.includes(searchTerm) || wachenName.includes(searchTerm) || erweiterung.includes(searchTerm)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
     // Schließen-Button-Funktionalität
     document.getElementById('close-extension-helper').addEventListener('click', () => {
         const lightbox = document.getElementById('extension-lightbox');
@@ -3429,16 +5085,55 @@
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Anfang des Bereichs für den Einzelbau in einem Gebäude
-
     // Funktion zum Bau einer Erweiterung, eines Lagerraumes
-    async function buildExtension(building, extensionId, currency, amount, row) {
-        const userInfo = await getUserCredits();
+    async function buildExtension(building, extensionId, currency, amount, row, isAllianceBuild = false) {
+        amount = Number(amount) || 0;
 
-        // Die Erweiterung wird direkt gebaut
+        // Guthaben prüfen
+        if (isAllianceBuild) {
+            if (currency !== 'credits') {
+                console.error(
+                    'Verbandsgebäude können ausschließlich mit Verbands-Credits gebaut werden.'
+                );
+                return false;
+            }
+
+            const currentAllianceCredits =
+                  Number(allianceInfo?.credits_current || 0);
+
+            if (currentAllianceCredits < amount) {
+                showError(
+                    `Nicht genügend Verbands-Credits vorhanden.\n\n` +
+                    `Benötigt: ${formatNumber(amount)}\n` +
+                    `Vorhanden: ${formatNumber(currentAllianceCredits)}`
+                );
+                return false;
+            }
+        } else {
+            const userInfo = await getUserCredits();
+
+            if (currency === 'credits' && userInfo.credits < amount) {
+                showError(
+                    `Nicht genügend Credits vorhanden.\n\n` +
+                    `Benötigt: ${formatNumber(amount)}`
+                );
+                return false;
+            }
+
+            if (currency === 'coins' && userInfo.coins < amount) {
+                showError(
+                    `Nicht genügend Coins vorhanden.\n\n` +
+                    `Benötigt: ${formatNumber(amount)}`
+                );
+                return false;
+            }
+        }
+
         const csrfToken = getCSRFToken();
-        const buildUrl = `/buildings/${building.id}/extension/${currency}/${extensionId}`;
+        const buildUrl =
+              `/buildings/${building.id}/extension/${currency}/${extensionId}`;
 
-        await new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: 'POST',
                 url: buildUrl,
@@ -3446,60 +5141,91 @@
                     'X-CSRF-Token': csrfToken,
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                onload: function(response) {
-                    // Überprüfen, ob die Zeile existiert
-                    if (row) {
-                        // Wenn es sich um eine Polizei-Kleinwache handelt und Erweiterungen 10, 11, 12, 13 oder 16 betroffen sind
-                        if (building.building_type === 6 && building.small_building && [10, 11, 12, 13, 16].includes(extensionId)) {
-                            // Alle Erweiterungen der Polizei-Kleinwache ausblenden, die noch nicht gebaut wurden
-                            const allRows = document.querySelectorAll(
-                                `.row-${building.id}-10,
-                         .row-${building.id}-11,
-                         .row-${building.id}-12,
-                         .row-${building.id}-13,
-                         .row-${building.id}-16`
-                            );
-                            allRows.forEach(otherRow => {
-                                if (otherRow !== row) {
-                                    otherRow.style.display = 'none';
-                                }
-                            });
-                        }
-
-                        // Wenn es sich um eine Feuerwehr-Kleinwache handelt und Erweiterungen 0, 3, 4, 5, 6, 7, 8, 9 oder 12 betroffen sind
-                        if (building.building_type === 0 && building.small_building && [0, 6, 8, 13, 14, 16, 18, 19, 25].includes(extensionId)) {
-                            // Alle Erweiterungen der Feuerwehr-Kleinwache ausblenden, die noch nicht gebaut wurden
-                            const allRows = document.querySelectorAll(
-                                `.row-${building.id}-0,
-                         .row-${building.id}-6,
-                         .row-${building.id}-8,
-                         .row-${building.id}-13,
-                         .row-${building.id}-14,
-                         .row-${building.id}-16,
-                         .row-${building.id}-18,
-                         .row-${building.id}-19,
-                         .row-${building.id}-25`
-                            );
-                            allRows.forEach(otherRow => {
-                                if (otherRow !== row) {
-                                    otherRow.style.display = 'none';
-                                }
-                            });
-                        }
-
+                onload: async function(response) {
+                    if (response.status >= 200 && response.status < 300) {
                         if (row) {
-                            row.classList.add("built");
-                            row.style.display = "none";
+                            // Polizei-Kleinwache
+                            if (
+                                building.building_type === 6 &&
+                                building.small_building &&
+                                [10, 11, 12, 13, 16].includes(extensionId)
+                            ) {
+                                const allRows = document.querySelectorAll(
+                                    `.row-${building.id}-10,
+                                 .row-${building.id}-11,
+                                 .row-${building.id}-12,
+                                 .row-${building.id}-13,
+                                 .row-${building.id}-16`
+                                );
+
+                                allRows.forEach(otherRow => {
+                                    if (otherRow !== row) {
+                                        otherRow.style.display = 'none';
+                                    }
+                                });
+                            }
+
+                            // Feuerwehr-Kleinwache
+                            if (
+                                building.building_type === 0 &&
+                                building.small_building &&
+                                [0, 6, 8, 13, 14, 16, 18, 19, 25].includes(extensionId)
+                            ) {
+                                const allRows = document.querySelectorAll(
+                                    `.row-${building.id}-0,
+                                 .row-${building.id}-6,
+                                 .row-${building.id}-8,
+                                 .row-${building.id}-13,
+                                 .row-${building.id}-14,
+                                 .row-${building.id}-16,
+                                 .row-${building.id}-18,
+                                 .row-${building.id}-19,
+                                 .row-${building.id}-25`
+                                );
+
+                                allRows.forEach(otherRow => {
+                                    if (otherRow !== row) {
+                                        otherRow.style.display = 'none';
+                                    }
+                                });
+                            }
+
+                            row.classList.add('built');
+                            row.style.display = 'none';
                         }
 
-                        row.style.display = 'none';
-                    }
+                        // Guthaben nach erfolgreichem Bau aktualisieren
+                        if (isAllianceBuild) {
+                            allianceInfo = await getAllianceInfo();
+                        }
 
-                    resolve(response);
+                        resolve(true);
+                    } else {
+                        console.error(
+                            `Fehler beim Bauen der Erweiterung ${extensionId}:`,
+                            response.status,
+                            response.responseText
+                        );
+
+                        showError(
+                            `Die Erweiterung konnte nicht gebaut werden.\n\n` +
+                            `HTTP-Fehler: ${response.status}`
+                        );
+
+                        resolve(false);
+                    }
                 },
                 onerror: function(error) {
-                    console.error(`Fehler beim Bauen der Erweiterung in Gebäude ${building.id}.`, error);
-                    reject(error);
+                    console.error(
+                        `Fehler beim Bauen der Erweiterung in Gebäude ${building.id}.`,
+                        error
+                    );
+
+                    showError(
+                        'Beim Bauen der Erweiterung ist ein Fehler aufgetreten.'
+                    );
+
+                    resolve(false);
                 }
             });
         });
@@ -3547,57 +5273,102 @@
         });
     }
     async function buildLevel(buildingId, currency, level) {
+        const buildLevel = Number(level) - 1;
+        const url = `/buildings/${buildingId}/expand_do/${currency}?level=${buildLevel}`;
         const csrfToken = getCSRFToken();
-        const initialUrl = `/buildings/${buildingId}/expand_do/${currency}?level=${level}`;
 
         function doGetRequest(url) {
             return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
-                    url: url,
+                    url,
                     withCredentials: true,
                     headers: {
                         'X-CSRF-Token': csrfToken,
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    onload: (response) => resolve(response),
-                    onerror: (error) => reject(error)
+                    onload: resolve,
+                    onerror: reject
                 });
             });
         }
 
         try {
-            const response1 = await doGetRequest(initialUrl);
-
-            if (response1.status === 302) {
-                // Redirect URL auslesen
-                const locationHeader = (response1.responseHeaders.match(/location:\s*(.+)/i) || [])[1];
+            const response = await doGetRequest(url);
+            if (response.status === 302) {
+                const locationHeader = (response.responseHeaders.match(/location:\s*(.+)/i) || [])[1];
                 if (!locationHeader) throw new Error('Redirect ohne Location-Header');
 
                 const redirectUrl = locationHeader.trim();
-
-                // Zweite Anfrage an Redirect-URL
                 const response2 = await doGetRequest(redirectUrl);
 
-                if (response2.status >= 200 && response2.status < 400) {
-                    return response2;
-                } else {
-                    throw new Error(`Fehler nach Redirect: Status ${response2.status}`);
-                }
-            } else if (response1.status >= 200 && response1.status < 400) {
-                return response1;
-            } else {
-                throw new Error(`Fehler beim Ausbau: Status ${response1.status}`);
+                if (response2.status >= 200 && response2.status < 400) return response2;
+                throw new Error(`Fehler nach Redirect: Status ${response2.status}`);
             }
+
+            if (response.status >= 200 && response.status < 400) return response;
+
+            throw new Error(`Fehler beim Ausbau: Status ${response.status}`);
         } catch (err) {
             console.error(err);
             throw err;
         }
     }
+    async function buildSpecialization(building, specializationType, cost, currency = 'coins') {
+        const csrfToken = getCSRFToken();
+
+        if (!csrfToken) {
+            showError('CSRF-Token konnte nicht ermittelt werden.');
+            return false;
+        }
+
+        return new Promise(resolve => {
+            GM_xmlhttpRequest({
+                method: 'POST',
+                url:
+                `/building_specializations?building_id=${building.id}` +
+                `&pay_with=${encodeURIComponent(currency)}` +
+                `&type=${encodeURIComponent(specializationType)}`,
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                },
+                onload: response => {
+                    if (response.status >= 200 && response.status < 400) {
+                        console.log(
+                            '[Erweiterungs-Manager] Spezialisierung erfolgreich gebaut:',
+                            specializationType,
+                            currency,
+                            building.id
+                        );
+                        resolve(true);
+                    } else {
+                        console.error(
+                            '[Erweiterungs-Manager] Fehler beim Bau der Spezialisierung:',
+                            response.status,
+                            response.responseText
+                        );
+                        showError(
+                            `Fehler beim Bau der Spezialisierung (${response.status}).`
+                        );
+                        resolve(false);
+                    }
+                },
+                onerror: error => {
+                    console.error(
+                        '[Erweiterungs-Manager] Netzwerkfehler:',
+                        error
+                    );
+                    showError(
+                        'Beim Bau der Spezialisierung ist ein Netzwerkfehler aufgetreten.'
+                    );
+                    resolve(false);
+                }
+            });
+        });
+    }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Anfang der Funktion für * Bau von ausgewählten Erweiterungen *
-
     // Funktion zum Überprüfen der maximalen Erweiterungen für Kleinwachen
     function checkMaxExtensions(buildingId, selectedExtensions) {
         const building = buildingsData.find(b => String(b.id) === String(buildingId));
@@ -3677,8 +5448,11 @@
 
     // Funktion zum Bau der ausgewählten Erweiterungen
     async function buildSelectedExtensions() {
-        const selectedExtensions = document.querySelectorAll('.extension-checkbox:checked');
-        const selectedStorages = document.querySelectorAll('.storage-checkbox:checked');
+        const selectedExtensions =
+              document.querySelectorAll('.extension-checkbox:checked');
+
+        const selectedStorages =
+              document.querySelectorAll('.storage-checkbox:checked');
 
         const selectedExtensionsByBuilding = {};
         const selectedStoragesByBuilding = {};
@@ -3686,9 +5460,15 @@
         // Erweiterungen erfassen
         selectedExtensions.forEach(checkbox => {
             const buildingId = checkbox.dataset.buildingId;
-            const extensionId = parseInt(checkbox.dataset.extensionId, 10);
+            const extensionId = parseInt(
+                checkbox.dataset.extensionId,
+                10
+            );
 
-            if (!selectedExtensionsByBuilding[buildingId]) selectedExtensionsByBuilding[buildingId] = [];
+            if (!selectedExtensionsByBuilding[buildingId]) {
+                selectedExtensionsByBuilding[buildingId] = [];
+            }
+
             selectedExtensionsByBuilding[buildingId].push(extensionId);
         });
 
@@ -3697,105 +5477,154 @@
             const buildingId = checkbox.dataset.buildingId;
             const storageType = checkbox.dataset.storageType;
 
-            if (!selectedStoragesByBuilding[buildingId]) selectedStoragesByBuilding[buildingId] = [];
+            if (!selectedStoragesByBuilding[buildingId]) {
+                selectedStoragesByBuilding[buildingId] = [];
+            }
+
             selectedStoragesByBuilding[buildingId].push(storageType);
         });
 
         // Prüfung auf ungültige Erweiterungen für Kleinwachen
-        for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
-            const building = buildingsData.find(b => String(b.id) === String(buildingId));
-            if (!building) continue;
+        for (const [buildingId, extensions] of Object.entries(
+            selectedExtensionsByBuilding
+        )) {
+            const building = buildingsData.find(
+                b => String(b.id) === String(buildingId)
+            );
 
-            if (building.small_building) {
-                if (building.building_type === 0) {
-                    const invalidCombinationsFeuerwache = [0, 6, 8, 13, 14, 16, 18, 19, 25];
-                    const selectedInvalidExtensionsFeuerwache = extensions.filter(extId =>
-                                                                                  invalidCombinationsFeuerwache.includes(extId)
-                                                                                 );
+            if (!building || !building.small_building) {
+                continue;
+            }
 
-                    if (selectedInvalidExtensionsFeuerwache.length > 1) {
-                        showError("Information zu deinem Bauvorhaben:\n\nDiese Erweiterungen für die Feuerwache (Kleinwache) können nicht zusammen gebaut werden.\n\n Eine Erweiterung + 2 AB-Stellplätze sowie 2 Anh-Stellplätze sind erlaubt.");
-                        document.querySelector('.select-all-checkbox').checked = false;
-                        updateBuildSelectedButton();
-                        return;
-                    }
+            // Feuerwehr-Kleinwache
+            if (building.building_type === 0) {
+                const invalidCombinationsFeuerwache = [
+                    0, 6, 8, 13, 14, 16, 18, 19, 25
+                ];
+
+                const selectedInvalidExtensions =
+                      extensions.filter(extId =>
+                                        invalidCombinationsFeuerwache.includes(extId)
+                                       );
+
+                if (selectedInvalidExtensions.length > 1) {
+                    showError(
+                        'Information zu deinem Bauvorhaben:\n\n' +
+                        'Diese Erweiterungen für die Feuerwache (Kleinwache) ' +
+                        'können nicht zusammen gebaut werden.\n\n' +
+                        'Eine Erweiterung + 2 AB-Stellplätze sowie ' +
+                        '2 Anh-Stellplätze sind erlaubt.'
+                    );
+
+                    document
+                        .querySelectorAll('.select-all-checkbox')
+                        .forEach(cb => cb.checked = false);
+
+                    updateBuildSelectedButton();
+                    return;
                 }
+            }
 
-                if (building.building_type === 6) {
-                    const invalidCombinationsPolizei = [10, 11, 12, 13, 16];
-                    const selectedInvalidExtensionsPolizei = extensions.filter(extId =>
-                                                                               invalidCombinationsPolizei.includes(extId)
-                                                                              );
+            // Polizei-Kleinwache
+            if (building.building_type === 6) {
+                const invalidCombinationsPolizei = [
+                    10, 11, 12, 13, 16
+                ];
 
-                    if (selectedInvalidExtensionsPolizei.length > 1) {
-                        showError("Information zu deinem Bauvorhaben:\n\nDiese Erweiterungen für die Polizeiwache (Kleinwache) können nicht zusammen gebaut werden.\n\nEs ist maximal eine Erweiterung + 2 Zellen erlaubt.");
-                        document.querySelector('.select-all-checkbox').checked = false;
-                        updateBuildSelectedButton();
-                        return;
-                    }
+                const selectedInvalidExtensions =
+                      extensions.filter(extId =>
+                                        invalidCombinationsPolizei.includes(extId)
+                                       );
+
+                if (selectedInvalidExtensions.length > 1) {
+                    showError(
+                        'Information zu deinem Bauvorhaben:\n\n' +
+                        'Diese Erweiterungen für die Polizeiwache (Kleinwache) ' +
+                        'können nicht zusammen gebaut werden.\n\n' +
+                        'Es ist maximal eine Erweiterung + 2 Zellen erlaubt.'
+                    );
+
+                    document
+                        .querySelectorAll('.select-all-checkbox')
+                        .forEach(cb => cb.checked = false);
+
+                    updateBuildSelectedButton();
+                    return;
                 }
             }
         }
 
-        // Prüfung Lagerreihenfolge wachenweise
-        for (const [buildingId, storageTypes] of Object.entries(selectedStoragesByBuilding)) {
-            if (!canBuildAllSelectedInOrder(buildingId, storageTypes)) {
-                showError(`Bitte beachte: Die Lagerräume müssen in der vorgegebenen Reihenfolge gebaut werden.\n\nReihenfolge:\n1. Lagerraum\n2. 1te zusätzlicher Lagerraum\n3. 2te zusätzlicher Lagerraum\n...`);
-                updateBuildSelectedButton();
-                return;
+        // Prüfung der Lagerreihenfolge
+        // Bei Verbandsgebäuden gibt es keine Lager und damit auch nichts zu prüfen.
+        if (currentView !== 'alliance') {
+            for (const [
+                buildingId,
+                storageTypes
+            ] of Object.entries(selectedStoragesByBuilding)) {
+                if (!canBuildAllSelectedInOrder(
+                    buildingId,
+                    storageTypes
+                )) {
+                    showError(
+                        'Bitte beachte: Die Lagerräume müssen in der ' +
+                        'vorgegebenen Reihenfolge gebaut werden.\n\n' +
+                        'Reihenfolge:\n' +
+                        '1. Lagerraum\n' +
+                        '2. 1te zusätzlicher Lagerraum\n' +
+                        '3. 2te zusätzlicher Lagerraum\n' +
+                        '...'
+                    );
+
+                    updateBuildSelectedButton();
+                    return;
+                }
             }
         }
 
-        // Credits und Coins berechnen
+        // Währung auswählen und Bau starten
         let userInfo;
+
         if (currentView === 'alliance') {
             userInfo = {
-                credits: allianceInfo ? Number(allianceInfo.credits_current || 0) : 0,
+                credits: Number(
+                    allianceInfo?.credits_current || 0
+                ),
                 coins: 0,
                 premium: false
             };
         } else {
             userInfo = await getUserCredits();
         }
-        let totalCredits = 0;
-        let totalCoins = 0;
 
-        for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
-            extensions.forEach(extensionId => {
-                const row = document.querySelector(`.row-${buildingId}-${extensionId}`);
-                if (!row) return;
-                const creditElement = row.querySelector('.credit-button');
-                const coinElement = row.querySelector('.coins-button');
-                if (creditElement) totalCredits += parseInt(creditElement.innerText.replace(/\D/g, '') || '0', 10);
-                if (coinElement) totalCoins += parseInt(coinElement.innerText.replace(/\D/g, '') || '0', 10);
-            });
-        }
-
-        for (const [buildingId, storageTypes] of Object.entries(selectedStoragesByBuilding)) {
-            const building = buildingsData.find(b => String(b.id) === String(buildingId));
-            if (!building) continue;
-            const buildingTypeKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-            const storageDefs = manualStorageRooms[buildingTypeKey];
-            if (!storageDefs) continue;
-
-            storageTypes.forEach(storageType => {
-                const storageDef = storageDefs.find(s => s.id === storageType);
-                if (!storageDef) return;
-                totalCredits += storageDef.cost || 0;
-                totalCoins += storageDef.coins || 0;
-            });
-        }
-
-        showCurrencySelection(selectedExtensionsByBuilding, userInfo, selectedStoragesByBuilding);
+        await showCurrencySelection(
+            selectedExtensionsByBuilding,
+            userInfo,
+            selectedStoragesByBuilding
+        );
 
         // Checkboxen zurücksetzen
         setTimeout(() => {
-            [...selectedExtensions, ...selectedStorages].forEach(checkbox => checkbox.checked = false);
-            document.querySelectorAll('.select-all-checkbox, .select-all-checkbox-lager').forEach(cb => {
-                cb.checked = false;
-                cb.dispatchEvent(new Event('change'));
+            [
+                ...selectedExtensions,
+                ...selectedStorages
+            ].forEach(checkbox => {
+                checkbox.checked = false;
             });
+
+            document
+                .querySelectorAll(
+                '.select-all-checkbox, .select-all-checkbox-lager'
+            )
+                .forEach(cb => {
+                cb.checked = false;
+                cb.indeterminate = false;
+                cb.dispatchEvent(
+                    new Event('change')
+                );
+            });
+
             updateBuildSelectedButton();
+            updateSelectedAmounts(buildingsData);
         }, 100);
     }
 
@@ -3837,8 +5666,8 @@
 
     // Funktion zur Auswahl der Zahlmöglichkeit sowie Prüfung der ausgewählten Erweiterungen
     async function showCurrencySelection(selectedExtensionsByBuilding, userInfo, selectedStoragesByBuilding) {
-        const userSettings = await getUserMode();
-        const isDarkMode = userSettings && (userSettings.design_mode === 1 || userSettings.design_mode === 4);
+
+        const isAlliance = currentView === 'alliance';
 
         let totalCredits = 0;
         let totalCoins = 0;
@@ -3849,197 +5678,409 @@
         // Erweiterungskosten sammeln
         for (const [buildingId, extensions] of Object.entries(selectedExtensionsByBuilding)) {
             for (const extensionId of extensions) {
-                const row = document.querySelector(`.row-${buildingId}-${extensionId}`);
-                if (row) {
-                    const extensionCost = parseInt(row.querySelector('.credit-button')?.innerText.replace(/\D/g, '') || '0', 10);
-                    const extensionCoins = parseInt(row.querySelector('.coins-button')?.innerText.replace(/\D/g, '') || '0', 10);
-                    totalCredits += extensionCost;
-                    totalCoins += extensionCoins;
-                    extensionRows.push({ buildingId, extensionId, extensionCost, extensionCoins, row });
-                }
+                const row = document.querySelector(
+                    `.row-${buildingId}-${extensionId}`
+                );
+
+                if (!row) continue;
+
+                const checkbox = row.querySelector('.extension-checkbox');
+
+                if (!checkbox) continue;
+
+                const extensionCost = Number(
+                    checkbox.dataset.creditCost || 0
+                );
+
+                const extensionCoins = isAlliance
+                ? 0
+                : Number(checkbox.dataset.coinCost || 0);
+
+                totalCredits += extensionCost;
+                totalCoins += extensionCoins;
+
+                extensionRows.push({
+                    buildingId,
+                    extensionId,
+                    extensionCost,
+                    extensionCoins,
+                    row
+                });
             }
         }
 
-        // Lagerkosten sammeln
-        for (const [buildingId, storageTypes] of Object.entries(selectedStoragesByBuilding)) {
-            for (const storageType of storageTypes) {
-                const row = document.querySelector(`.storage-row-${buildingId}-${storageType}`);
-                if (row) {
-                    const storageCost = parseInt(row.querySelector('.credit-button')?.innerText.replace(/\D/g, '') || '0', 10);
-                    const storageCoins = parseInt(row.querySelector('.coins-button')?.innerText.replace(/\D/g, '') || '0', 10);
+        // Lager nur bei eigenen Gebäuden
+        if (!isAlliance) {
+            for (const [buildingId, storageTypes] of Object.entries(selectedStoragesByBuilding)) {
+                for (const storageType of storageTypes) {
+                    const row = document.querySelector(
+                        `.storage-row-${buildingId}-${storageType}`
+                    );
+
+                    if (!row) continue;
+
+                    const checkbox = row.querySelector('.storage-checkbox');
+
+                    if (!checkbox) continue;
+
+                    const storageCost = Number(
+                        checkbox.dataset.creditCost || 0
+                    );
+
+                    const storageCoins = Number(
+                        checkbox.dataset.coinCost || 0
+                    );
+
                     totalCredits += storageCost;
                     totalCoins += storageCoins;
-                    storageRows.push({ buildingId, storageType, storageCost, storageCoins, row });
+
+                    storageRows.push({
+                        buildingId,
+                        storageType,
+                        storageCost,
+                        storageCoins,
+                        row
+                    });
                 }
             }
         }
 
-        const fehlendeCredits = Math.max(0, totalCredits - userInfo.credits);
-        const fehlendeCoins = Math.max(0, totalCoins - userInfo.coins);
+        // Guthaben prüfen
+        if (isAlliance) {
+            const allianceCredits = Number(
+                allianceInfo?.credits_current || 0
+            );
 
-        if (userInfo.credits < totalCredits && userInfo.coins < totalCoins) {
-            alert(`Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n - Fehlende Credits: ${formatNumber(fehlendeCredits)}\n - Fehlende Coins: ${formatNumber(fehlendeCoins)}`);
-            return;
+            if (allianceCredits < totalCredits) {
+                const missingCredits =
+                      totalCredits - allianceCredits;
+
+                showError(
+                    'Die Auswahl übersteigt das verfügbare Verbandsguthaben.\n\n' +
+                    `Benötigte Verbands-Credits: ${formatNumber(totalCredits)}\n` +
+                    `Verfügbare Verbands-Credits: ${formatNumber(allianceCredits)}\n` +
+                    `Fehlende Verbands-Credits: ${formatNumber(missingCredits)}`
+                );
+
+                return;
+            }
+        } else {
+            const missingCredits = Math.max(
+                0,
+                totalCredits - userInfo.credits
+            );
+
+            const missingCoins = Math.max(
+                0,
+                totalCoins - userInfo.coins
+            );
+
+            if (
+                userInfo.credits < totalCredits &&
+                userInfo.coins < totalCoins
+            ) {
+                showError(
+                    'Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n' +
+                    `Fehlende Credits: ${formatNumber(missingCredits)}\n` +
+                    `Fehlende Coins: ${formatNumber(missingCoins)}`
+                );
+
+                return;
+            }
         }
 
+        // Bestätigungsfenster
         const selectionDiv = document.createElement('div');
+
         selectionDiv.className = 'currency-selection';
-        selectionDiv.style.position = 'fixed';
-        selectionDiv.style.top = '50%';
-        selectionDiv.style.left = '50%';
-        selectionDiv.style.transform = 'translate(-50%, -50%)';
-        selectionDiv.style.zIndex = '10001';
-        selectionDiv.style.background = isDarkMode ? '#333' : '#fff';
-        selectionDiv.style.color = isDarkMode ? '#fff' : '#000';
-        selectionDiv.style.border = `1px solid ${isDarkMode ? '#444' : '#ccc'}`;
-        selectionDiv.style.padding = '20px';
-        selectionDiv.style.borderRadius = '8px';
-        selectionDiv.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
-        selectionDiv.style.minWidth = '320px';
-        selectionDiv.style.textAlign = 'center';
+
+        Object.assign(selectionDiv.style, {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: '10001',
+            padding: '20px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+            minWidth: '320px',
+            textAlign: 'center'
+        });
 
         const totalText = document.createElement('p');
-        totalText.innerHTML = `Wähle zwischen <b style="color:green">Credits (grün)</b> oder <b style="color:red">Coins (rot)</b><br><br>Info:<br>Sollte eine Währung <b>nicht</b> ausreichend vorhanden sein,<br>kannst Du diese nicht auswählen`;
+
+        if (isAlliance) {
+            totalText.innerHTML =
+                `Möchtest du die ausgewählten Erweiterungen wirklich bauen?<br><br>`
+        } else {
+            totalText.innerHTML =
+                `Wähle zwischen <b style="color:green">Credits (grün)</b> ` +
+                `oder <b style="color:red">Coins (rot)</b><br><br>` +
+                `Info:<br>` +
+                `Sollte eine Währung <b>nicht</b> ausreichend vorhanden sein, ` +
+                `kannst Du diese nicht auswählen.`;
+        }
+
         selectionDiv.appendChild(totalText);
 
+        // Credits-Button
+        const creditsButton = document.createElement('button');
+
+        creditsButton.className =
+            'currency-button credits-button';
+
+        creditsButton.textContent = isAlliance
+            ? `${formatNumber(totalCredits)} Verbands-Credits`
+        : `${formatNumber(totalCredits)} Credits`;
+
+        creditsButton.disabled = isAlliance
+            ? Number(allianceInfo?.credits_current || 0) < totalCredits
+        : userInfo.credits < totalCredits;
+
+        Object.assign(creditsButton.style, {
+            margin: '5px',
+            padding: '10px 20px',
+            backgroundColor: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: creditsButton.disabled
+            ? 'not-allowed'
+            : 'pointer'
+        });
+
+        // Coins-Button nur für eigene Gebäude
+        let coinsButton = null;
+
+        if (!isAlliance) {
+            coinsButton = document.createElement('button');
+
+            coinsButton.className =
+                'currency-button coins-button';
+
+            coinsButton.textContent =
+                `${formatNumber(totalCoins)} Coins`;
+
+            coinsButton.disabled =
+                userInfo.coins < totalCoins;
+
+            Object.assign(coinsButton.style, {
+                margin: '5px',
+                padding: '10px 20px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: coinsButton.disabled
+                ? 'not-allowed'
+                : 'pointer'
+            });
+        }
+
+        // Abbrechen-Button
+        const cancelButton = document.createElement('button');
+
+        cancelButton.className = 'cancel-button';
+        cancelButton.textContent = 'Abbrechen';
+
+        Object.assign(cancelButton.style, {
+            margin: '5px',
+            padding: '10px 20px',
+            backgroundColor: '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+        });
+
+        // Credits bauen
+        creditsButton.onclick = async () => {
+            creditsButton.disabled = true;
+
+            if (coinsButton) {
+                coinsButton.disabled = true;
+            }
+
+            cancelButton.disabled = true;
+
+            await buildSelectedWithCurrency(
+                extensionRows,
+                isAlliance ? [] : storageRows,
+                'credits',
+                isAlliance,
+                selectionDiv
+            );
+        };
+
+        // Coins bauen
+        if (coinsButton) {
+            coinsButton.onclick = async () => {
+                creditsButton.disabled = true;
+                coinsButton.disabled = true;
+                cancelButton.disabled = true;
+
+                await buildSelectedWithCurrency(
+                    extensionRows,
+                    storageRows,
+                    'coins',
+                    false,
+                    selectionDiv
+                );
+            };
+        }
+
+        // Abbrechen
+        cancelButton.onclick = () => {
+            selectionDiv.remove();
+        };
+
+        selectionDiv.appendChild(creditsButton);
+
+        if (coinsButton) {
+            selectionDiv.appendChild(coinsButton);
+        }
+
+        selectionDiv.appendChild(cancelButton);
+
+        document.body.appendChild(selectionDiv);
+
+        // Ausgewählte Gebäude bauen
+        async function buildSelectedWithCurrency(extensionRows, storageRows, currency, isAllianceBuild, modal) {
+            const progress = showProgress();
+
+            const totalTasks =
+                  extensionRows.length +
+                  storageRows.length;
+
+            let done = 0;
+
+            try {
+                // Erweiterungen bauen
+                for (const ext of extensionRows) {
+                    const building = buildingsData.find(
+                        b => String(b.id) === String(ext.buildingId)
+                    );
+
+                    if (!building) {
+                        console.warn(
+                            `Gebäude ${ext.buildingId} nicht gefunden.`
+                        );
+                        continue;
+                    }
+
+                    await buildExtension(
+                        building,
+                        ext.extensionId,
+                        currency,
+                        currency === 'credits'
+                        ? ext.extensionCost
+                        : ext.extensionCoins,
+                        ext.row,
+                        isAllianceBuild
+                    );
+
+                    done++;
+                    progress.update(done, totalTasks);
+                }
+
+                // Lager nur bei eigenen Gebäuden
+                if (!isAllianceBuild) {
+                    for (const store of storageRows) {
+                        const building = buildingsData.find(
+                            b => String(b.id) === String(store.buildingId)
+                        );
+
+                        if (!building) {
+                            console.warn(
+                                `Gebäude ${store.buildingId} nicht gefunden.`
+                            );
+                            continue;
+                        }
+
+                        await buildStorage(
+                            building,
+                            store.storageType,
+                            currency,
+                            currency === 'credits'
+                            ? store.storageCost
+                            : store.storageCoins,
+                            store.row,
+                            false
+                        );
+
+                        done++;
+                        progress.update(done, totalTasks);
+                    }
+                }
+
+                progress.close();
+
+                if (modal) {
+                    modal.remove();
+                }
+
+                // Guthaben aktualisieren
+                if (isAllianceBuild) {
+                    allianceInfo = await getAllianceInfo();
+                } else {
+                    await initUserCredits();
+                }
+
+                // Gebäude neu laden
+                await fetchBuildingsAndRender();
+
+            } catch (error) {
+                progress.close();
+
+                console.error(
+                    'Fehler beim Bauen der ausgewählten Gebäude:',
+                    error
+                );
+
+                showError(
+                    'Beim Bauen der ausgewählten Gebäude ist ein Fehler aufgetreten.'
+                );
+            }
+        }
+
+        // Fortschrittsanzeige
         function showProgress() {
             const container = document.createElement('div');
-            container.style.position = 'fixed';
-            container.style.top = '50%';
-            container.style.left = '50%';
-            container.style.transform = 'translate(-50%, -50%)';
-            container.style.zIndex = '10002';
-            container.style.background = isDarkMode ? '#333' : '#fff';
-            container.style.padding = '20px';
-            container.style.borderRadius = '8px';
-            container.style.textAlign = 'center';
-            container.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+            container.className = 'progress-container';
             container.innerHTML = 'Bitte warten...';
 
             const progressBar = document.createElement('div');
-            progressBar.style.height = '10px';
-            progressBar.style.width = '100%';
-            progressBar.style.backgroundColor = '#e0e0e0';
-            progressBar.style.marginTop = '10px';
-            progressBar.style.borderRadius = '5px';
+            progressBar.className = 'progress-bar';
 
             const progressFill = document.createElement('div');
-            progressFill.style.height = '100%';
-            progressFill.style.width = '0%';
-            progressFill.style.backgroundColor = '#76c7c0';
-            progressFill.style.borderRadius = '5px';
+            progressFill.className = 'progress-fill';
+
             progressBar.appendChild(progressFill);
 
             const progressText = document.createElement('p');
-            progressText.style.marginTop = '8px';
+            progressText.className = 'progress-text';
             progressText.textContent = '0 von 0 Erweiterungen gebaut';
 
             container.appendChild(progressBar);
             container.appendChild(progressText);
-
             document.body.appendChild(container);
 
             return {
                 container,
                 update: (done, total) => {
-                    progressFill.style.width = `${(done / total) * 100}%`;
-                    progressText.textContent = `${done} von ${total} Erweiterungen gebaut`;
+                    const percentage = total > 0
+                    ? (done / total) * 100
+                    : 100;
+
+                    progressFill.style.width = `${percentage}%`;
+                    progressText.textContent =
+                        `${done} von ${total} Erweiterungen gebaut`;
                 },
                 close: () => {
-                    document.body.removeChild(container);
+                    container.remove();
                 }
             };
         }
-
-        const creditsButton = document.createElement('button');
-        creditsButton.className = 'currency-button credits-button';
-        creditsButton.textContent = `${formatNumber(totalCredits)} Credits`;
-        creditsButton.disabled = userInfo.credits < totalCredits;
-        creditsButton.style.margin = '5px';
-        creditsButton.style.padding = '10px 20px';
-        creditsButton.style.backgroundColor = '#28a745';
-        creditsButton.style.color = 'white';
-        creditsButton.style.border = 'none';
-        creditsButton.style.borderRadius = '5px';
-        creditsButton.style.cursor = creditsButton.disabled ? 'not-allowed' : 'pointer';
-
-        creditsButton.onclick = async () => {
-            const progress = showProgress();
-            const totalTasks = extensionRows.length + storageRows.length;
-            let done = 0;
-
-            for (const ext of extensionRows) {
-                await buildExtension({ id: ext.buildingId }, ext.extensionId, 'credits', ext.extensionCost, ext.row);
-                done++;
-                progress.update(done, totalTasks);
-            }
-
-            for (const store of storageRows) {
-                await buildStorage({ id: store.buildingId }, store.storageType, 'credits', store.storageCost, store.row);
-                done++;
-                progress.update(done, totalTasks);
-            }
-
-            progress.close();
-            document.body.removeChild(selectionDiv);
-
-            await fetchBuildingsAndRender();
-        };
-
-        const coinsButton = document.createElement('button');
-        coinsButton.className = 'currency-button coins-button';
-        coinsButton.textContent = `${formatNumber(totalCoins)} Coins`;
-        coinsButton.disabled = userInfo.coins < totalCoins;
-        coinsButton.style.margin = '5px';
-        coinsButton.style.padding = '10px 20px';
-        coinsButton.style.backgroundColor = '#dc3545';
-        coinsButton.style.color = 'white';
-        coinsButton.style.border = 'none';
-        coinsButton.style.borderRadius = '5px';
-        coinsButton.style.cursor = coinsButton.disabled ? 'not-allowed' : 'pointer';
-
-        coinsButton.onclick = async () => {
-            const progress = showProgress();
-            const totalTasks = extensionRows.length + storageRows.length;
-            let done = 0;
-
-            for (const ext of extensionRows) {
-                await buildExtension({ id: ext.buildingId }, ext.extensionId, 'coins', ext.extensionCoins, ext.row);
-                done++;
-                progress.update(done, totalTasks);
-            }
-
-            for (const store of storageRows) {
-                await buildStorage({ id: store.buildingId }, store.storageType, 'coins', store.storageCoins, store.row);
-                done++;
-                progress.update(done, totalTasks);
-            }
-
-            progress.close();
-            document.body.removeChild(selectionDiv);
-
-            await fetchBuildingsAndRender();
-        };
-
-        const cancelButton = document.createElement('button');
-        cancelButton.className = 'cancel-button';
-        cancelButton.textContent = 'Abbrechen';
-        cancelButton.style.margin = '5px';
-        cancelButton.style.padding = '10px 20px';
-        cancelButton.style.backgroundColor = '#6c757d';
-        cancelButton.style.color = 'white';
-        cancelButton.style.border = 'none';
-        cancelButton.style.borderRadius = '5px';
-        cancelButton.style.cursor = 'pointer';
-        cancelButton.onclick = () => {
-            document.body.removeChild(selectionDiv);
-        };
-
-        selectionDiv.appendChild(creditsButton);
-        selectionDiv.appendChild(coinsButton);
-        selectionDiv.appendChild(cancelButton);
-
-        document.body.appendChild(selectionDiv);
     }
 
     // Funktiom um eine Fehlermeldung auszugeben
@@ -4113,69 +6154,67 @@
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Anfang der Funktion für * Bau von ausgewählten Stufen *
-
     // Funktion zum Bau der ausgewählten Stufen
     async function buildSelectedLevelsAll(buildingsData, userInfo) {
 
-    let totalCredits = 0;
-    let totalCoins = 0;
-    const levelRows = [];
+        let totalCredits = 0;
+        let totalCoins = 0;
+        const levelRows = [];
 
-    for (const building of buildingsData) {
-        const level = selectedLevels[building.id];
-        if (level === undefined || level === null) continue;
+        for (const building of buildingsData) {
+            const level = selectedLevels[building.id];
+            if (level === undefined || level === null) continue;
 
-        const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
-        const levelList = manualLevels[key];
-        if (!levelList) continue;
+            const key = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+            const levelList = manualLevels[key];
+            if (!levelList) continue;
 
-        const currentLevel = getBuildingLevelInfo(building)?.currentLevel ?? -1;
+            const currentLevel = getBuildingLevelInfo(building)?.currentLevel ?? -1;
 
-        // Startet bei der nächsten Stufe nach currentLevel (bei nicht vorhandenem Gebäude: Stufe 1)
-        const startLevel = currentLevel >= 0 ? currentLevel + 1 : 1;
-        const targetLevel = Number(level);
+            // Startet bei der nächsten Stufe nach currentLevel (bei nicht vorhandenem Gebäude: Stufe 1)
+            const startLevel = currentLevel >= 0 ? currentLevel + 1 : 1;
+            const targetLevel = Number(level);
 
-        // Falls nichts zu tun (z.B. ausgewählte Stufe <= aktuelles Level), überspringen
-        if (targetLevel < startLevel) continue;
+            // Falls nichts zu tun (z.B. ausgewählte Stufe <= aktuelles Level), überspringen
+            if (targetLevel < startLevel) continue;
 
-        let buildingCredits = 0;
-        let buildingCoins = 0;
+            let buildingCredits = 0;
+            let buildingCoins = 0;
 
-        // Summiere Levelkosten anhand der Level-IDs (nicht Array-Indizes)
-        for (let levelId = startLevel; levelId <= targetLevel; levelId++) {
-            const stufe = levelList.find(l => Number(l.id) === levelId);
-            if (!stufe) continue;
-            buildingCredits += Number(stufe.cost || 0);
-            buildingCoins += Number(stufe.coins || 0);
+            // Summiere Levelkosten anhand der Level-IDs (nicht Array-Indizes)
+            for (let levelId = startLevel; levelId <= targetLevel; levelId++) {
+                const stufe = levelList.find(l => Number(l.id) === levelId);
+                if (!stufe) continue;
+                buildingCredits += Number(stufe.cost || 0);
+                buildingCoins += Number(stufe.coins || 0);
+            }
+
+            if (buildingCredits === 0 && buildingCoins === 0) continue;
+
+            totalCredits += buildingCredits;
+            totalCoins += buildingCoins;
+
+            levelRows.push({
+                buildingId: building.id,
+                targetLevel,
+                buildingCredits,
+                buildingCoins
+            });
+        }
+        if (levelRows.length === 0) {
+            alert("Keine Leveländerungen ausgewählt.");
+            return;
         }
 
-        if (buildingCredits === 0 && buildingCoins === 0) continue;
-
-        totalCredits += buildingCredits;
-        totalCoins += buildingCoins;
-
-        levelRows.push({
-            buildingId: building.id,
-            targetLevel,
-            buildingCredits,
-            buildingCoins
-        });
+        // Übergabe von userInfo wie bisher
+        let runtimeUserInfo;
+        if (currentView === 'alliance') {
+            runtimeUserInfo = { credits: allianceInfo ? Number(allianceInfo.credits_current || 0) : 0, coins: 0 };
+        } else {
+            runtimeUserInfo = { credits: currentCredits, coins: currentCoins };
+        }
+        await showCurrencySelectionForLevelsAll(levelRows, runtimeUserInfo, totalCredits, totalCoins);
     }
-
-    if (levelRows.length === 0) {
-        alert("Keine Leveländerungen ausgewählt.");
-        return;
-    }
-
-    // Übergabe von userInfo wie bisher
-    let runtimeUserInfo;
-    if (currentView === 'alliance') {
-        runtimeUserInfo = { credits: allianceInfo ? Number(allianceInfo.credits_current || 0) : 0, coins: 0 };
-    } else {
-        runtimeUserInfo = { credits: currentCredits, coins: currentCoins };
-    }
-    await showCurrencySelectionForLevelsAll(levelRows, runtimeUserInfo, totalCredits, totalCoins);
-}
 
     // Funktion um den Ausgewählte Stufen Button zu aktivieren
     function updateBuildSelectedLevelsButtonState(group) {
@@ -4215,8 +6254,6 @@
 
     // Auswahlfenster für Level-Ausbau
     async function showCurrencySelectionForLevelsAll(levelRows, userInfo, totalCredits, totalCoins) {
-        const userSettings = await getUserMode();
-        const isDarkMode = userSettings && (userSettings.design_mode === 1 || userSettings.design_mode === 4);
 
         const fehlendeCredits = Math.max(0, totalCredits - userInfo.credits);
         const fehlendeCoins = Math.max(0, totalCoins - userInfo.coins);
@@ -4233,9 +6270,6 @@
         selectionDiv.style.left = '50%';
         selectionDiv.style.transform = 'translate(-50%, -50%)';
         selectionDiv.style.zIndex = '10001';
-        selectionDiv.style.background = isDarkMode ? '#333' : '#fff';
-        selectionDiv.style.color = isDarkMode ? '#fff' : '#000';
-        selectionDiv.style.border = `1px solid ${isDarkMode ? '#444' : '#ccc'}`;
         selectionDiv.style.padding = '20px';
         selectionDiv.style.borderRadius = '8px';
         selectionDiv.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
@@ -4254,7 +6288,6 @@
             container.style.left = '50%';
             container.style.transform = 'translate(-50%, -50%)';
             container.style.zIndex = '10002';
-            container.style.background = isDarkMode ? '#333' : '#fff';
             container.style.padding = '20px';
             container.style.borderRadius = '8px';
             container.style.textAlign = 'center';
@@ -4309,22 +6342,20 @@
         creditsButton.style.cursor = creditsButton.disabled ? 'not-allowed' : 'pointer';
 
         creditsButton.onclick = async () => {
-    const progress = showProgress();
-    let done = 0;
+            const progress = showProgress();
+            let done = 0;
 
-    // Einfach bauen ohne einzeln zu prüfen - Gesamtprüfung erfolgt vorher
-    for (const lvl of levelRows) {
-        await buildLevel(lvl.buildingId, 'credits', lvl.targetLevel);
-        done++;
-        progress.update(done);
-    }
-
-    progress.close();
-    document.body.removeChild(selectionDiv);
-
-    initUserCredits();       // aktualisiert globale Werte
-    fetchBuildingsAndRender(); // rendert alles neu
-};
+            for (const lvl of levelRows) {
+                await buildLevel(lvl.buildingId, 'credits', lvl.targetLevel);
+                delete selectedLevels[lvl.buildingId];
+                done++;
+                progress.update(done);
+            }
+            progress.close();
+            document.body.removeChild(selectionDiv);
+            initUserCredits();       // aktualisiert globale Werte
+            fetchBuildingsAndRender(); // rendert alles neu
+        };
 
         const coinsButton = document.createElement('button');
         coinsButton.className = 'currency-button coins-button';
@@ -4339,21 +6370,21 @@
         coinsButton.style.cursor = coinsButton.disabled ? 'not-allowed' : 'pointer';
 
         coinsButton.onclick = async () => {
-    const progress = showProgress();
-    let done = 0;
+            const progress = showProgress();
+            let done = 0;
 
-    for (const lvl of levelRows) {
-        await buildLevel(lvl.buildingId, 'coins', lvl.targetLevel);
-        done++;
-        progress.update(done);
-    }
+            for (const lvl of levelRows) {
+                await buildLevel(lvl.buildingId, 'coins', lvl.targetLevel);
+                delete selectedLevels[lvl.buildingId];
+                done++;
+                progress.update(done);
+            }
 
-    progress.close();
-    document.body.removeChild(selectionDiv);
-
-    initUserCredits();
-    fetchBuildingsAndRender();
-};
+            progress.close();
+            selectionDiv.remove();
+            initUserCredits();
+            fetchBuildingsAndRender();
+        };
 
         const cancelButton = document.createElement('button');
         cancelButton.className = 'cancel-button';
@@ -4377,15 +6408,122 @@
     }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    // Anfang der Funktion * Alle Erweiterungen * in einem Gebäude bauen
+    // Funktion * Bau von ausgewählten Spezialisierungen *
+    // Baut alle ausgewählten Spezialisierungen
+    async function buildSelectedSpecializations(buildings) {
+        const selected = [...document.querySelectorAll(
+            '.extension-checkbox:checked[data-specialization-type]'
+        )];
 
-    // Funktion zur Auswahl der Währung und Prüfung der Credit/Coins vorhandenheit
+        if (!selected.length) {
+            alert('Bitte wähle mindestens eine Spezialisierung aus.');
+            return;
+        }
+
+        const items = selected
+        .map(cb => {
+            const building = buildings.find(
+                b => String(b.id) === String(cb.dataset.buildingId)
+            );
+
+            if (!building) return null;
+
+            return {
+                checkbox: cb,
+                building,
+                specializationType: cb.dataset.apiType,
+                cost: Number(cb.dataset.creditCost) || 0
+            };
+        })
+        .filter(Boolean);
+
+        if (!items.length) return;
+
+        const totalCredits = items.reduce(
+            (sum, item) => sum + item.cost,
+            0
+        );
+
+        if (Number(currentCredits || 0) < totalCredits) {
+            alert(
+                `Du benötigst ${formatNumber(totalCredits)} Credits für die ausgewählten Spezialisierungen.`
+            );
+            return;
+        }
+
+        if (!confirm(
+            `Möchtest du ${items.length} ausgewählte Spezialisierung(en) für insgesamt ${formatNumber(totalCredits)} Credits bauen?`
+        )) {
+            return;
+        }
+
+        const button = document.querySelector(
+            '#build-selected-specializations'
+        );
+
+        if (button) button.disabled = true;
+
+        let successCount = 0;
+
+        for (const item of items) {
+            const success = await buildSpecialization(
+                item.building,
+                item.specializationType,
+                item.cost,
+                'credits'
+            );
+
+            if (success) {
+                successCount++;
+                item.checkbox.checked = false;
+                item.checkbox.closest('tr')?.remove();
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        await initUserCredits();
+
+        updateSelectedAmounts(buildings);
+        updateBuildSelectedButton();
+        updateSpecializationPrices(buildings);
+
+        const selectAll = document.querySelector(
+            '.select-all-checkbox[data-group="specializations"]'
+        );
+
+        if (selectAll) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        }
+
+        if (button) button.disabled = false;
+
+        if (successCount) {
+            alert(
+                `${successCount} von ${items.length} Spezialisierung(en) wurden gebaut.`
+            );
+        }
+    }
+
+    // Gesamtkostenprüfung der Spezialisierungen
+    function updateSelectedSpecializationButton() {
+        const button = document.querySelector('.build-selected-special-button');
+        if (!button) return;
+
+        button.disabled = !document.querySelector(
+            '.extension-checkbox:checked[data-specialization-type]'
+        );
+    }
+    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    // Währung auswählen und Bauvorhaben bestätigen
     async function showCurrencySelectionForAll(groupKey) {
-        const userSettings = await getUserMode();
-        const isDarkMode = userSettings && (userSettings.design_mode === 1 || userSettings.design_mode === 4);
+
+        const isAlliance = currentView === 'alliance';
 
         const wachenGroup = buildingGroups[groupKey] || [];
-        const lagerGroup = storageGroups[groupKey] || [];
+        const lagerGroup = isAlliance ? [] : (storageGroups[groupKey] || []);
         const combinedGroup = [...wachenGroup, ...lagerGroup];
 
         if (combinedGroup.length === 0) {
@@ -4395,61 +6533,245 @@
 
         let totalCredits = 0;
         let totalCoins = 0;
+        let totalExtensions = 0;
 
         combinedGroup.forEach(({ missingExtensions }) => {
             missingExtensions.forEach(extension => {
-                totalCredits += extension.cost;
-                totalCoins += extension.coins;
+                if (isExtensionLimitReached(
+                    combinedGroup.find(g =>
+                                       g.missingExtensions.includes(extension)
+                                      )?.building,
+                    extension.id
+                )) {
+                    return;
+                }
+
+                totalExtensions++;
+                totalCredits += Number(extension.cost) || 0;
+
+                if (!isAlliance) {
+                    totalCoins += Number(extension.coins) || 0;
+                }
             });
         });
 
-        let userInfo;
-        if (currentView === 'alliance') {
-            userInfo = { credits: allianceInfo ? Number(allianceInfo.credits_current || 0) : 0, coins: 0 };
-        } else {
-            userInfo = await getUserCredits();
-        }
-        const fehlendeCredits = Math.max(0, totalCredits - userInfo.credits);
-        const fehlendeCoins = Math.max(0, totalCoins - userInfo.coins);
-
-        if (userInfo.credits < totalCredits && userInfo.coins < totalCoins) {
-            alert(`Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n - Fehlende Credits: ${formatNumber(fehlendeCredits)}\n - Fehlende Coins: ${formatNumber(fehlendeCoins)}`);
+        if (totalExtensions === 0) {
+            showError('Es sind keine baubaren Erweiterungen vorhanden.');
             return;
         }
 
+        let userInfo;
+
+        if (isAlliance) {
+            userInfo = {
+                credits: Number(allianceInfo?.credits_current || 0),
+                coins: 0
+            };
+        } else {
+            userInfo = await getUserCredits();
+        }
+
+        // Verbandsgebäude
+        if (isAlliance) {
+            const missingCredits = Math.max(
+                0,
+                totalCredits - userInfo.credits
+            );
+
+            if (userInfo.credits < totalCredits) {
+                showError(
+                    'Das Bauvorhaben kann nicht durchgeführt werden.\n\n' +
+                    `Benötigte Verbands-Credits: ${formatNumber(totalCredits)}\n` +
+                    `Verfügbare Verbands-Credits: ${formatNumber(userInfo.credits)}\n` +
+                    `Fehlende Verbands-Credits: ${formatNumber(missingCredits)}`
+                );
+                return;
+            }
+
+            // Einheitliches Bestätigungsfenster
+            const selectionDiv = document.createElement('div');
+            selectionDiv.className = 'currency-selection';
+
+            Object.assign(selectionDiv.style, {
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: '10001',
+                padding: '20px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                minWidth: '350px',
+                maxWidth: '500px',
+                textAlign: 'center'
+            });
+
+            const title = document.createElement('h4');
+            title.textContent = 'Bauvorhaben bestätigen';
+            title.style.marginTop = '0';
+
+            const info = document.createElement('p');
+            info.innerHTML =
+                `Du möchtest <b>${totalExtensions}</b> Erweiterung(en) bauen.<br><br>` +
+                `Gesamtkosten:<br>` +
+                `<b style="color:#28a745;">${formatNumber(totalCredits)} Verbands-Credits</b><br><br>` +
+                `Die Erweiterungen werden ausschließlich mit ` +
+                `<b>Verbands-Credits</b> gebaut.`;
+
+            selectionDiv.appendChild(title);
+            selectionDiv.appendChild(info);
+
+            const buildButton = document.createElement('button');
+            buildButton.className = 'btn btn-success';
+            buildButton.textContent = `Ausbau bestätigen`;
+
+            Object.assign(buildButton.style, {
+                margin: '5px',
+                padding: '10px 20px'
+            });
+
+            buildButton.onclick = async () => {
+                selectionDiv.remove();
+                await buildAllExtensionsWithPause(
+                    groupKey,
+                    'credits',
+                    true
+                );
+            };
+
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'btn btn-danger';
+            cancelButton.textContent = 'Ausbau Abbrechen';
+
+            Object.assign(cancelButton.style, {
+                margin: '5px',
+                padding: '10px 20px'
+            });
+
+            cancelButton.onclick = () => {
+                selectionDiv.remove();
+            };
+
+            selectionDiv.appendChild(buildButton);
+            selectionDiv.appendChild(cancelButton);
+
+            document.body.appendChild(selectionDiv);
+            return;
+        }
+
+        // Eigene Gebäude
+        const fehlendeCredits = Math.max(
+            0,
+            totalCredits - userInfo.credits
+        );
+
+        const fehlendeCoins = Math.max(
+            0,
+            totalCoins - userInfo.coins
+        );
+
+        if (
+            userInfo.credits < totalCredits &&
+            userInfo.coins < totalCoins
+        ) {
+            showError(
+                'Deine Auswahl übersteigt dein aktuelles Guthaben.\n\n' +
+                `Fehlende Credits: ${formatNumber(fehlendeCredits)}\n` +
+                `Fehlende Coins: ${formatNumber(fehlendeCoins)}`
+            );
+            return;
+        }
+
+        // Einheitliches Bestätigungsfenster
         const selectionDiv = document.createElement('div');
         selectionDiv.className = 'currency-selection';
-        selectionDiv.style.background = isDarkMode ? '#333' : '#fff';
-        selectionDiv.style.color = isDarkMode ? '#fff' : '#000';
-        selectionDiv.style.borderColor = isDarkMode ? '#444' : '#ccc';
 
-        const totalText = document.createElement('p');
-        totalText.innerHTML = `Wähle zwischen <b>Credits (grün)</b> oder <b>Coins (rot)</b><br><br>Info:<br>Sollte eine Währung <b>nicht</b> ausreichend vorhanden sein,<br>kannst Du diese nicht auswählen`;
-        selectionDiv.appendChild(totalText);
+        Object.assign(selectionDiv.style, {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: '10001',
+            padding: '20px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+            minWidth: '350px',
+            maxWidth: '500px',
+            textAlign: 'center'
+        });
+
+        const title = document.createElement('h4');
+        title.textContent = 'Bauvorhaben bestätigen';
+        title.style.marginTop = '0';
+
+        const info = document.createElement('p');
+        info.innerHTML =
+            `Du möchtest <b>${totalExtensions}</b> Erweiterung(en) bauen.<br><br>` +
+            `Gesamtkosten:<br>` +
+            `<b style="color:#28a745;">${formatNumber(totalCredits)} Credits</b><br>` +
+            `<b style="color:#dc3545;">${formatNumber(totalCoins)} Coins</b><br><br>` +
+            `Wähle anschließend die gewünschte Währung.`;
+
+        selectionDiv.appendChild(title);
+        selectionDiv.appendChild(info);
 
         const creditsButton = document.createElement('button');
-        creditsButton.className = 'currency-button credits-button';
-        creditsButton.textContent = `${formatNumber(totalCredits)} Credits`;
-        creditsButton.disabled = userInfo.credits < totalCredits;
+        creditsButton.className = 'btn btn-success';
+        creditsButton.textContent =
+            `${formatNumber(totalCredits)} Credits`;
+
+        creditsButton.disabled =
+            userInfo.credits < totalCredits;
+
+        Object.assign(creditsButton.style, {
+            margin: '5px',
+            padding: '10px 20px'
+        });
+
         creditsButton.onclick = async () => {
-            document.body.removeChild(selectionDiv);
-            await buildAllExtensionsWithPause(groupKey, 'credits');
+            selectionDiv.remove();
+
+            await buildAllExtensionsWithPause(
+                groupKey,
+                'credits',
+                false
+            );
         };
 
         const coinsButton = document.createElement('button');
-        coinsButton.className = 'currency-button coins-button';
-        coinsButton.textContent = `${formatNumber(totalCoins)} Coins`;
-        coinsButton.disabled = userInfo.coins < totalCoins;
+        coinsButton.className = 'btn btn-danger';
+        coinsButton.textContent =
+            `${formatNumber(totalCoins)} Coins`;
+
+        coinsButton.disabled =
+            userInfo.coins < totalCoins;
+
+        Object.assign(coinsButton.style, {
+            margin: '5px',
+            padding: '10px 20px'
+        });
+
         coinsButton.onclick = async () => {
-            document.body.removeChild(selectionDiv);
-            await buildAllExtensionsWithPause(groupKey, 'coins');
+            selectionDiv.remove();
+
+            await buildAllExtensionsWithPause(
+                groupKey,
+                'coins',
+                false
+            );
         };
 
         const cancelButton = document.createElement('button');
-        cancelButton.className = 'cancel-button';
+        cancelButton.className = 'btn btn-secondary';
         cancelButton.textContent = 'Abbrechen';
+
+        Object.assign(cancelButton.style, {
+            margin: '5px',
+            padding: '10px 20px'
+        });
+
         cancelButton.onclick = () => {
-            document.body.removeChild(selectionDiv);
+            selectionDiv.remove();
         };
 
         selectionDiv.appendChild(creditsButton);
@@ -4459,128 +6781,101 @@
         document.body.appendChild(selectionDiv);
     }
 
-    // Funktion um die Gesamtkosten zu errechnen
-    async function calculateAndBuildAllExtensions(groupKey, currency) {
+    // Gesamtkosten prüfen und anschließend alle Erweiterungen bauen
+    async function calculateAndBuildAllExtensions(groupKey, currency, isAllianceBuild = false) {
         const wachenGroup = buildingGroups[groupKey] || [];
-        const lagerGroup = storageGroups[groupKey] || [];
-        const combinedGroup = [...wachenGroup, ...lagerGroup];
+        const lagerGroup = isAllianceBuild
+        ? []
+        : (storageGroups[groupKey] || []);
 
-        const totalExtensions = combinedGroup.reduce((sum, { missingExtensions }) => sum + missingExtensions.length, 0);
-        const totalCost = combinedGroup.reduce((sum, { missingExtensions }) => {
-            return sum + missingExtensions.reduce((extSum, extension) => extSum + extension[currency], 0);
-        }, 0);
+        const combinedGroup = [
+            ...wachenGroup,
+            ...lagerGroup
+        ];
 
-        try {
-            const userInfo = await getUserCredits();
-            if ((currency === 'credits' && userInfo.credits < totalCost) || (currency === 'coins' && userInfo.coins < totalCost)) {
-                alert(`Nicht genügend ${currency === 'credits' ? 'Credits' : 'Coins'}. Der Bauversuch wird abgebrochen.`);
-                return;
-            }
-
-            const { progressContainer, progressText, progressFill } = await createProgressBar(totalExtensions);
-            let builtCount = 0;
-
-            for (const { building, missingExtensions } of combinedGroup) {
-                for (const extension of missingExtensions) {
-                    if (!isExtensionLimitReached(building, extension.id)) {
-                        const isStorage = extension.isStorage === true;
-
-                        if (isStorage) {
-                            await buildStorage(building, extension.id, currency, extension[currency]);
-                        } else {
-                            await buildExtension(building, extension.id, currency, extension[currency]);
-                        }
-
-                        builtCount++;
-                        updateProgress(builtCount, totalExtensions, progressText, progressFill);
-                    }
-                }
-            }
-
-            removeProgressBar(progressContainer);
-            renderMissingExtensions(buildingsData);
-        } catch (error) {
-            console.error('Fehler beim Abrufen der Credits und Coins:', error);
-            alert('Fehler beim Abrufen der Credits und Coins.');
-        }
-    }
-
-    // Funktion zur Erstellung der Fortschrittsanzeige
-    async function createProgressBar(totalExtensions) {
-        const userSettings = await getUserMode();
-        const isDarkMode = userSettings && (userSettings.design_mode === 1 || userSettings.design_mode === 4);
-
-        const progressContainer = document.createElement('div');
-        progressContainer.className = 'progress-container';
-        progressContainer.style.position = 'fixed';
-        progressContainer.style.top = '50%';
-        progressContainer.style.left = '50%';
-        progressContainer.style.transform = 'translate(-50%, -50%)';
-        progressContainer.style.padding = '20px';
-        progressContainer.style.border = '1px solid #ccc';
-        progressContainer.style.borderRadius = '10px';
-        progressContainer.style.boxShadow = '0px 0px 10px rgba(0,0,0,0.2)';
-        progressContainer.style.width = '300px';
-        progressContainer.style.textAlign = 'center';
-        progressContainer.style.zIndex = '10002';
-
-        progressContainer.style.background = isDarkMode ? '#333' : '#fff';
-        progressContainer.style.color = isDarkMode ? '#fff' : '#000';
-
-        const progressText = document.createElement('p');
-        progressText.textContent = `0 / ${totalExtensions} Erweiterungen gebaut`;
-        progressText.style.fontWeight = 'bold';
-        progressText.style.fontSize = '16px';
-
-        const progressBar = document.createElement('div');
-        progressBar.style.width = '100%';
-        progressBar.style.background = isDarkMode ? '#555' : '#ddd';
-        progressBar.style.borderRadius = '5px';
-        progressBar.style.marginTop = '10px';
-        progressBar.style.overflow = 'hidden';
-
-        const progressFill = document.createElement('div');
-        progressFill.style.width = '0%';
-        progressFill.style.height = '20px';
-        progressFill.style.background = '#4caf50';
-        progressFill.style.borderRadius = '5px';
-
-        progressBar.appendChild(progressFill);
-        progressContainer.appendChild(progressText);
-        progressContainer.appendChild(progressBar);
-        document.body.appendChild(progressContainer);
-
-        return { progressContainer, progressText, progressFill };
-    }
-
-    // Funktion zur Aktualisierung des Fortschritts
-    function updateProgress(builtCount, totalExtensions, progressText, progressFill) {
-        progressText.textContent = `${builtCount} / ${totalExtensions} Erweiterungen gebaut`;
-        progressFill.style.width = Math.min(100, (builtCount / totalExtensions) * 100) + '%'; // Math.min hinzugefügt, um sicherzustellen, dass die Breite nicht 100% überschreitet
-    }
-
-    // Funktion zum Entfernen der Fortschrittsanzeige mit 500ms Verzögerung
-    function removeProgressBar(progressContainer) {
-        setTimeout(() => {
-            document.body.removeChild(progressContainer);
-        }, 500);
-    }
-
-    // Funktion um einfach alles zu bauen was man eingestellt hat
-    async function buildAllExtensionsWithPause(groupKey, currency) {
-        const wachenGroup = buildingGroups[groupKey] || [];
-        const lagerGroup = storageGroups[groupKey] || [];
-        const combinedGroup = [...wachenGroup, ...lagerGroup];
-
-        let totalExtensions = combinedGroup.reduce((sum, { missingExtensions }) => sum + missingExtensions.length, 0);
-        let builtCount = 0;
-
-        const { progressContainer, progressText, progressFill } = await createProgressBar(totalExtensions);
+        let totalExtensions = 0;
+        let totalCost = 0;
 
         for (const { building, missingExtensions } of combinedGroup) {
             for (const extension of missingExtensions) {
-                if (!isExtensionLimitReached(building, extension.id)) {
-                    const isStorage = extension.isStorage === true;
+                if (isExtensionLimitReached(building, extension.id)) {
+                    continue;
+                }
+
+                totalExtensions++;
+                totalCost += Number(extension[currency]) || 0;
+            }
+        }
+
+        if (totalExtensions === 0) {
+            showError('Es sind keine baubaren Erweiterungen vorhanden.');
+            return;
+        }
+
+        if (isAllianceBuild) {
+            const allianceCredits = Number(
+                allianceInfo?.credits_current || 0
+            );
+
+            if (currency !== 'credits') {
+                showError(
+                    'Verbandsgebäude können ausschließlich mit Verbands-Credits gebaut werden.'
+                );
+                return;
+            }
+
+            if (allianceCredits < totalCost) {
+                showError(
+                    'Nicht genügend Verbands-Credits vorhanden.\n\n' +
+                    `Benötigt: ${formatNumber(totalCost)}\n` +
+                    `Vorhanden: ${formatNumber(allianceCredits)}`
+                );
+                return;
+            }
+        } else {
+            const userInfo = await getUserCredits();
+
+            if (
+                currency === 'credits' &&
+                userInfo.credits < totalCost
+            ) {
+                showError(
+                    `Nicht genügend Credits vorhanden.\n\n` +
+                    `Benötigt: ${formatNumber(totalCost)}`
+                );
+                return;
+            }
+
+            if (
+                currency === 'coins' &&
+                userInfo.coins < totalCost
+            ) {
+                showError(
+                    `Nicht genügend Coins vorhanden.\n\n` +
+                    `Benötigt: ${formatNumber(totalCost)}`
+                );
+                return;
+            }
+        }
+
+        const {
+            progressContainer,
+            progressText,
+            progressFill
+        } = await createProgressBar(totalExtensions);
+
+        let builtCount = 0;
+
+        try {
+            for (const { building, missingExtensions } of combinedGroup) {
+                for (const extension of missingExtensions) {
+                    if (isExtensionLimitReached(building, extension.id)) {
+                        continue;
+                    }
+
+                    const isStorage =
+                          !isAllianceBuild &&
+                          extension.isStorage === true;
 
                     const row = document.querySelector(
                         isStorage
@@ -4589,57 +6884,492 @@
                     );
 
                     if (isStorage) {
-                        await buildStorage(building, extension.id, currency, extension[currency], row);
+                        await buildStorage(
+                            building,
+                            extension.id,
+                            currency,
+                            Number(extension[currency]) || 0,
+                            row,
+                            false
+                        );
                     } else {
-                        await buildExtension(building, extension.id, currency, extension[currency], row);
+                        await buildExtension(
+                            building,
+                            extension.id,
+                            currency,
+                            Number(extension[currency]) || 0,
+                            row,
+                            isAllianceBuild
+                        );
                     }
 
-                    await new Promise(resolve => setTimeout(resolve, 500));
                     builtCount++;
-                    updateProgress(builtCount, totalExtensions, progressText, progressFill);
+
+                    updateProgress(
+                        builtCount,
+                        totalExtensions,
+                        progressText,
+                        progressFill
+                    );
+
+                    await new Promise(resolve =>
+                                      setTimeout(resolve, 500)
+                                     );
+                }
+            }
+
+            if (isAllianceBuild) {
+                allianceInfo = await getAllianceInfo();
+            } else {
+                await initUserCredits(true);
+            }
+
+            await fetchBuildingsAndRender();
+
+        } catch (error) {
+            console.error(
+                'Fehler beim Bauen der ausgewählten Erweiterungen:',
+                error
+            );
+            showError(
+                'Beim Bauen der Erweiterungen ist ein Fehler aufgetreten.'
+            );
+        } finally {
+            removeProgressBar(progressContainer);
+        }
+    }
+
+    // Fortschrittsanzeige erstellen
+    async function createProgressBar(totalExtensions) {
+
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'progress-container';
+
+        Object.assign(progressContainer.style, {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            padding: '20px',
+            borderRadius: '10px',
+            boxShadow: '0 0 10px rgba(0,0,0,0.2)',
+            width: '300px',
+            textAlign: 'center',
+            zIndex: '10002'
+        });
+
+        const progressText = document.createElement('p');
+        progressText.textContent =
+            `0 / ${totalExtensions} Erweiterungen gebaut`;
+
+        progressText.style.fontWeight = 'bold';
+        progressText.style.fontSize = '16px';
+
+        const progressBar = document.createElement('div');
+
+        Object.assign(progressBar.style, {
+            width: '100%',
+            borderRadius: '5px',
+            marginTop: '10px',
+            overflow: 'hidden'
+        });
+
+        const progressFill = document.createElement('div');
+
+        Object.assign(progressFill.style, {
+            width: '0%',
+            height: '20px',
+            background: '#4caf50',
+            borderRadius: '5px'
+        });
+
+        progressBar.appendChild(progressFill);
+        progressContainer.appendChild(progressText);
+        progressContainer.appendChild(progressBar);
+
+        document.body.appendChild(progressContainer);
+
+        return {
+            progressContainer,
+            progressText,
+            progressFill
+        };
+    }
+
+    // Fortschritt aktualisieren
+    function updateProgress(builtCount, totalExtensions, progressText, progressFill) {
+        const percentage = totalExtensions > 0
+        ? Math.min(
+            100,
+            (builtCount / totalExtensions) * 100
+        )
+        : 100;
+
+        progressText.textContent =
+            `${builtCount} / ${totalExtensions} Erweiterungen gebaut`;
+
+        progressFill.style.width = `${percentage}%`;
+    }
+
+    // Fortschrittsanzeige entfernen
+    function removeProgressBar(progressContainer) {
+        setTimeout(() => {
+            if (progressContainer?.parentNode) {
+                progressContainer.remove();
+            }
+        }, 500);
+    }
+
+    // Alle Erweiterungen einer Gruppe bauen
+    async function buildAllExtensionsWithPause(groupKey, currency, isAllianceBuild = false) {
+        const wachenGroup = buildingGroups[groupKey] || [];
+
+        // Verbandsgebäude haben keine Lager
+        const lagerGroup = isAllianceBuild
+        ? []
+        : (storageGroups[groupKey] || []);
+
+        const combinedGroup = [
+            ...wachenGroup,
+            ...lagerGroup
+        ];
+
+        let totalExtensions = 0;
+
+        for (const { building, missingExtensions } of combinedGroup) {
+            for (const extension of missingExtensions) {
+                if (!isExtensionLimitReached(building, extension.id)) {
+                    totalExtensions++;
                 }
             }
         }
 
-        removeProgressBar(progressContainer);
+        if (totalExtensions === 0) {
+            showError('Es sind keine baubaren Erweiterungen vorhanden.');
+            return;
+        }
+
+        // Letzte Guthabenprüfung unmittelbar vor dem Bau
+        if (isAllianceBuild) {
+            const allianceCredits = Number(
+                allianceInfo?.credits_current || 0
+            );
+
+            if (currency !== 'credits') {
+                showError(
+                    'Verbandsgebäude können ausschließlich mit Verbands-Credits gebaut werden.'
+                );
+                return;
+            }
+
+            let totalCost = 0;
+
+            for (const { building, missingExtensions } of combinedGroup) {
+                for (const extension of missingExtensions) {
+                    if (!isExtensionLimitReached(building, extension.id)) {
+                        totalCost += Number(extension.cost) || 0;
+                    }
+                }
+            }
+
+            if (allianceCredits < totalCost) {
+                showError(
+                    'Nicht genügend Verbands-Credits vorhanden.\n\n' +
+                    `Benötigt: ${formatNumber(totalCost)}\n` +
+                    `Vorhanden: ${formatNumber(allianceCredits)}`
+                );
+                return;
+            }
+        }
+
+        const {
+            progressContainer,
+            progressText,
+            progressFill
+        } = await createProgressBar(totalExtensions);
+
+        let builtCount = 0;
+
+        try {
+            for (const { building, missingExtensions } of combinedGroup) {
+                for (const extension of missingExtensions) {
+                    if (isExtensionLimitReached(building, extension.id)) {
+                        continue;
+                    }
+
+                    const isStorage =
+                          !isAllianceBuild &&
+                          extension.isStorage === true;
+
+                    const row = document.querySelector(
+                        isStorage
+                        ? `.storage-row-${building.id}-${extension.id}`
+                        : `.row-${building.id}-${extension.id}`
+                    );
+
+                    if (isStorage) {
+                        await buildStorage(
+                            building,
+                            extension.id,
+                            currency,
+                            Number(extension[currency]) || 0,
+                            row,
+                            false
+                        );
+                    } else {
+                        await buildExtension(
+                            building,
+                            extension.id,
+                            currency,
+                            Number(extension[currency]) || 0,
+                            row,
+                            isAllianceBuild
+                        );
+                    }
+
+                    builtCount++;
+
+                    updateProgress(
+                        builtCount,
+                        totalExtensions,
+                        progressText,
+                        progressFill
+                    );
+
+                    await new Promise(resolve =>
+                                      setTimeout(resolve, 500)
+                                     );
+                }
+            }
+
+            if (isAllianceBuild) {
+                allianceInfo = await getAllianceInfo();
+            } else {
+                await initUserCredits();
+            }
+
+            await fetchBuildingsAndRender();
+
+        } catch (error) {
+            console.error(
+                'Fehler beim Bauen aller Erweiterungen:',
+                error
+            );
+            showError(
+                'Beim Bauen der Erweiterungen ist ein Fehler aufgetreten.'
+            );
+        } finally {
+            removeProgressBar(progressContainer);
+        }
+    }
+
+    // Funktion zur Gesamtkostenberechnung
+    function updateSelectedAmounts(buildingsData) {
+        if (!Array.isArray(buildingsData)) {
+            return;
+        }
+
+        let totalCredits = 0;
+        let totalCoins = 0;
+
+        // Erweiterungen und Lager
+        document.querySelectorAll(
+            '.extension-checkbox:checked, .storage-checkbox:checked'
+        ).forEach(cb => {
+            // Spezialisierungen werden separat berechnet
+            if (cb.dataset.specializationType) return;
+
+            totalCredits += Number(cb.dataset.creditCost) || 0;
+
+            if (currentView !== 'alliance') {
+                totalCoins += Number(cb.dataset.coinCost) || 0;
+            }
+        });
+
+        // Spezialisierungen
+        if (currentView !== 'alliance') {
+            const specializationCounts = {};
+
+            // Bereits vorhandene Spezialisierungen
+            buildingsData.forEach(building => {
+                const type = building.specialization?.type;
+
+                if (building.specialization?.active && type) {
+                    specializationCounts[type] =
+                        (specializationCounts[type] || 0) + 1;
+                }
+            });
+
+            // Ausgewählte Spezialisierungen in DOM-/Auswahlreihenfolge
+            document.querySelectorAll(
+                '.extension-checkbox:checked[data-specialization-type]'
+            ).forEach(cb => {
+                const type = cb.dataset.apiType;
+
+                const building = buildingsData.find(
+                    b => String(b.id) === String(cb.dataset.buildingId)
+                );
+
+                if (!building || !type) return;
+
+                specializationCounts[type] =
+                    (specializationCounts[type] || 0) + 1;
+
+                const cost =
+                      getSpecializationCreditCostByCount(
+                          specializationCounts[type],
+                          building.small_building
+                      );
+
+                cb.dataset.creditCost = cost;
+
+                totalCredits += cost;
+                totalCoins += Number(cb.dataset.coinCost) || 0;
+            });
+        }
+
+        // Level-Ausbau
+        if (currentView !== 'alliance') {
+            buildingsData.forEach(building => {
+                const key =
+                      `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+
+                const levelList = manualLevels[key];
+
+                if (!levelList) {
+                    return;
+                }
+
+                const currentLevel =
+                      getBuildingLevelInfo(building)?.currentLevel ?? -1;
+
+                const selectedLevel =
+                      selectedLevels[building.id] ?? null;
+
+                if (
+                    selectedLevel === null ||
+                    selectedLevel <= currentLevel
+                ) {
+                    return;
+                }
+
+                for (
+                    let levelId = currentLevel + 1;
+                    levelId <= selectedLevel;
+                    levelId++
+                ) {
+                    const stufe = levelList.find(
+                        level => level.id === levelId
+                    );
+
+                    if (!stufe) {
+                        continue;
+                    }
+
+                    totalCredits +=
+                        Number(stufe.cost) || 0;
+
+                    totalCoins +=
+                        Number(stufe.coins) || 0;
+                }
+            });
+        }
+
+        const selectedCreditsSpan =
+              document.getElementById('selected-credits');
+
+        const selectedCoinsSpan =
+              document.getElementById('selected-coins');
+
+        const selectedAllianceCreditsSpan =
+              document.getElementById('selected-alliance-credits');
+
+        if (currentView === 'alliance') {
+            if (selectedAllianceCreditsSpan) {
+                selectedAllianceCreditsSpan.textContent =
+                    totalCredits.toLocaleString();
+            }
+
+            if (selectedCreditsSpan) {
+                selectedCreditsSpan.textContent = '0';
+            }
+
+            if (selectedCoinsSpan) {
+                selectedCoinsSpan.textContent = '0';
+            }
+
+            return;
+        }
+
+        if (selectedCreditsSpan) {
+            selectedCreditsSpan.textContent =
+                totalCredits.toLocaleString();
+        }
+
+        if (selectedAllianceCreditsSpan) {
+            selectedAllianceCreditsSpan.textContent = '0';
+        }
+
+        if (selectedCoinsSpan) {
+            selectedCoinsSpan.textContent =
+                totalCoins.toLocaleString();
+        }
     }
     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Anfang des Bereiches * Im Bau *
-
     // Funktion um im Bau befindliche Erweiterungen zu laden
     async function fetchConstructionProjects() {
         try {
-            const response = await fetch('/api/buildings');
-            if (!response.ok) throw new Error("Fehler beim Abrufen der Daten");
-
-            const buildingsData = await response.json();
             const constructionList = document.getElementById("construction-list");
             constructionList.innerHTML = "";
+            if (!Array.isArray(buildingsData) || buildingsData.length === 0) {
+                throw new Error("Keine Gebäudedaten verfügbar");
+            }
 
             buildingsData.forEach(building => {
-                // Erweiterungen im Bau
                 building.extensions?.forEach(ext => {
+
                     if (!ext.available && ext.available_at) {
-                        addConstructionRow(building, ext.caption, new Date(ext.available_at), "extension", ext.type_id);
+                        addConstructionRow(
+                            building,
+                            ext.caption,
+                            new Date(ext.available_at),
+                            "extension",
+                            ext.type_id
+                        );
                     }
-                    // Fertige Erweiterungen aktivieren
                     if (ext.available && !ext.enabled) {
-                        addConstructionRow(building, ext.caption, null, "extension-ready", ext.type_id);
+                        addConstructionRow(
+                            building,
+                            ext.caption,
+                            null,
+                            "extension-ready",
+                            ext.type_id
+                        );
                     }
                 });
-
-                // Lager im Bau (fertige Lager sind sofort aktiv, kein ready-Button nötig)
                 building.storage_upgrades?.forEach(stor => {
+
                     if (!stor.available && stor.available_at) {
-                        addConstructionRow(building, stor.upgrade_type, new Date(stor.available_at), "storage", stor.type_id);
+                        addConstructionRow(
+                            building,
+                            stor.upgrade_type,
+                            new Date(stor.available_at),
+                            "storage",
+                            stor.type_id
+                        );
                     }
                 });
             });
+
         } catch (err) {
-            console.error(err);
+            console.error("fetchConstructionProjects:", err);
+
             document.getElementById("construction-list").innerHTML =
-                `<tr><td colspan="5">Fehler beim Laden der Bauprojekte.</td></tr>`;
+                `<tr>
+                <td colspan="5">Fehler beim Laden der Bauprojekte.</td>
+            </tr>`;
         }
     }
 
@@ -5286,12 +8016,10 @@
     }
 
     // Event
-    document.getElementById("under-construction").addEventListener("click", async () => {
+    document.getElementById("under-construction").addEventListener("click", () => {
         openConstructionModal();
-        await applyMode();
     });
 
     // Initiale Aufrufe
     addMenuButton();
-
 })();
