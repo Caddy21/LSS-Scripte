@@ -15,37 +15,28 @@
     function sortSelect() {
         const select = document.querySelector('#dispatch_center_filter');
         if (!select) return;
-
         const selected = select.value;
-
         const placeholder = [...select.options].filter(o => o.value === "");
         const options = [...select.options].filter(o => o.value !== "");
-
         options.sort((a, b) =>
             a.text.localeCompare(b.text, "de", {
                 numeric: true,
                 sensitivity: "base"
             })
         );
-
         select.innerHTML = "";
         [...placeholder, ...options].forEach(option => select.appendChild(option));
-
-        select.value = selected;
-
-        // Bootstrap-Select neu aufbauen
+        select.value = selected; 
         if (window.jQuery) {
             $(select).selectpicker("refresh");
         }
     }
-
     const observer = new MutationObserver(() => {
         if (document.querySelector("#dispatch_center_filter")) {
             sortSelect();
             observer.disconnect();
         }
     });
-
     observer.observe(document.body, {
         childList: true,
         subtree: true
