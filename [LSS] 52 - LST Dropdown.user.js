@@ -16,7 +16,6 @@
     const isDarkMode = document.body.classList.contains('dark');
 
     function applyThemeStyles(select) {
-        // gemeinsame Styles
         select.style.width = 'auto';
         select.style.minWidth = '220px';
         select.style.maxWidth = '320px';
@@ -24,12 +23,10 @@
         select.style.marginTop = '2px';
 
         if (isDarkMode) {
-            // Dark Mode – an LSS angelehnt
             select.style.backgroundColor = '#2b2b2b';
             select.style.color = '#e0e0e0';
             select.style.border = '1px solid #555';
         }
-        // White Mode → absichtlich KEINE Styles setzen
     }
 
     function replaceButtonGroups() {
