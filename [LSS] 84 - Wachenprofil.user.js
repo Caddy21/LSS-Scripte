@@ -111,7 +111,7 @@
             return;
         }
 
-        const profileName = prompt('Name für das neue Fahrzeug-Manager-Profil:', getBuildingCaption());
+        const profileName = prompt('Name für das neue Profil:', getBuildingCaption());
         if (profileName === null) return;
 
         const name = profileName.trim();
@@ -171,9 +171,12 @@
                 }
             };
 
+            const safeProfileName = name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
+            const today = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
+
             downloadJson(
                 exportData,
-                `fahrzeug-manager-${buildingId}-${new Date().toISOString().slice(0, 10)}.json`
+                `Fahrzeug-Manager-${safeProfileName}-${today}.json`
             );
 
             const exportedVehicles = Object.entries(counts)
@@ -189,10 +192,10 @@
                 (exportedVehicles.length
                  ? exportedVehicles.map(vehicle => `${vehicle.amount}x ${vehicle.caption}`).join('\n')
                  : 'Keine Fahrzeuge gefunden.') +
-                '\n\nDie Exportdatei kann im Fahrzeug-Manager über die Importfunktion verwendet werden.'
+                '\n\nDie Exportdatei kann zum Beispiel im Fahrzeug-Manager über die Importfunktion verwendet werden.'
             );
         } catch (error) {
-            console.error('Fahrzeug-Manager Profil-Exporter:', error);
+            console.error('Wachenprofil:', error);
             alert(`Der Export ist fehlgeschlagen:\n${error.message}`);
         } finally {
             if (button) {
@@ -215,7 +218,7 @@
         button.type = 'button';
         button.className = 'btn btn-primary btn-sm';
         button.textContent = 'Profil exportieren';
-        button.title = 'Fahrzeugbestand als Fahrzeug-Manager-Profil exportieren';
+        button.title = 'Fahrzeugbestand als Wachenprofil exportieren';
         button.addEventListener('click', exportProfile);
 
         item.appendChild(button);
