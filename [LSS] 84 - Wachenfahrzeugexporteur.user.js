@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         [LSS] Wachenfahrzeugexporteurer
+// @name         [LSS] 84 - Fahrzeugexportierer
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
-// @description  Exportiert den Fahrzeugbestand einer Wache, dieser Export kann als Import für den Fahrzeug-Manager genutzt werden.
 // @author       Caddy21
+// @description  Exportiert den Fahrzeugbestand einer Wache welcher dann als Profil im Fahrzeug-Manager verwendet werden kann
 // @match        https://www.leitstellenspiel.de/buildings/*
-// @match        https://polizie.leitstellenspiel.de/buildings/*
+// @match        https://polizei.leitstellenspiel.de/buildings/*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
 // @run-at       document-idle
 // @grant        none
