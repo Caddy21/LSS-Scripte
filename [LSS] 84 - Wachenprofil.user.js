@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] 84 - Wachenprofil
+// @name         [LSS] Wachenprofil
 // @namespace    https://www.leitstellenspiel.de/
 // @version      1.0
 // @author       Caddy21
