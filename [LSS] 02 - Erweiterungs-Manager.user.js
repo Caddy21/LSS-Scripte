@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         [LSS] Erweiterungs-Manager
+// @name         [LSS] 02 - Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
 // @version      1.6
 // @description  Ermöglicht das einfache Verwalten und Bauen von fehlenden Erweiterungen, Lagerräumen, Ausbaustufen und Spezialisierungen für eigene Wachen/Gebäude sowie Verbandsgebäude.
@@ -464,6 +464,400 @@
     #open-extension-settings:active {
         transform: translateY(1px);
     }
+
+
+/* ============================================
+   BAUPROJEKTE – GRUNDLAYOUT
+   ============================================ */
+
+#construction-lightbox,
+#construction-lightbox * {
+    box-sizing: border-box;
+}
+
+#construction-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 8px;
+    background: var(--overlay-color);
+}
+
+#construction-lightbox .construction-modal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1650px;
+    height: calc(100vh - 16px);
+    height: calc(100dvh - 16px);
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px var(--shadow-color);
+}
+
+/* ============================================
+   HEADER UND BUTTONS
+   ============================================ */
+
+#construction-lightbox .construction-header {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0;
+    padding: 12px 16px;
+    background: #383838;
+    color: #fff;
+    border-bottom: 1px solid #505050;
+}
+
+#construction-lightbox .construction-title {
+    margin: 0;
+    color: #fff;
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+#construction-lightbox .construction-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+#construction-lightbox .bau-btn {
+    min-height: 32px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.1s ease;
+}
+
+#construction-lightbox .bau-btn:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
+
+#construction-lightbox .bau-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+#construction-lightbox .bau-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#construction-lightbox .bau-btn-danger {
+    background: var(--coins-color);
+}
+
+#construction-lightbox .bau-btn-success {
+    background: var(--credits-color);
+}
+
+#construction-lightbox .bau-btn-warning {
+    background: var(--warning-color);
+}
+
+/* ============================================
+   TABELLEN – GEMEINSAME SPALTEN
+   ============================================ */
+
+#construction-lightbox .construction-filter-table,
+#construction-lightbox #construction-data-table {
+    width: 100%;
+    min-width: 1250px;
+    margin: 0;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* Einheitliche Spaltenbreiten */
+#construction-lightbox .construction-filter-table col,
+#construction-lightbox #construction-data-table col {
+    width: 17%;
+}
+
+#construction-lightbox .construction-filter-table col:nth-child(2),
+#construction-lightbox #construction-data-table col:nth-child(2) {
+    width: 13%;
+}
+
+#construction-lightbox .construction-filter-table col:nth-child(3),
+#construction-lightbox #construction-data-table col:nth-child(3) {
+    width: 20%;
+}
+
+#construction-lightbox .construction-filter-table col:nth-child(4),
+#construction-lightbox #construction-data-table col:nth-child(4) {
+    width: 18%;
+}
+
+#construction-lightbox .construction-filter-table col:nth-child(5),
+#construction-lightbox #construction-data-table col:nth-child(5) {
+    width: 20%;
+}
+
+#construction-lightbox .construction-filter-table col:nth-child(6),
+#construction-lightbox #construction-data-table col:nth-child(6) {
+    width: 12%;
+}
+
+/* ============================================
+   FILTERBEREICH
+   ============================================ */
+
+#construction-lightbox .construction-filters-wrapper {
+    position: relative;
+    z-index: 5;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    background: #303030;
+    border-bottom: 1px solid #505050;
+}
+
+#construction-lightbox .construction-filters-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+#construction-lightbox .construction-filter-table,
+#construction-lightbox .construction-filter-table th {
+    background: #303030;
+    color: #fff;
+}
+
+#construction-lightbox .construction-filter-table th {
+    padding: 9px 10px 10px;
+    vertical-align: top;
+    text-align: left;
+    border-right: 1px solid #454545;
+    border-bottom: 0;
+}
+
+#construction-lightbox .construction-filter-table th:last-child {
+    border-right: 0;
+}
+
+/* Filterbeschriftungen */
+#construction-lightbox .construction-filter-label {
+    display: block;
+    min-height: 18px;
+    margin: 0 0 7px;
+    color: #e5e5e5;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Restzeit-Sortierung */
+#construction-lightbox .construction-filter-table th:nth-child(5) {
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Filter-Dropdowns */
+#construction-lightbox .construction-filter-table select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 34px;
+    margin: 0;
+    padding: 6px 25px 6px 9px;
+    border: 1px solid #555;
+    border-radius: 5px;
+    background: #414141;
+    color: #fff;
+    font-size: 12px;
+    line-height: normal;
+}
+
+#construction-lightbox .construction-filter-table select:focus {
+    outline: 2px solid var(--button-background-color);
+    outline-offset: -1px;
+}
+
+/* ============================================
+   PROJEKTLISTE UND SCROLLBEREICH
+   ============================================ */
+
+#construction-lightbox .construction-table-wrapper {
+    position: relative;
+    isolation: isolate;
+    z-index: 1;
+    display: block;
+    flex: 1 1 0;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: var(--background-color);
+}
+
+#construction-lightbox #construction-data-table {
+    background: var(--background-color);
+}
+
+#construction-lightbox #construction-data-table td {
+    padding: 11px 10px;
+    vertical-align: middle;
+    text-align: center;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    color: var(--text-color);
+    background: var(--background-color);
+    border-right: 1px solid #454545;
+    border-bottom: 1px solid #454545;
+}
+
+/* Erste Spalte */
+#construction-lightbox #construction-data-table td:first-child {
+    padding-left: 16px;
+    text-align: left;
+}
+
+/* Aktionsspalte */
+#construction-lightbox #construction-data-table td:last-child {
+    padding: 8px;
+    white-space: normal;
+}
+
+#construction-lightbox #construction-data-table td:last-child .bau-btn {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Zeilenfarben und Hover */
+#construction-lightbox #construction-data-table tr:nth-child(even) td {
+    background: #353535;
+}
+
+#construction-lightbox #construction-data-table tr:hover td {
+    background: #454545;
+}
+
+/* Countdown */
+#construction-lightbox .countdown {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================
+   FORTSCHRITTSANZEIGE
+   ============================================ */
+
+#construction-lightbox .construction-progress {
+    flex: 0 0 auto;
+    width: min(80%, 400px);
+    height: 25px;
+    margin: 12px auto;
+    overflow: hidden;
+    background: var(--progress-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-medium);
+}
+
+#construction-lightbox .construction-progress-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 0%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--progress-fill);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: width 0.3s ease;
+}
+
+#construction-lightbox .construction-progress-bar.cancel {
+    background: var(--coins-color);
+}
+
+/* ============================================
+   RESPONSIVE DARSTELLUNG
+   ============================================ */
+
+@media (max-width: 900px) {
+    #construction-lightbox {
+        padding: 4px;
+    }
+
+    #construction-lightbox .construction-modal {
+        height: calc(100vh - 8px);
+        height: calc(100dvh - 8px);
+    }
+
+    #construction-lightbox .construction-header {
+        align-items: flex-start;
+        padding: 10px 12px;
+    }
+
+    #construction-lightbox .construction-toolbar {
+        justify-content: flex-start;
+    }
+
+    #construction-lightbox .construction-title {
+        font-size: 18px;
+    }
+
+    #construction-lightbox .construction-filter-table th {
+        padding: 8px;
+    }
+
+    #construction-lightbox #construction-data-table td {
+        padding: 9px 8px;
+    }
+}
+
+@media (max-width: 500px) {
+    #construction-lightbox .construction-toolbar {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    #construction-lightbox .construction-title {
+        font-size: 17px;
+    }
+}
+
 `;
 
     // Fügt die Stile hinzu
@@ -641,15 +1035,15 @@
     const manualLevels = {};
     const buildingTypeApiMapping = {
         '0_normal': 0,
-        '0_small': 18,
+        '0_small': 0,
         '1_normal': 1,
         '2_normal': 2,
-        '2_small': 20,
+        '2_small': 2,
         '3_normal': 3,
         '4_normal': 4,
         '5_normal': 5,
         '6_normal': 6,
-        '6_small': 19,
+        '6_small': 6,
         '8_normal': 8,
         '9_normal': 9,
         '10_normal': 10,
@@ -1825,12 +2219,16 @@
 
             if (Array.isArray(building.extensions)) {
                 extensionsData[key] = building.extensions
-                    .map((extension, id) => {
+                    .map((extension, idx) => {
                     if (!extension) return null;
 
+                    // Nutze, falls vorhanden, die echte API-ID / type_id.
+                    const apiId = Number(extension.type_id ?? extension.typeId ?? extension.id ?? idx);
+
                     return {
-                        id,
-                        name: extension.caption ?? `Erweiterung ${id}`,
+                        id: apiId,         // <-- wichtige Änderung: id = echte API-ID
+                        _index: idx,       // optional zur Fehlersuche
+                        name: extension.caption ?? `Erweiterung ${apiId}`,
                         cost: Number(extension.credits ?? 0),
                         coins: Number(extension.coins ?? 0)
                     };
@@ -2432,11 +2830,9 @@
     // Funktion zur Unterscheidung der Erweiterungswarteschlange zwischen Premium und Nicht Premium User
     function isExtensionLimitReached(building, extensionId) {
         const fireStationSmallAlwaysAllowed = [1, 2, 20, 21];
-        const fireStationSmallLimited = [0, 6, 8, 13, 14, 16, 18, 19, 25];
-
+        const fireStationSmallLimited = [0, 6, 8, 13, 14, 16, 18, 19, 25, 30];
         const policeStationSmallAlwaysAllowed = [0, 1];
         const policeStationSmallLimited = [10, 11, 12, 13, 16];
-
         const thwAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; // Alle THW-Erweiterungen
         const bpolAllExtensions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Alle BPol-Erweiterungen
         const polSonderEinheitAllExtensions = [0, 1, 2, 3, 4]; // Alle PolSondereinheit-Erweiterungen
@@ -2457,22 +2853,16 @@
                 const hasExtension0 = building.extensions.some(ext => ext.type_id === 0);
                 if (!hasExtension0) return true; // Blockiere Erweiterung 2, wenn Erweiterung 0 noch nicht gebaut wurde
             }
-        }
-
+        } // Schulen
         if (building.building_type === 0 && building.small_building) {
-            // Feuerwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
             if (fireStationSmallAlwaysAllowed.includes(extensionId)) return false;
             return building.extensions.some(ext => fireStationSmallLimited.includes(ext.type_id));
-        }
-
+        } // Feuerwehr
         if (building.building_type === 6 && building.small_building) {
-            // Polizeiwache (Kleinwache): Prüfen, ob die Erweiterung limitiert ist
             if (policeStationSmallAlwaysAllowed.includes(extensionId)) return false;
             return building.extensions.some(ext => policeStationSmallLimited.includes(ext.type_id));
-        }
-
+        } // Polizei
         if (building.building_type === 4) {
-            // Krankenhaus
             const khRequiredFirst = [0, 1];
             const khRestrictedUntilFirstTwo = [2, 3, 4, 5, 6, 7, 8];
             const khAlwaysAllowed = [9];
@@ -2488,8 +2878,7 @@
             }
 
             return false;
-        }
-
+        } // Krankenhaus
         if (building.building_type === 9) {
             // THW
             const thwRequiredFirst = [0, 1];
@@ -2507,10 +2896,8 @@
             }
 
             return false;
-        }
-
+        } // THW
         if (building.building_type === 11) {
-            // BPol
             const bpolAlwaysAllowed = [0, 3, 4, 6, 8, 9, 10];
             const bpolConditional = { 1: 0, 2: 1, 5: 4, 7: 8 };
 
@@ -2520,10 +2907,8 @@
             }
 
             return false;
-        }
-
+        } // BePol
         if (building.building_type === 17) {
-            // PolSonderEinheit
             const polSonderEinheitAlwaysAllowed = [0, 2, 4];
             const polSonderEinheitConditional = { 1: 0, 3: 1 };
 
@@ -2533,7 +2918,7 @@
             }
 
             return false;
-        }
+        } // Pol-Sondereinheit
 
         return false;
     }
@@ -2619,7 +3004,7 @@
                       !ids.includes(Number(ext.id));
 
                 if (building.building_type === 0 && building.small_building) {
-                    const limited = [0, 6, 8, 13, 14, 16, 18, 19, 25];
+                    const limited = [0, 6, 8, 13, 14, 16, 18, 19, 25, 30];
                     const alwaysAllowed = [1, 2, 20, 21];
                     if (alwaysAllowed.includes(Number(ext.id))) return true;
                     return !isForbidden(limited);
@@ -5169,7 +5554,7 @@
                             if (
                                 building.building_type === 0 &&
                                 building.small_building &&
-                                [0, 6, 8, 13, 14, 16, 18, 19, 25].includes(extensionId)
+                                [0, 6, 8, 13, 14, 16, 18, 19, 25, 30].includes(extensionId)
                             ) {
                                 const allRows = document.querySelectorAll(
                                     `.row-${building.id}-0,
@@ -5180,7 +5565,8 @@
                                  .row-${building.id}-16,
                                  .row-${building.id}-18,
                                  .row-${building.id}-19,
-                                 .row-${building.id}-25`
+                                 .row-${building.id}-25,
+                                 .row-${building.id}-30`
                                 );
 
                                 allRows.forEach(otherRow => {
@@ -5385,7 +5771,7 @@
             let anhStellplatzCount = 0;
 
             selectedExtensions.forEach(extensionId => {
-                if ([0, 6, 8, 13, 14, 16, 18, 19, 25].includes(extensionId)) {
+                if ([0, 6, 8, 13, 14, 16, 18, 19, 25, 30].includes(extensionId)) {
                     extensionCount++;
                 } else if (extensionId === 1) {
                     abStellplatzCount++;
@@ -5499,7 +5885,7 @@
             // Feuerwehr-Kleinwache
             if (building.building_type === 0) {
                 const invalidCombinationsFeuerwache = [
-                    0, 6, 8, 13, 14, 16, 18, 19, 25
+                    0, 6, 8, 13, 14, 16, 18, 19, 25, 30
                 ];
 
                 const selectedInvalidExtensions =
@@ -7375,208 +7761,291 @@
 
     // Funktion für das Modal mit Tabelle & Filter
     function openConstructionModal() {
+        // Vorhandenes Fenster nicht doppelt öffnen
+        if (document.getElementById("construction-lightbox")) return;
+
         const modal = document.createElement("div");
         modal.id = "construction-lightbox";
-        Object.assign(modal.style, {
-            position: "fixed",
-            top: "0",
-            left: "0",
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-start",
-            paddingTop: "20px",
-            zIndex: "10001"
-        });
 
         const container = document.createElement("div");
-        Object.assign(container.style, {
-            background: "var(--background-color)",
-            color: "var(--text-color)",
-            border: "1px solid var(--border-color)",
-            padding: "15px",
-            width: "100%",
-            maxWidth: "2000px",
-            maxHeight: "85vh",
-            overflowY: "auto",
-            overflowX: "hidden",
-            borderRadius: "6px"
-        });
+        container.className = "construction-modal";
 
         // HEADER
         const header = document.createElement("div");
-        Object.assign(header.style, {
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "10px"
-        });
+        header.className = "construction-header";
 
         const title = document.createElement("h3");
+        title.className = "construction-title";
         title.textContent = "Laufende Bauprojekte";
-        title.style.margin = "0";
 
         header.appendChild(title);
 
         // BUTTONS
         const btnContainer = document.createElement("div");
-        btnContainer.style.display = "flex";
-        btnContainer.style.gap = "10px";
+        btnContainer.className = "construction-toolbar";
 
         // Alle aktivieren
-        const activateAllBtn = createButton("Alle aktivieren (0)", ["bau-btn", "bau-btn-success"]);
-        activateAllBtn.addEventListener("click", async () => {
-            const rows = Array.from(document.querySelectorAll("#construction-list tr"))
-            .filter(row => row.style.display !== "none" && row.dataset.actionType === "activate");
+        const activateAllBtn = createButton(
+            "Alle aktivieren (0)",
+            ["bau-btn", "bau-btn-success"]
+        );
 
-            const { wrapper, bar } = getOrCreateProgressBar("activate", container, "#4caf50");
+        activateAllBtn.addEventListener("click", async () => {
+            const rows = Array.from(
+                modal.querySelectorAll("#construction-list tr")
+            ).filter(
+                row =>
+                row.style.display !== "none" &&
+                row.dataset.actionType === "activate"
+            );
+
+            const { wrapper, bar } = getOrCreateProgressBar(
+                "activate",
+                container,
+                "#4caf50"
+            );
+
             const total = rows.length;
 
             if (total === 0) {
                 bar.style.width = "100%";
                 bar.textContent = "0 von 0 aktiviert";
-                setTimeout(() => wrapper.style.display = "none", 1500);
+
+                setTimeout(() => {
+                    wrapper.style.display = "none";
+                }, 1500);
+
                 return;
             }
 
-            for (let i = 0; i < total; i++) {
-                const row = rows[i];
-                const buildingId = row.dataset.buildingId;
-                const typeId = row.dataset.typeId;
-                const csrfToken = getCSRFToken();
+            activateAllBtn.disabled = true;
 
-                try {
-                    await fetch(`/buildings/${buildingId}/extension_ready/${typeId}/${buildingId}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRF-Token": csrfToken },
-                        credentials: "same-origin"
-                    });
-                    row.remove();
-                } catch (err) {
-                    console.warn("Fehler beim Aktivieren:", err);
+            try {
+                for (let i = 0; i < total; i++) {
+                    const row = rows[i];
+                    const buildingId = row.dataset.buildingId;
+                    const typeId = row.dataset.typeId;
+                    const csrfToken = getCSRFToken();
+
+                    try {
+                        const response = await fetch(
+                            `/buildings/${buildingId}/extension_ready/${typeId}/${buildingId}`,
+                            {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/x-www-form-urlencoded",
+                                    "X-CSRF-Token": csrfToken
+                                },
+                                credentials: "same-origin"
+                            }
+                        );
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+
+                        if (row._countdownInterval) {
+                            clearInterval(row._countdownInterval);
+                        }
+
+                        row.remove();
+                    } catch (err) {
+                        console.warn("Fehler beim Aktivieren:", err);
+                    }
+
+                    const done = i + 1;
+                    const percent = Math.round((done / total) * 100);
+
+                    bar.style.width = `${percent}%`;
+                    bar.textContent = `${done} von ${total} aktiviert`;
+
+                    updateConstructionButtonCounts();
+
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
+            } finally {
+                activateAllBtn.disabled = false;
 
-                const done = i + 1;
-                const percent = Math.round((done / total) * 100);
-                bar.style.width = `${percent}%`;
-                bar.textContent = `${done} von ${total} aktiviert`;
+                await fetchBuildingsAndRender();
+                updateConstructionButtonCounts();
 
-                await new Promise(resolve => setTimeout(resolve, 300));
+                setTimeout(() => {
+                    wrapper.style.display = "none";
+                }, 1000);
             }
-
-            fetchBuildingsAndRender();
-            updateConstructionButtonCounts();
-
-            setTimeout(() => wrapper.style.display = "none", 1000);
         });
+
         btnContainer.appendChild(activateAllBtn);
 
         // Alle abbrechen
-        const cancelAllBtn = createButton("Alle abbrechen (0)", ["bau-btn", "bau-btn-danger"]);
-        cancelAllBtn.addEventListener("click", async () => {
-            const tbody = document.getElementById("construction-list");
+        const cancelAllBtn = createButton(
+            "Alle abbrechen (0)",
+            ["bau-btn", "bau-btn-danger"]
+        );
 
-            // Vor dem Abbruch sortieren (von lang -> kurz)
+        cancelAllBtn.addEventListener("click", async () => {
+            const tbody = modal.querySelector("#construction-list");
+
+            if (!tbody) return;
+
+            // Von langer zu kurzer Restzeit sortieren
             sortConstructionByTime(false);
 
-            let rows = Array.from(tbody.querySelectorAll("tr"))
-            .filter(row => row.style.display !== "none" && row.dataset.actionType === "cancel");
+            const rows = Array.from(
+                tbody.querySelectorAll("tr")
+            ).filter(
+                row =>
+                row.style.display !== "none" &&
+                row.dataset.actionType === "cancel"
+            );
 
             if (!rows.length) return;
 
-            const { wrapper, bar } = getOrCreateProgressBar("cancel", container, "#f44336");
+            const { wrapper, bar } = getOrCreateProgressBar(
+                "cancel",
+                container,
+                "#f44336"
+            );
+
             const total = rows.length;
 
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                const typeId = row.dataset.typeId;
-                const type = row.dataset.actionTypeDetail;
-                const buildingId = row.dataset.buildingId;
-                const csrfToken = getCSRFToken();
+            cancelAllBtn.disabled = true;
 
-                const url = type === "extension"
-                ? `/buildings/${buildingId}/extension_cancel/${typeId}?redirect_building_id=${buildingId}`
-                : `/buildings/${buildingId}/storage_cancel/${typeId}?redirect_building_id=${buildingId}`;
+            try {
+                for (let i = 0; i < total; i++) {
+                    const row = rows[i];
 
-                try {
-                    await fetch(url, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
-                            "X-CSRF-Token": csrfToken
-                        },
-                        credentials: "same-origin"
-                    });
-                    row.remove();
-                } catch (err) {
-                    console.warn("Fehler beim Abbrechen:", err);
+                    const typeId = row.dataset.typeId;
+                    const type = row.dataset.actionTypeDetail;
+                    const buildingId = row.dataset.buildingId;
+                    const csrfToken = getCSRFToken();
+
+                    const url = type === "extension"
+                    ? `/buildings/${buildingId}/extension_cancel/${typeId}?redirect_building_id=${buildingId}`
+                    : `/buildings/${buildingId}/storage_cancel/${typeId}?redirect_building_id=${buildingId}`;
+
+                    try {
+                        const response = await fetch(url, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded",
+                                "X-CSRF-Token": csrfToken
+                            },
+                            credentials: "same-origin"
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+
+                        if (row._countdownInterval) {
+                            clearInterval(row._countdownInterval);
+                        }
+
+                        row.remove();
+                    } catch (err) {
+                        console.warn("Fehler beim Abbrechen:", err);
+                    }
+
+                    const done = i + 1;
+                    const percent = Math.round((done / total) * 100);
+
+                    bar.style.width = `${percent}%`;
+                    bar.textContent = `${done} von ${total} abgebrochen`;
+
+                    updateConstructionButtonCounts();
+
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
+            } finally {
+                cancelAllBtn.disabled = false;
 
-                const done = i + 1;
-                const percent = Math.round((done / total) * 100);
-                bar.style.width = `${percent}%`;
-                bar.textContent = `${done} von ${total} abgebrochen`;
+                await fetchBuildingsAndRender();
+                updateConstructionButtonCounts();
 
-                await new Promise(resolve => setTimeout(resolve, 300));
+                setTimeout(() => {
+                    wrapper.style.display = "none";
+                }, 1000);
             }
-
-            fetchBuildingsAndRender();
-            updateConstructionButtonCounts();
-
-            setTimeout(() => wrapper.style.display = "none", 1000);
         });
+
         btnContainer.appendChild(cancelAllBtn);
 
-        // Reset-Button
-        const resetBtn = createButton("Filter zurücksetzen", ["bau-btn", "bau-btn-warning"]);
+        // Filter zurücksetzen
+        const resetBtn = createButton(
+            "Filter zurücksetzen",
+            ["bau-btn", "bau-btn-warning"]
+        );
+
         resetBtn.addEventListener("click", () => {
-            document.querySelectorAll("#construction-lightbox select").forEach(select => select.value = "");
+            modal.querySelectorAll("select").forEach(select => {
+                select.value = "";
+            });
+
             filterConstructionTable();
             updateConstructionButtonCounts();
         });
+
         btnContainer.appendChild(resetBtn);
 
-        // Schließen-Button
-        const closeBtn = createButton("Schließen", ["bau-btn", "bau-btn-danger"]);
-        closeBtn.addEventListener("click", () => modal.remove());
-        btnContainer.appendChild(closeBtn);
+        // Schließen
+        const closeBtn = createButton(
+            "Schließen",
+            ["bau-btn", "bau-btn-danger"]
+        );
 
+        closeBtn.addEventListener("click", () => {
+            modal.querySelectorAll("#construction-list tr").forEach(row => {
+                if (row._countdownInterval) {
+                    clearInterval(row._countdownInterval);
+                }
+            });
+
+            modal.remove();
+        });
+
+        btnContainer.appendChild(closeBtn);
         header.appendChild(btnContainer);
 
-        // TABELLE
-        const table = document.createElement("table");
-        Object.assign(table.style, {
-            width: "100%",
-            minWidth: "900px",
-            borderCollapse: "collapse",
-            fontSize: "14px",
-            textAlign: "center",
-            tableLayout: "auto"
-        });
+        // FILTERBEREICH: unabhängig vom scrollenden Tabelleninhalt
+        const filterHeaderWrapper = document.createElement("div");
+        filterHeaderWrapper.className = "construction-filters-wrapper";
+
+        const filterTable = document.createElement("table");
+        filterTable.className = "construction-filter-table";
 
         const thead = document.createElement("thead");
         const headRow = document.createElement("tr");
+
+        // Gemeinsame Spaltenstruktur für Filter und Projektzeilen
+        const createColGroup = () => {
+            const colgroup = document.createElement("colgroup");
+
+            for (let i = 0; i < 6; i++) {
+                colgroup.appendChild(document.createElement("col"));
+            }
+
+            return colgroup;
+        };
+
+        filterTable.appendChild(createColGroup());
+
+        // Filter-Header erstellen
         const createFilterHeader = (label, id) => {
             const th = document.createElement("th");
-            Object.assign(th.style, {
-                border: "1px solid var(--border-color)",
-                padding: "6px",
-                background: "var(--background-color)",
-                textAlign: "center",
-                verticalAlign: "middle",
-                whiteSpace: "nowrap"
-            });
 
             const span = document.createElement("div");
+            span.className = "construction-filter-label";
             span.textContent = label;
-            span.style.marginBottom = "4px";
 
             const select = document.createElement("select");
             select.id = id;
-            select.innerHTML = `<option value="">${label}</option>`;
-            select.style.width = "80%";
+
+            const defaultOption = document.createElement("option");
+            defaultOption.value = "";
+            defaultOption.textContent = label;
+            select.appendChild(defaultOption);
+
             select.addEventListener("change", () => {
                 filterConstructionTable();
                 updateConstructionButtonCounts();
@@ -7584,52 +8053,55 @@
 
             th.appendChild(span);
             th.appendChild(select);
+
             return th;
         };
 
-        headRow.appendChild(createFilterHeader("Alle Leitstellen", "filter-leitstelle"));
-        headRow.appendChild(createFilterHeader("Alle Wachentypen", "filter-wachentyp"));
-        headRow.appendChild(createFilterHeader("Alle Wachen", "filter-wache"));
-        headRow.appendChild(createFilterHeader("Alle Erweiterungen", "filter-erweiterung"));
+        headRow.appendChild(createFilterHeader("Leistellen", "filter-leitstelle"));
+        headRow.appendChild(createFilterHeader("Wachenart", "filter-wachentyp"));
+        headRow.appendChild(createFilterHeader("Wachen", "filter-wache"));
+        headRow.appendChild(createFilterHeader("Erweiterungen", "filter-erweiterung"));
 
+        // Restzeit-Sortierung
         const thRestzeit = document.createElement("th");
         thRestzeit.textContent = "Restzeit ▼";
-        Object.assign(thRestzeit.style, {
-            border: "1px solid var(--border-color)",
-            padding: "6px",
-            background: "var(--background-color)",
-            textAlign: "center",
-            cursor: "pointer",
-            userSelect: "none"
-        });
+        thRestzeit.style.cursor = "pointer";
+        thRestzeit.style.userSelect = "none";
+
         let sortAsc = true;
+
         thRestzeit.addEventListener("click", () => {
             sortConstructionByTime(sortAsc);
-            thRestzeit.textContent = `Restzeit ${sortAsc ? "▲" : "▼"}`;
+
+            thRestzeit.textContent =
+                `Restzeit ${sortAsc ? "▲" : "▼"}`;
+
             sortAsc = !sortAsc;
         });
 
+        headRow.appendChild(thRestzeit);
+
+        // Aktionsfilter
         const thAktion = document.createElement("th");
-        Object.assign(thAktion.style, {
-            border: "1px solid var(--border-color)",
-            padding: "6px",
-            background: "var(--background-color)",
-            textAlign: "center",
-            verticalAlign: "middle"
-        });
 
         const actionLabel = document.createElement("div");
+        actionLabel.className = "construction-filter-label";
         actionLabel.textContent = "Aktion";
-        actionLabel.style.marginBottom = "4px";
 
         const actionFilter = document.createElement("select");
         actionFilter.id = "filter-aktion";
-        actionFilter.innerHTML = `
-        <option value="">Auswahl</option>
-        <option value="cancel">Im Bau</option>
-        <option value="activate">Einsatzbereit schalten</option>
-    `;
-        actionFilter.style.width = "50%";
+
+        [
+            { value: "", text: "Auswahl" },
+            { value: "cancel", text: "Im Bau" },
+            { value: "activate", text: "Einsatzbereit schalten" }
+        ].forEach(item => {
+            const option = document.createElement("option");
+            option.value = item.value;
+            option.textContent = item.text;
+            actionFilter.appendChild(option);
+        });
+
         actionFilter.addEventListener("change", () => {
             filterConstructionTable();
             updateConstructionButtonCounts();
@@ -7638,30 +8110,77 @@
         thAktion.appendChild(actionLabel);
         thAktion.appendChild(actionFilter);
 
-        headRow.appendChild(thRestzeit);
         headRow.appendChild(thAktion);
         thead.appendChild(headRow);
+
+        filterTable.appendChild(thead);
+        filterHeaderWrapper.appendChild(filterTable);
+
+        // SCROLLBEREICH: nur Projektzeilen
+        const tableWrapper = document.createElement("div");
+        tableWrapper.className = "construction-table-wrapper";
+
+        const table = document.createElement("table");
+        table.id = "construction-data-table";
+        table.appendChild(createColGroup());
 
         const tbody = document.createElement("tbody");
         tbody.id = "construction-list";
 
-        table.appendChild(thead);
         table.appendChild(tbody);
+        tableWrapper.appendChild(table);
 
+        // Horizontales Scrollen synchronisieren
+        filterHeaderWrapper.addEventListener("scroll", () => {
+            tableWrapper.scrollLeft = filterHeaderWrapper.scrollLeft;
+        });
+
+        tableWrapper.addEventListener("scroll", () => {
+            filterHeaderWrapper.scrollLeft = tableWrapper.scrollLeft;
+        });
+
+        // MODAL ZUSAMMENBAUEN
         container.appendChild(header);
-        container.appendChild(table);
+        container.appendChild(filterHeaderWrapper);
+        container.appendChild(tableWrapper);
+
         modal.appendChild(container);
         document.body.appendChild(modal);
 
-        // --- Funktion zum Update der Button-Zahlen ---
-        function updateConstructionButtonCounts() {
-            const rows = Array.from(document.querySelectorAll("#construction-list tr"))
-            .filter(row => row.style.display !== "none");
-            const activateCount = rows.filter(row => row.dataset.actionType === "activate").length;
-            const cancelCount = rows.filter(row => row.dataset.actionType === "cancel").length;
+        requestAnimationFrame(() => {
+            const filterTable = modal.querySelector(".construction-filter-table");
+            const dataTable = modal.querySelector("#construction-data-table");
 
-            activateAllBtn.textContent = `Alle aktivieren (${activateCount})`;
-            cancelAllBtn.textContent = `Alle abbrechen (${cancelCount})`;
+            if (filterTable && dataTable) {
+                const sharedWidth = Math.max(
+                    filterTable.parentElement.clientWidth,
+                    1250
+                );
+
+                filterTable.style.width = `${sharedWidth}px`;
+                dataTable.style.width = `${sharedWidth}px`;
+            }
+        });
+
+        // Button-Zahlen aktualisieren
+        function updateConstructionButtonCounts() {
+            const rows = Array.from(
+                modal.querySelectorAll("#construction-list tr")
+            ).filter(row => row.style.display !== "none");
+
+            const activateCount = rows.filter(
+                row => row.dataset.actionType === "activate"
+            ).length;
+
+            const cancelCount = rows.filter(
+                row => row.dataset.actionType === "cancel"
+            ).length;
+
+            activateAllBtn.textContent =
+                `Alle aktivieren (${activateCount})`;
+
+            cancelAllBtn.textContent =
+                `Alle abbrechen (${cancelCount})`;
         }
 
         // Bauprojekte laden
@@ -7673,26 +8192,37 @@
     // Funktion um die Ausbauten hinzufügen
     function addConstructionRow(building, caption, endTime, type, type_id) {
         const tbody = document.getElementById("construction-list");
+        if (!tbody) return;
+
         const row = document.createElement("tr");
 
-        // Wachentyp ermitteln (Mapping-Key bilden)
-        const typeKey = building.building_type + (building.small_building ? '_small' : '_normal');
-        const wachentypName = buildingTypeNames[typeKey] || `Typ ${building.building_type}`;
+        // Wachentyp ermitteln
+        const typeKey =
+              building.building_type +
+              (building.small_building ? "_small" : "_normal");
 
-        // Daten für Filter speichern
+        const wachentypName =
+              buildingTypeNames[typeKey] ||
+              `Typ ${building.building_type}`;
+
+        // Filterdaten
         row.dataset.leitstelle = getLeitstelleName(building);
         row.dataset.wachentyp = wachentypName;
         row.dataset.wache = building.caption;
         row.dataset.erweiterung = caption;
 
-        if (type === "extension" || type === "storage") row.dataset.actionType = "cancel";
-        else if (type === "extension-ready") row.dataset.actionType = "activate";
+        // Aktionstyp
+        if (type === "extension" || type === "storage") {
+            row.dataset.actionType = "cancel";
+        } else if (type === "extension-ready") {
+            row.dataset.actionType = "activate";
+        }
 
         row.dataset.buildingId = building.id;
         row.dataset.typeId = type_id;
         row.dataset.actionTypeDetail = type;
 
-        // Reihenfolge der sichtbaren Spalten: Leitstelle → Wachentyp → Wache → Erweiterung
+        // Normale Tabellenzellen
         const values = [
             row.dataset.leitstelle,
             row.dataset.wachentyp,
@@ -7700,118 +8230,209 @@
             row.dataset.erweiterung
         ];
 
-        values.forEach(txt => {
+        values.forEach(text => {
             const td = document.createElement("td");
-            td.textContent = txt;
-            Object.assign(td.style, {
-                border: "1px solid var(--border-color)",
-                padding: "6px",
-                textAlign: "center",
-                verticalAlign: "middle",
-                whiteSpace: "nowrap"
-            });
+            td.textContent = text;
             row.appendChild(td);
         });
 
         // Countdown-Zelle
         const countdownTd = document.createElement("td");
-        countdownTd.classList.add("countdown"); // <-- neu
-        Object.assign(countdownTd.style, {
-            border: "1px solid var(--border-color)",
-            padding: "6px",
-            textAlign: "center",
-            verticalAlign: "middle",
-            whiteSpace: "nowrap"
-        });
+        countdownTd.className = "countdown";
 
-        countdownTd.textContent = endTime ? "" : "Ausbau fertiggestellt";
+        countdownTd.textContent = endTime
+            ? ""
+        : "Ausbau fertiggestellt";
+
         row.appendChild(countdownTd);
 
-        // Action-Zelle
+        // Aktionszelle
         const actionTd = document.createElement("td");
-        Object.assign(actionTd.style, {
-            border: "1px solid var(--border-color)",
-            padding: "6px",
-            textAlign: "center",
-            verticalAlign: "middle",
-            whiteSpace: "nowrap"
-        });
 
+        // Bau abbrechen
         if (type === "extension" || type === "storage") {
-            const cancelButton = createButton("Bau abbrechen", ["bau-btn", "bau-btn-danger"]);
-            cancelButton.onclick = async () => {
+            const cancelButton = createButton(
+                "Bau abbrechen",
+                ["bau-btn", "bau-btn-danger"]
+            );
+
+            cancelButton.addEventListener("click", async () => {
                 cancelButton.disabled = true;
+
                 const csrfToken = getCSRFToken();
+
                 try {
                     const url = type === "extension"
                     ? `/buildings/${building.id}/extension_cancel/${type_id}?redirect_building_id=${building.id}`
                     : `/buildings/${building.id}/storage_cancel/${type_id}?redirect_building_id=${building.id}`;
-                    await fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRF-Token": csrfToken }, credentials: "same-origin" });
+
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            "X-CSRF-Token": csrfToken
+                        },
+                        credentials: "same-origin"
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    if (row._countdownInterval) {
+                        clearInterval(row._countdownInterval);
+                    }
+
                     row.remove();
-                    fetchBuildingsAndRender();
+
+                    await fetchBuildingsAndRender();
                 } catch (err) {
                     console.warn("Fehler beim Abbrechen:", err);
                     cancelButton.disabled = false;
                 }
-            };
+            });
+
             actionTd.appendChild(cancelButton);
-        } else if (type === "extension-ready") {
-            const activateButton = createButton("Einsatzbereit schalten", ["bau-btn", "bau-btn-success"]);
-            activateButton.onclick = async () => {
+        }
+
+        // Erweiterung einsatzbereit schalten
+        else if (type === "extension-ready") {
+            const activateButton = createButton(
+                "Einsatzbereit schalten",
+                ["bau-btn", "bau-btn-success"]
+            );
+
+            activateButton.addEventListener("click", async () => {
                 activateButton.disabled = true;
+
                 const csrfToken = getCSRFToken();
+
                 try {
-                    const url = `/buildings/${building.id}/extension_ready/${type_id}/${building.id}`;
-                    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRF-Token": csrfToken }, credentials: "same-origin" });
-                    if (!res.ok) throw new Error("Fehler beim Aktivieren der Erweiterung");
+                    const url =
+                          `/buildings/${building.id}/extension_ready/${type_id}/${building.id}`;
+
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            "X-CSRF-Token": csrfToken
+                        },
+                        credentials: "same-origin"
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    if (row._countdownInterval) {
+                        clearInterval(row._countdownInterval);
+                    }
+
                     row.remove();
-                    fetchConstructionProjects();
+
+                    await fetchConstructionProjects();
                 } catch (err) {
-                    console.warn("Fehler beim Aktivieren der Erweiterung:", err);
+                    console.warn(
+                        "Fehler beim Aktivieren der Erweiterung:",
+                        err
+                    );
+
                     activateButton.disabled = false;
                 }
-            };
+            });
+
             actionTd.appendChild(activateButton);
         }
 
         row.appendChild(actionTd);
         tbody.appendChild(row);
 
-        // Countdown nur für Bauprojekte
+        // Countdown aktualisieren
         if (endTime) {
+            let interval;
+
             function updateCountdown() {
                 const now = new Date();
-                const remaining = endTime - now;
+                const remaining = new Date(endTime).getTime() - now.getTime();
+
                 if (remaining <= 0) {
                     countdownTd.textContent = "Fertig!";
-                    clearInterval(interval);
+
+                    if (interval) {
+                        clearInterval(interval);
+                    }
+
+                    row._countdownInterval = null;
                     return;
                 }
-                const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-                countdownTd.textContent = `${days} Tag(e), ${hours} Stunde(n), ${minutes} Minute(n), ${seconds} Sekunde(n)`;
+
+                const days = Math.floor(
+                    remaining / (1000 * 60 * 60 * 24)
+                );
+
+                const hours = Math.floor(
+                    (remaining % (1000 * 60 * 60 * 24)) /
+                    (1000 * 60 * 60)
+                );
+
+                const minutes = Math.floor(
+                    (remaining % (1000 * 60 * 60)) /
+                    (1000 * 60)
+                );
+
+                const seconds = Math.floor(
+                    (remaining % (1000 * 60)) / 1000
+                );
+
+                countdownTd.textContent =
+                    `${days} Tag(e), ${hours} Stunde(n), ` +
+                    `${minutes} Minute(n), ${seconds} Sekunde(n)`;
             }
+
             updateCountdown();
-            const interval = setInterval(updateCountdown, 1000);
+
+            interval = setInterval(updateCountdown, 1000);
+            row._countdownInterval = interval;
         }
 
-        // Dropdowns automatisch füllen
+        // Filter-Dropdowns automatisch füllen
         const addOptionIfMissing = (selectId, value) => {
             const select = document.getElementById(selectId);
+
             if (!select) return;
-            if (!Array.from(select.options).some(opt => opt.value === value)) {
+
+            const exists = Array.from(select.options).some(
+                option => option.value === value
+            );
+
+            if (!exists) {
                 const option = document.createElement("option");
                 option.value = value;
                 option.textContent = value;
+
                 select.appendChild(option);
             }
         };
-        addOptionIfMissing("filter-leitstelle", row.dataset.leitstelle);
-        addOptionIfMissing("filter-wachentyp", row.dataset.wachentyp);
-        addOptionIfMissing("filter-wache", row.dataset.wache);
-        addOptionIfMissing("filter-erweiterung", row.dataset.erweiterung);
+
+        addOptionIfMissing(
+            "filter-leitstelle",
+            row.dataset.leitstelle
+        );
+
+        addOptionIfMissing(
+            "filter-wachentyp",
+            row.dataset.wachentyp
+        );
+
+        addOptionIfMissing(
+            "filter-wache",
+            row.dataset.wache
+        );
+
+        addOptionIfMissing(
+            "filter-erweiterung",
+            row.dataset.erweiterung
+        );
     }
 
     // Filterfunktion
@@ -7971,47 +8592,50 @@
 
     // Mittig platzierte Fortschrittsbalken
     function getOrCreateProgressBar(type, container, color) {
+        // Vorhandenen Fortschrittsbalken wiederverwenden
         if (progressBars[type]) {
-            // existierender Balken wieder sichtbar machen & zurücksetzen
-            progressBars[type].wrapper.style.display = "flex";
-            progressBars[type].bar.style.width = "0%";
-            progressBars[type].bar.textContent = "";
-            return progressBars[type];
+            const existing = progressBars[type];
+
+            existing.wrapper.style.display = "block";
+            existing.bar.style.width = "0%";
+            existing.bar.textContent = "";
+
+            return existing;
         }
 
+        // Container
         const wrapper = document.createElement("div");
-        Object.assign(wrapper.style, {
-            width: "80%",
-            maxWidth: "400px",
-            height: "25px",
-            background: "#f0f0f0",
-            border: "1px solid #aaa",
-            borderRadius: "6px",
-            overflow: "hidden",
-            margin: "15px auto",
-            display: "flex",
-            justifyContent: "flex-start",
-            alignItems: "center",
-            fontSize: "14px",
-            color: "#fff",
-            fontWeight: "bold",
-            textAlign: "center",
-            transition: "all 0.3s"
-        });
+        wrapper.className = "construction-progress";
 
+        // Fortschrittsbalken
         const bar = document.createElement("div");
-        Object.assign(bar.style, {
-            height: "100%",
-            width: "0%",
-            background: color,
-            lineHeight: "25px",
-            textAlign: "center",
-            transition: "width 0.3s"
-        });
+        bar.className = "construction-progress-bar";
+
+        if (type === "cancel") {
+            bar.classList.add("cancel");
+        } else if (type !== "activate" && color) {
+            bar.style.backgroundColor = color;
+        }
+
         wrapper.appendChild(bar);
 
-        container.insertBefore(wrapper, container.firstChild);
-        progressBars[type] = { wrapper, bar };
+        // Zwischen Header und Tabelle platzieren
+        const tableWrapper = container.querySelector(
+            ".construction-table-wrapper"
+        );
+
+        if (tableWrapper) {
+            container.insertBefore(wrapper, tableWrapper);
+        } else {
+            container.appendChild(wrapper);
+        }
+
+        // Referenz speichern
+        progressBars[type] = {
+            wrapper,
+            bar
+        };
+
         return progressBars[type];
     }
 
