@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Fahrzeug-Manager
 // @namespace    https://leitstellenspiel.de/
-// @version      1.3
+// @version      1.2.1
 // @description  Zeigt fehlende Fahrzeuge, Abrollbehälter, Anhänger und Rollcontainer pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -2196,31 +2196,31 @@
             });
         });
         table.querySelectorAll('.fm-hide-all-buildings').forEach(button => {
-    button.addEventListener('click', () => {
-        const rows = [...table.querySelectorAll('tbody tr')]
-            .filter(row =>
-                row.getClientRects().length > 0 &&
-                getComputedStyle(row).display !== 'none' &&
-                getComputedStyle(row).visibility !== 'hidden'
-            );
+            button.addEventListener('click', () => {
+                const rows = [...table.querySelectorAll('tbody tr')]
+                .filter(row =>
+                        row.getClientRects().length > 0 &&
+                        getComputedStyle(row).display !== 'none' &&
+                        getComputedStyle(row).visibility !== 'hidden'
+                       );
 
-        console.log('[Wachen-Massenbearbeiter] Sichtbare Wachen zum Ausblenden:', rows.length);
+                console.log('[Wachen-Massenbearbeiter] Sichtbare Wachen zum Ausblenden:', rows.length);
 
-        rows.forEach(row => {
-            const buildingId = Number(row.dataset.buildingId);
-            if (!buildingId) return;
+                rows.forEach(row => {
+                    const buildingId = Number(row.dataset.buildingId);
+                    if (!buildingId) return;
 
-            hideBuilding(buildingId);
-            row.remove();
+                    hideBuilding(buildingId);
+                    row.remove();
+                });
+
+                updateBuyButtons(table);
+
+                if (!table.querySelector('tbody tr')) {
+                    table.closest('.fm-spoiler')?.remove();
+                }
+            });
         });
-
-        updateBuyButtons(table);
-
-        if (!table.querySelector('tbody tr')) {
-            table.closest('.fm-spoiler')?.remove();
-        }
-    });
-});
 
         applyRowFilter();
     }
@@ -2619,35 +2619,19 @@
                 return;
             }
 
-            let freshVehiclesData;
-
-            try {
-                const res = await fetch('/api/vehicles', { signal: controller.signal });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                freshVehiclesData = await res.json();
-            } catch (e) {
-                if (e.name === 'AbortError') {
-                    cancelRequested = true;
-                    return;
-                }
-
-                console.error('[FM] Fehler beim Nachladen der Fahrzeugliste:', e);
-                alert('Fehler beim Nachladen der aktuellen Fahrzeugliste. Kauf abgebrochen.');
-                return;
-            }
-
-            const freshVehicleMap = {};
-            freshVehiclesData.forEach(vehicle => {
-                const buildingId = Number(vehicle.building_id);
-                freshVehicleMap[buildingId] ??= [];
-                freshVehicleMap[buildingId].push(vehicle);
-            });
-
             const requestsByBuilding = {};
             Object.values(buyPlanMap).forEach(request => {
                 const buildingId = Number(request.buildingId);
                 requestsByBuilding[buildingId] ??= [];
                 requestsByBuilding[buildingId].push(request);
+            });
+            
+            const freshVehicleMap = {};
+
+            (vehicleDataGlobal || []).forEach(vehicle => {
+                const buildingId = Number(vehicle.building_id);
+                freshVehicleMap[buildingId] ??= [];
+                freshVehicleMap[buildingId].push(vehicle);
             });
 
             const filteredBuyList = [];
@@ -2875,15 +2859,15 @@
                 const parts = [];
 
                 if (vehicleCount) {
-                    parts.push(`${
-                               vehicleCount
-                               } Fahrzeug${vehicleCount === 1 ? '' : 'e'}`);
+                    parts.push(
+                        `${vehicleCount} Fahrzeug${vehicleCount === 1 ? '' : 'e'}`
+                    );
                 }
 
                 if (equipmentCount) {
-                    parts.push(`${
-                               equipmentCount
-                               } RC${equipmentCount === 1 ? '' : 's'}`);
+                    parts.push(
+                        `${equipmentCount} RC${equipmentCount === 1 ? '' : 's'}`
+                    );
                 }
 
                 const proceed = confirm(
@@ -2905,7 +2889,7 @@
                 const itemData = getItemData(item);
 
                 if (!itemData) {
-                    console.warn('[FM] Kaufobjekt nicht gefunden:', item);
+                    console.warn('[Kauf] Kaufobjekt nicht gefunden:', item);
                     continue;
                 }
 
