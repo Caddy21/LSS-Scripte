@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Fahrzeug-Manager
 // @namespace    https://leitstellenspiel.de/
-// @version      1.2
+// @version      1.3
 // @description  Zeigt fehlende Fahrzeuge, Abrollbehälter, Anhänger und Rollcontainer pro Wache, je Einstellung an und ermöglicht den Kauf dieser.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/*
@@ -13,8 +13,7 @@
 (function() {
     'use strict';
 
-    const coinsButton = false; 
-    // Jede menge Daten (mehr wie Google!)
+    const coinsButton = false;
     const buildingTypeNames = {
         '0_normal': 'Feuerwache (Normal)',
         '0_small': 'Feuerwache (Kleinwache)',
@@ -1541,89 +1540,68 @@
         const filterLeitstelle = filters.leitstelle || '';
         const filterWache = filters.wache || '';
         const hiddenBuildings = getHiddenBuildings();
-        const leitstellen = [...new Set(
-            buildings.map(b => b.leitstelle_caption).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'de'));
-        const wachen = [...new Set(
-            buildings.map(b => b.caption).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'de'));
+        const leitstellen = [...new Set(buildings.map(b => b.leitstelle_caption).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+        const wachen = [...new Set(buildings.map(b => b.caption).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+        const firstBuilding = buildings[0];
+        const globalConfigKey = firstBuilding
+        ? `${firstBuilding.building_type}_${firstBuilding.small_building ? 'small' : 'normal'}`
+        : '';
+        const globalProfileNames = globalConfigKey
+        ? Object.keys(loadProfiles(globalConfigKey).profiles)
+        : [];
 
         let html = `
-    <table class="table fm-table" id="fm-table-${tableId}">
-      <thead>
-        <tr>
-          <th>Auswahl</th>
-          <th>Leitstelle</th>
-          <th>Wache</th>
-          <th>Profil</th>
-          <th>Freie Stellplätze</th>
-          <th>Fahrzeuge / Ausrüstung auf Wache</th>
-          <th>Fehlende Fahrzeuge / Ausrüstung</th>
-          <th>Kaufen mit Credits</th>
-          ${coinsButton ? '<th>Kaufen mit Coins</th>' : ''}
-        </tr>
-
-        <tr class="fm-filter-row">
-          <td>
-            <input type="checkbox" class="fm-select-all" data-table="${tableId}">
-          </td>
-
-          <td>
-            <select class="fm-filter-leitstelle" data-table="${tableId}">
-              <option value="">Alle</option>
-              ${leitstellen.map(n => `<option value="${n}">${n}</option>`).join('')}
-            </select>
-          </td>
-
-          <td>
-            <select class="fm-filter-wache" data-table="${tableId}">
-              <option value="">Alle</option>
-              ${wachen.map(n => `<option value="${n}">${n}</option>`).join('')}
-            </select>
-          </td>
-
-          <td>
-            <button class="fm-filter-reset btn btn-primary btn-xs" data-table="${tableId}">
-              Filter zurücksetzen
-            </button>
-          </td>
-
-          <td></td>
-          <td></td>
-
-          <td style="text-align:center;">
-            <button class="btn btn-info btn-xs fm-toggle-hide-no-missing"
-                    data-table="${tableId}"
-                    title="Blendet Wachen aus, bei denen keine Fahrzeuge oder RCs fehlen">
-              Keine fehlenden
-            </button>
-          </td>
-
-          <td style="text-align:center;">
-            <button class="btn btn-success btn-xs fm-buy-selected-credits"
-                    data-table="${tableId}">
-              💳 Alle kaufen
-            </button>
-          </td>
-
-          ${coinsButton ? `
-    <td style="text-align:center;">
-        <button class="btn btn-danger btn-xs fm-buy-selected-coins"
-                data-table="${tableId}">
-            🪙 Alle kaufen
-        </button>
-    </td>
-` : ''}
-        </tr>
-      </thead>
-
-      <tbody>
+        <table class="table fm-table" id="fm-table-${tableId}">
+            <thead>
+                <tr>
+                    <th>Auswahl</th>
+                    <th>Leitstelle</th>
+                    <th>Wache</th>
+                    <th>Ausblenden</th>
+                    <th>Profil</th>
+                    <th>Freie Stellplätze</th>
+                    <th>Fahrzeuge / Ausrüstung auf Wache</th>
+                    <th>Fehlende Fahrzeuge / Ausrüstung</th>
+                    <th>Kaufen mit Credits</th>
+                    ${coinsButton ? '<th>Kaufen mit Coins</th>' : ''}
+                </tr>
+                <tr class="fm-filter-row">
+                    <td>
+                        <input type="checkbox" class="fm-select-all" data-table="${tableId}">
+                    </td>
+                    <td>
+                        <select class="fm-filter-leitstelle" data-table="${tableId}"><option value="">Alle</option>${leitstellen.map(n => `<option value="${n}">${n}</option>`).join('')}</select>
+                    </td>
+                    <td>
+                        <select class="fm-filter-wache" data-table="${tableId}"><option value="">Alle</option>${wachen.map(n => `<option value="${n}">${n}</option>`).join('')}</select>
+                    </td>
+                    <td
+                        style="text-align:center; white-space:nowrap;"><button class="btn btn-danger btn-xs fm-hide-all-buildings" data-table="${tableId}" title="Alle aktuell angezeigten Wachen ausblenden"> 👁 Wachen ausblenden</button>
+                    </td>
+                    <td>
+                        <select class="fm-profile-all" data-table="${tableId}" style="width:100%;"><option value="">Profil für alle Auswählen</option>${globalProfileNames.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
+                    </td>
+                    <td style="text-align:center;">
+                        <button class="fm-filter-reset btn btn-primary btn-xs" data-table="${tableId}">Filter zurücksetzen</button>
+                    </td>
+                    <td></td>
+                    <td 
+                        style="text-align:center;"><button class="btn btn-info btn-xs fm-toggle-hide-no-missing" data-table="${tableId}" title="Blendet Wachen aus, bei denen keine Fahrzeuge oder RCs fehlen">Keine fehlenden</button>
+                    </td>
+                    <td 
+                        style="text-align:center;"><button class="btn btn-success btn-xs fm-buy-selected-credits" data-table="${tableId}">💳 Alle kaufen</button>
+                    </td>
+                    ${coinsButton ? `
+                        <td style="text-align:center;">
+                            <button class="btn btn-danger btn-xs fm-buy-selected-coins" data-table="${tableId}">🪙 Alle kaufen</button>
+                        </td>
+                    ` : ''}
+                </tr>
+            </thead>
+            <tbody>
     `;
 
-        const sortedBuildings = buildings
-        .slice()
-        .sort((a, b) => a.caption.localeCompare(b.caption));
-
+        const sortedBuildings = buildings.slice().sort((a, b) => a.caption.localeCompare(b.caption));
         sortedBuildings.forEach((b, idx) => {
             if (hiddenBuildings.includes(Number(b.id))) return;
             if (filterLeitstelle && b.leitstelle_caption !== filterLeitstelle) return;
@@ -1634,10 +1612,7 @@
             vehiclesOnBuilding.forEach(v => {
                 const typeId = v.vehicle_type;
                 const key = `vehicle:${typeId}`;
-
-                const typeName =
-                      vehicleTypeMap[typeId]?.caption ||
-                      `Unbekannt (Typ ${typeId})`;
+                const typeName = vehicleTypeMap[typeId]?.caption || `Unbekannt (Typ ${typeId})`;
 
                 if (!typeCountMapOnBuilding[key]) {
                     typeCountMapOnBuilding[key] = {
@@ -1665,33 +1640,16 @@
                 };
             });
             const vehicleNames = Object.values(typeCountMapOnBuilding).map(item => {
-                const displayName =
-                      item.count > 1
-                ? `${item.count}x ${item.name}`
-                : item.name;
-
+                const displayName = item.count > 1 ? `${item.count}x ${item.name}` : item.name;
                 const surplusKey = `${item.type}:${item.id}`;
                 const surplus = configuredSurplusItems[surplusKey];
 
-                // Mehr Fahrzeuge/RCs vorhanden als konfiguriert
                 if (surplus) {
-                    return `
-                <span
-                    style="color: #00a8e8; font-weight: bold;"
-                    title="${surplus.surplus}x mehr vorhanden als konfiguriert (${surplus.actual}/${surplus.configured})"
-                >
-                    ${displayName}
-                </span>
-            `;
+                    return `<span style="color:#00a8e8;font-weight:bold;" title="${surplus.surplus}x mehr vorhanden als konfiguriert (${surplus.actual}/${surplus.configured})">${displayName}</span>`;
                 }
 
-                // Bestehende RC-Darstellung
                 if (item.type === 'equipment') {
-                    return `
-                <span title="Rollcontainer">
-                    ${displayName}
-                </span>
-            `;
+                    return `<span title="Rollcontainer">${displayName}</span>`;
                 }
 
                 return displayName;
@@ -1722,79 +1680,45 @@
                     const equipmentId = id.substring('equipment:'.length);
                     const equipment = getEquipmentById(equipmentId);
 
-                    if (!equipment) {
-                        return `Unbekannter RC (${equipmentId})`;
-                    }
+                    if (!equipment) return `Unbekannter RC (${equipmentId})`;
 
-                    const displayName =
-                          count > 1
-                    ? `${count}x ${equipment.caption}`
-                    : equipment.caption;
-
+                    const displayName = count > 1 ? `${count}x ${equipment.caption}` : equipment.caption;
                     const storageTotal = Number(b.storage_total || 0);
-                    const storageUpgrade =
-                          Array.isArray(b.storage_upgrades)
-                    ? b.storage_upgrades.find(
-                        u => u.upgrade_type?.toLowerCase().includes('lagerraum')
-                    )
+                    const storageUpgrade = Array.isArray(b.storage_upgrades)
+                    ? b.storage_upgrades.find(u => u.upgrade_type?.toLowerCase().includes('lagerraum'))
                     : null;
-                    if (
-                        storageUpgrade &&
-                        storageUpgrade.available === false &&
-                        storageUpgrade.available_at
-                    ) {
+
+                    if (storageUpgrade && storageUpgrade.available === false && storageUpgrade.available_at) {
                         return `<span style="color:orange;font-weight:bold;" title="Lager im Bau">${displayName}</span>`;
                     }
-
                     if (purchaseLimited && storageTotal > 0) {
                         return `<span style="color:#00a6a6;font-weight:bold;" title="Nicht alle konfigurierten RCs können gekauft werden – Lagerkapazität reicht nicht aus">${displayName}</span>`;
                     }
-                    if (storageTotal > 0) {
-                        return displayName;
-                    }
+                    if (storageTotal > 0) return displayName;
+
                     return `<span style="color:red;font-weight:bold;" title="Lager fehlt">${displayName}</span>`;
                 }
 
-
                 const typeId = parseInt(id, 10);
+                const status = getExtensionStatusForVehicle(b, typeId, lssmBuildingDefs);
+                const name = vehicleTypeMap[typeId]?.caption || `Unbekannt (Typ ${id})`;
+                const displayName = count > 1 ? `${count}x ${name}` : name;
 
-                const status = getExtensionStatusForVehicle(
-                    b,
-                    typeId,
-                    lssmBuildingDefs
-                );
-
-                const name =
-                      vehicleTypeMap[typeId]?.caption ||
-                      `Unbekannt (Typ ${id})`;
-
-                const displayName =
-                      count > 1
-                ? `${count}x ${name}`
-                : name;
-
-                // Erweiterungsstatus hat IMMER Vorrang
                 switch (status) {
                     case 'locked':
                     case 'missing':
-                        return `<span style="color:red;font-weight:bold;"
-                    title="Erweiterung fehlt">${displayName}</span>`;
+                        return `<span style="color:red;font-weight:bold;" title="Erweiterung fehlt">${displayName}</span>`;
 
                     case 'in_progress':
-                        return `<span style="color:orange;font-weight:bold;"
-                    title="Erweiterung im Bau">${displayName}</span>`;
+                        return `<span style="color:orange;font-weight:bold;" title="Erweiterung im Bau">${displayName}</span>`;
 
                     default:
-                        // Erweiterung ist vorhanden/fertig.
-                        // Erst jetzt prüfen, ob alle Fahrzeuge gekauft werden können.
                         if (purchaseLimited) {
                             if (isBesonderheit(typeId)) {
-                                return `<span style="color:#00a6a6;font-weight:bold;"
-                            title="Nicht alle konfigurierten Außenlastbehälter können gekauft werden – nicht genügend freie Plätze für Hubschrauber">${displayName}</span>`;
+                                return `<span style="color:#00a6a6;font-weight:bold;" title="Nicht alle konfigurierten Außenlastbehälter können gekauft werden – nicht genügend freie Plätze für Hubschrauber">${displayName}</span>`;
                             }
 
-                            return `<span style="color:#00a6a6;font-weight:bold;"
-                        title="Nicht alle konfigurierten Fahrzeuge können gekauft werden – nicht genügend freie Stellplätze">${displayName}</span>`;
+                            return `<span style="color:#00a6a6;font-weight:bold;" title="Nicht alle konfigurierten Fahrzeuge können gekauft werden – nicht genügend freie Stellplätze">${displayName}</span>`;
                         }
 
                         return displayName;
@@ -1806,14 +1730,12 @@
             const maxVehicles = calcMaxParkingLots(b, lssmBuildingDefs);
             const abOnBuilding = vehiclesOnBuilding.filter(v => {
                 const type = vehicleTypeMap[v.vehicle_type];
-                return type?.isTrailer === true &&
-                    Array.isArray(type.tractiveVehicles) &&
-                    type.tractiveVehicles.includes(46);
+                return type?.isTrailer === true && Array.isArray(type.tractiveVehicles) && type.tractiveVehicles.includes(46);
             });
             const normalVehiclesOnBuilding = vehiclesOnBuilding.filter(v => !isBesonderheit(v.vehicle_type));
-            const maxABStellplaetze = calcMaxABParkingLots(b,lssmBuildingDefs);
-            const freieStellplaetze = Math.max(maxVehicles - normalVehiclesOnBuilding.length,0);
-            const freieABStellplaetze = Math.max(maxABStellplaetze - abOnBuilding.length,0);
+            const maxABStellplaetze = calcMaxABParkingLots(b, lssmBuildingDefs);
+            const freieStellplaetze = Math.max(maxVehicles - normalVehiclesOnBuilding.length, 0);
+            const freieABStellplaetze = Math.max(maxABStellplaetze - abOnBuilding.length, 0);
             const anhaengerOnBuilding = vehiclesOnBuilding.filter(v => {
                 const type = vehicleTypeMap[v.vehicle_type];
                 return type?.isTrailer === true && !(Array.isArray(type.tractiveVehicles) && type.tractiveVehicles.includes(46));
@@ -1821,126 +1743,61 @@
             const maxAnhStellplaetze = calcMaxAnhStellplaetze(b);
             const freieAnhStellplaetze = Math.max(maxAnhStellplaetze - anhaengerOnBuilding.length, 0);
             const profileCell = hasProfiles
-            ? `<select class="fm-building-profile"
-                       data-building-id="${b.id}"
-                       data-config-key="${configKey}"
-                       style="padding:2px 4px;
-                              border:1px solid var(--spoiler-border);
-                              border-radius:4px;
-                              background:var(--spoiler-body-bg);
-                              color:var(--spoiler-body-text);
-                              width:100%;">
-                ${profileNames.map(p => `
-                    <option value="${p}" ${p === activeProfile ? 'selected' : ''}>
-                        ${p}
-                    </option>
-                `).join('')}
-              </select>`
-            : `<span style="color:var(--text-color-secondary,#999);
-                             font-style:italic;">
-                 – kein Profil –
-               </span>`;
+            ? `<select class="fm-building-profile" data-building-id="${b.id}" data-config-key="${configKey}" style="padding:2px 4px;border:1px solid var(--spoiler-border);border-radius:4px;background:var(--spoiler-body-bg);color:var(--spoiler-body-text);width:100%;">
+                ${profileNames.map(p => `<option value="${p}" ${p === activeProfile ? 'selected' : ''}>${p}</option>`).join('')}
+               </select>`
+            : `<span style="color:var(--text-color-secondary,#999);font-style:italic;">– kein Profil –</span>`;
 
             html += `
-                    <tr data-building-id="${b.id}"
-                        data-building-caption="${b.caption}"
-                        data-leitstelle-caption="${b.leitstelle_caption ?? ''}"
-                        data-config-key="${configKey}"
-                        data-missing-vehicle-ids='${missingVehiclesJson}'
-                        data-has-missing="${hasMissing}"
-                        data-storage-free="${storageFree}">
-
-            <td>
-              <input type="checkbox"
-                     class="fm-select"
-                     id="fm-select-${tableId}-${idx}"
-                     data-credits="${buyableData.totalCredits}"
-                     data-coins="${buyableData.totalCoins}">
-            </td>
-            <td data-leitstelle-caption="${b.leitstelle_caption ?? ''}">
-    ${b.leitstelle_caption ?? '-'}
-<td>
-    ${buildBuildingLink(b)}
-    <button class="btn btn-danger btn-xs fm-hide-building"
-            data-building-id="${b.id}"
-            title="Wache dauerhaft ausblenden"
-            style="margin-left:4px;">
-        👁
-    </button>
-</td>
-        <td>${profileCell}</td>
-        <td>
-  <span class="badge fm-badge-green" title="Freie Fahrzeug-Stellplätze">
-    FZ ${freieStellplaetze}
-  </span>
-  ${maxABStellplaetze > 0 ? `
-    <span class="badge fm-badge-green" title="Freie AB-Stellplätze">
-      AB ${freieABStellplaetze}
-    </span>
-  ` : ''}
-  ${Number(b.storage_total || 0) > 0 ? `
-    <span class="badge fm-badge-green" title="Freie RC-Lagerplätze">
-      RC ${storageFree}
-    </span>
-  ` : ''}
-</td>
-        <td>
-          <span class="fm-vehicle-list">
-            ${vehicleNames}
-          </span>
-        </td>
-
-        <td>
-          <span class="fm-vehicle-list">
-            ${coloredMissingNames}
-          </span>
-        </td>
-
-        <td>
-          <button class="btn btn-success btn-xs fm-buy-credit"
-            ${
+                <tr data-building-id="${b.id}"
+                    data-building-caption="${b.caption}"
+                    data-leitstelle-caption="${b.leitstelle_caption ?? ''}"
+                    data-config-key="${configKey}"
+                    data-missing-vehicle-ids='${missingVehiclesJson}'
+                    data-has-missing="${hasMissing}"
+                    data-storage-free="${storageFree}">
+                    <td>
+                        <input type="checkbox" class="fm-select" id="fm-select-${tableId}-${idx}" data-credits="${buyableData.totalCredits}" data-coins="${buyableData.totalCoins}">
+                    </td>
+                    <td data-leitstelle-caption="${b.leitstelle_caption ?? ''}">${b.leitstelle_caption ?? '-'}</td>
+                    <td>${buildBuildingLink(b)}</td>
+                    <td style="text-align:center;white-space:nowrap;">
+                        <button class="btn btn-danger btn-xs fm-hide-building" data-building-id="${b.id}" title="Wache dauerhaft ausblenden">👁</button>
+                    </td>
+                    <td>${profileCell}</td>
+                    <td>
+                        <span class="badge fm-badge-green" title="Freie Fahrzeug-Stellplätze">FZ ${freieStellplaetze}</span>
+                        ${maxABStellplaetze > 0 ? `<span class="badge fm-badge-green" title="Freie AB-Stellplätze">AB ${freieABStellplaetze}</span>` : ''}
+                        ${Number(b.storage_total || 0) > 0 ? `<span class="badge fm-badge-green" title="Freie RC-Lagerplätze">RC ${storageFree}</span>` : ''}
+                    </td>
+                    <td><span class="fm-vehicle-list">${vehicleNames}</span></td>
+                    <td><span class="fm-vehicle-list">${coloredMissingNames}</span></td>
+                    <td>
+                        <button class="btn btn-success btn-xs fm-buy-credit" ${
             buyableData.totalCredits === 0
                 ? 'disabled title="Keine kaufbaren Fahrzeuge oder RCs"'
             : buyableData.totalCredits > currentCredits
                 ? 'disabled title="Nicht genug Credits"'
             : ''
-        }>
-            ${buyableData.totalCredits.toLocaleString()} Credits
-          </button>
-        </td>
-
-        ${coinsButton ? `
-    <td>
-        <button class="btn btn-danger btn-xs fm-buy-coin"
-            ${
+        }>${buyableData.totalCredits.toLocaleString()} Credits</button>
+                    </td>
+                    ${coinsButton ? `
+                        <td>
+                            <button class="btn btn-danger btn-xs fm-buy-coin" ${
             buyableData.totalCoins === 0
                 ? 'disabled title="Keine kaufbaren Fahrzeuge oder RCs"'
             : buyableData.totalCoins > currentCoins
                 ? 'disabled title="Nicht genug Coins"'
             : ''
-        }>
-            ${buyableData.totalCoins.toLocaleString()} Coins
-        </button>
-    </td>
-` : ''}
-
-      </tr>
-    `;
+        }>${buyableData.totalCoins.toLocaleString()} Coins</button>
+                        </td>
+                    ` : ''}
+                </tr>
+        `;
         });
 
         html += '</tbody></table>';
-
-        setTimeout(
-            () => setupTableEventListeners(
-                tableId,
-                buildings,
-                vehicleMap,
-                vehicleTypeMap,
-                lssmBuildingDefs
-            ),
-            0
-        );
-
+        setTimeout(() => setupTableEventListeners(tableId, buildings, vehicleMap, vehicleTypeMap, lssmBuildingDefs), 0);
         return html;
     }
 
@@ -2245,6 +2102,65 @@
         });
         table.querySelector('.fm-filter-leitstelle')?.addEventListener('change', applyRowFilter);
         table.querySelector('.fm-filter-wache')?.addEventListener('change', applyRowFilter);
+        table.querySelector('.fm-profile-all')?.addEventListener('change', e => {
+            const selectedProfile = e.target.value;
+            if (!selectedProfile) return;
+
+            // Profil auf alle Wachen anwenden, die es unterstützen
+            buildings.forEach(building => {
+                const configKey = `${building.building_type}_${building.small_building ? 'small' : 'normal'}`;
+                const profiles = loadProfiles(configKey).profiles;
+
+                if (Object.prototype.hasOwnProperty.call(profiles, selectedProfile)) {
+                    setBuildingActiveProfile(building.id, configKey, selectedProfile);
+                }
+            });
+
+            // Auswahl und Filter für den Neuaufbau sichern
+            const selectedBuildings = new Set(
+                [...table.querySelectorAll('.fm-select:checked')]
+                .map(cb => cb.closest('tr')?.dataset.buildingId)
+                .filter(Boolean)
+            );
+            const masterChecked = table.querySelector('.fm-select-all')?.checked || false;
+            const filterLeitstelle = table.querySelector('.fm-filter-leitstelle')?.value || '';
+            const filterWache = table.querySelector('.fm-filter-wache')?.value || '';
+            const container = table.parentElement;
+
+            container.style.visibility = 'hidden';
+            container.innerHTML = buildFahrzeugTable(
+                buildings,
+                tableId,
+                vehicleMap,
+                vehicleTypeMap,
+                lssmBuildingDefs,
+                { leitstelle: '', wache: '' }
+            );
+
+            const newTable = document.getElementById(`fm-table-${tableId}`);
+
+            if (newTable) {
+                const leitstelleSelect = newTable.querySelector('.fm-filter-leitstelle');
+                const wacheSelect = newTable.querySelector('.fm-filter-wache');
+
+                if (leitstelleSelect) leitstelleSelect.value = filterLeitstelle;
+                if (wacheSelect) wacheSelect.value = filterWache;
+
+                newTable.querySelectorAll('tbody tr').forEach(row => {
+                    if (selectedBuildings.has(row.dataset.buildingId)) {
+                        const checkbox = row.querySelector('.fm-select');
+                        if (checkbox) checkbox.checked = true;
+                    }
+                });
+
+                const master = newTable.querySelector('.fm-select-all');
+                if (master) master.checked = masterChecked;
+
+                updateBuyButtons(newTable);
+            }
+
+            container.style.visibility = 'visible';
+        });
         table.querySelector('.fm-filter-reset')?.addEventListener('click', () => {
             const container = table.parentElement;
 
@@ -2268,26 +2184,44 @@
                 hideBuilding(buildingId);
 
                 if (row) {
-                    const checkbox = row.querySelector('.fm-select');
-
-                    if (checkbox) {
-                        checkbox.checked = false;
-                    }
-
+                    row.querySelector('.fm-select')?.click();
                     row.remove();
                 }
 
                 updateBuyButtons(table);
 
                 if (!table.querySelector('tbody tr')) {
-                    const spoiler = table.closest('.fm-spoiler');
-
-                    if (spoiler) {
-                        spoiler.remove();
-                    }
+                    table.closest('.fm-spoiler')?.remove();
                 }
             });
         });
+        table.querySelectorAll('.fm-hide-all-buildings').forEach(button => {
+    button.addEventListener('click', () => {
+        const rows = [...table.querySelectorAll('tbody tr')]
+            .filter(row =>
+                row.getClientRects().length > 0 &&
+                getComputedStyle(row).display !== 'none' &&
+                getComputedStyle(row).visibility !== 'hidden'
+            );
+
+        console.log('[Wachen-Massenbearbeiter] Sichtbare Wachen zum Ausblenden:', rows.length);
+
+        rows.forEach(row => {
+            const buildingId = Number(row.dataset.buildingId);
+            if (!buildingId) return;
+
+            hideBuilding(buildingId);
+            row.remove();
+        });
+
+        updateBuyButtons(table);
+
+        if (!table.querySelector('tbody tr')) {
+            table.closest('.fm-spoiler')?.remove();
+        }
+    });
+});
+
         applyRowFilter();
     }
 
