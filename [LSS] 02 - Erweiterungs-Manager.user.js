@@ -5518,15 +5518,20 @@
         const buildUrl =
               `/buildings/${building.id}/extension/${currency}/${extensionId}`;
 
+        // Bewusst fetch statt GM_xmlhttpRequest: Das Spiel antwortet nach dem Bau mit einer
+        // Weiterleitung auf /buildings/<id>. fetch folgt ihr als GET (wie ein Klick auf den
+        // Knopf). GM_xmlhttpRequest folgt ihr je nach Browser/Tampermonkey als POST, und
+        // POST /buildings/<id> liefert 404 - obwohl die Erweiterung schon gebaut ist.
         return await new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
+            fetch(buildUrl, {
                 method: 'POST',
-                url: buildUrl,
+                credentials: 'same-origin',
                 headers: {
                     'X-CSRF-Token': csrfToken,
                     'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                onload: async function(response) {
+                }
+            }).then(async r => ({ status: r.status, responseText: await r.text() }))
+              .then(async function(response) {
                     if (response.status >= 200 && response.status < 300) {
                         if (row) {
                             // Polizei-Kleinwache
@@ -5600,8 +5605,7 @@
 
                         resolve(false);
                     }
-                },
-                onerror: function(error) {
+            }).catch(function(error) {
                     console.error(
                         `Fehler beim Bauen der Erweiterung in Gebäude ${building.id}.`,
                         error
@@ -5612,7 +5616,6 @@
                     );
 
                     resolve(false);
-                }
             });
         });
     }
