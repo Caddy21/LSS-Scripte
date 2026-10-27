@@ -105,12 +105,9 @@
         migrateButton('#Personalübersicht', 'personal-overview-btn', 'Personalübersicht');
         migrateButton('#open-alias-manager', 'open-alias-manager-btn', 'Wachenalias-Manager');
         migrateButton('#lssfm-open-menu', 'lssfm-open-menu-btn', 'Fleet Manager');
-        migrateButton('#multiausblender-settings-btn', 'multiausblender-btn', 'Multiausblender');
         migrateButton('#open-icon-manager', 'open-icon-manager', 'Gebäudegrafiken');
         migrateButton('#open-thw-working-hours-manager', 'open-thw-working-hours-manager-btn', 'THW-Arbeitszeiten');
-        migrateButton('#open-lss-massenbearbeiter', 'open-lss-massenbearbeiter', 'Wachen-Massenbearbeiter');
-        migrateButton('#ab-settings-menu', 'ab-settings-menu', 'Abrollbehälter-Manager');
-       
+        migrateButton('#ab-settings-menu', 'ab-settings-menu', 'Abrollbehälter-Manager');   
     }, 10000);
 
 })();
