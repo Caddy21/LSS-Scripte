@@ -1,8 +1,7 @@
-
  // ==UserScript==
- // @name         [LSS] 76 - Icon Manager
+ // @name         [LSS] Icon Manager
  // @namespace    https://leitstellenspiel.de/
- // @version      1.5.3
+ // @version      1.0
  // @description  Verwaltung fehlender Gebäudegrafiken nach Wachentyp und Wachengröße mit Reload beim Schließen
  // @author       Caddy21
  // @match        https://www.leitstellenspiel.de/*
