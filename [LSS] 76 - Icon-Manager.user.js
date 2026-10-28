@@ -27,8 +27,6 @@
      let saveRunning = false;
      let saveCurrent = 0;
      let saveTotal = 0;
-
-     // Merkt sich erfolgreiche Gebäudespeicherungen bis zum Schließen.
      let hasSavedChanges = false;
      let managerClosed = false;
      let activeSingleSaves = 0;
@@ -71,10 +69,6 @@
          return getTabLabel(type, size);
      }
 
-     // ------------------------------------------------------------
-     // Reload-Verwaltung
-     // ------------------------------------------------------------
-
      function reloadAfterCloseIfNeeded() {
          if (
              managerClosed &&
@@ -95,10 +89,6 @@
          clearPreviewUrls();
          reloadAfterCloseIfNeeded();
      }
-
-     // ------------------------------------------------------------
-     // IndexedDB
-     // ------------------------------------------------------------
 
      function openImageDatabase() {
          if (!('indexedDB' in window) || !window.indexedDB) {
@@ -290,11 +280,7 @@
              }
          );
      }
-
-     // ------------------------------------------------------------
-     // Vorschauen
-     // ------------------------------------------------------------
-
+  
      function createPreviewUrl(file) {
          const url = URL.createObjectURL(file);
          previewUrls.add(url);
@@ -390,10 +376,6 @@
          }
      }
 
-     // ------------------------------------------------------------
-     // Menü und Modal
-     // ------------------------------------------------------------
-
      function createButton() {
          const interval = setInterval(() => {
              const menu = document.querySelector('#menu_profile + .dropdown-menu');
@@ -479,12 +461,10 @@
              </div>
          `);
 
-         // Schließen über das X:
          $('#lss-icon-close').on('click', () => {
              closeManager();
          });
 
-         // Schließen durch Klick auf den abgedunkelten Hintergrund:
          $('#lss-icon-modal').on('click', function (event) {
              if (event.target === this) {
                  closeManager();
@@ -547,9 +527,7 @@
                  $(input).prop('disabled', false);
              }
          });
-
-         // Einzelnes Gebäude speichern:
-         // Kein sofortiger Reload. Änderungen werden beim Schließen übernommen.
+      
          $(document).on('click', '.lss-save', async function () {
              if (saveRunning) return;
 
@@ -572,15 +550,10 @@
              } finally {
                  activeSingleSaves--;
                  button.prop('disabled', false).text('Speichern');
-
-                 // Falls der Manager während des Speicherns geschlossen wurde:
                  reloadAfterCloseIfNeeded();
              }
          });
-
-         // Alle Gebäude speichern:
-         // Sequenziell, mit unveränderter Pause von 100 ms.
-         // Kein Reload während des Durchlaufs.
+      
          $(document).on('click', '.lss-save-all', async function () {
              if (saveRunning) return;
 
@@ -638,8 +611,7 @@
                      if (saved) {
                          hasSavedChanges = true;
                      }
-
-                     // Diese Pause ist vom Betreiber vorgegeben und bleibt erhalten.
+                  
                      await new Promise(resolve => setTimeout(resolve, SAVE_DELAY));
                  }
              } finally {
@@ -656,10 +628,6 @@
                          `Vorgang abgeschlossen: ${saveCurrent} von ${saveTotal} Gebäuden bearbeitet.`
                      );
                  }
-
-                 // Wurde der Manager während des Durchlaufs geschlossen,
-                 // erfolgt der Reload erst jetzt, nachdem alle laufenden
-                 // Speichervorgänge beendet sind.
                  reloadAfterCloseIfNeeded();
              }
          });
@@ -669,10 +637,6 @@
              $('#lss-counter').text('Abbruch angefordert …');
          });
      }
-
-     // ------------------------------------------------------------
-     // Gebäudetypen
-     // ------------------------------------------------------------
 
      async function loadBuildingTypeNames() {
          const fallback = {
@@ -750,10 +714,6 @@
              );
          }
      }
-
-     // ------------------------------------------------------------
-     // Tabs und Gebäudeliste
-     // ------------------------------------------------------------
 
      function createTabContent(tabKey, group) {
          const label = group.label;
@@ -935,10 +895,6 @@
          loadGlobalImageForTab(selectedTabKey);
      }
 
-     // ------------------------------------------------------------
-     // Gebäude speichern
-     // ------------------------------------------------------------
-
      async function saveBuilding(row) {
          const id = row.data('id');
          const input = row.find('.lss-building-image')[0];
@@ -964,7 +920,6 @@
          row.find('.lss-status').text('Speichere …');
 
          try {
-             // Bewährter Ablauf: Bearbeitungsformular abrufen und übernehmen.
              const response = await fetch(
                  `/buildings/${encodeURIComponent(id)}/edit`,
                  {
@@ -1093,7 +1048,6 @@
              $('#lss-counter').text(`Fehler: ${error.message}`);
          }
      }
-
      createButton();
      createModal();
  })();
