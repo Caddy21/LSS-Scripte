@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LSS] Erweiterungs-Manager
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.7.1
 // @description  Ermöglicht das einfache Verwalten und Bauen von fehlenden Erweiterungen, Lagerräumen, Ausbaustufen und Spezialisierungen für eigene Wachen/Gebäude sowie Verbandsgebäude.
 // @author       Caddy21
 // @match        https://www.leitstellenspiel.de/
@@ -333,15 +333,15 @@ body.hide-coins-buttons .coins-button, body.hide-coins-buttons .coins-column-hid
     const manualLevels = {};
     const buildingTypeApiMapping = {
         '0_normal': 0,
-        '0_small': 0,
+        '0_small': 18,
         '1_normal': 1,
-        '2_normal': 2,
+        '2_normal': 20,
         '2_small': 2,
         '3_normal': 3,
         '4_normal': 4,
         '5_normal': 5,
         '6_normal': 6,
-        '6_small': 6,
+        '6_small': 19,
         '8_normal': 8,
         '9_normal': 9,
         '10_normal': 10,
