@@ -126,4 +126,6 @@ Mögliche Komplikationen mit anderen Scripten oder Browsern schließe ich **nich
     - Chat-Manager
     - Wachenfahrzeugexporteur
     - LST-Zuordner
+    - Waldbrand
+    - Fahrzeugverstecker
 </details>
