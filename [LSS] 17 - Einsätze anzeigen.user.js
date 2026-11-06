@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         [LSS] Einsätze anzeigen
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.6
 // @author       Caddy21
-// @description  Blendet Einsätze basierend auf individuellen Einstellungen aus.
+// @description  Blendet Einsätze basierend auf individuellen Kategorien, Einsatzarten und Erfolgsstatus aus.
 // @match        https://www.leitstellenspiel.de/einsaetze*
 // @match        https://polizei.leitstellenspiel.de/einsaetze*
 // @icon         https://github.com/Caddy21/-docs-assets-css/raw/main/yoshi_icon__by_josecapes_dgqbro3-fullview.png
@@ -19,73 +19,14 @@
     let initialGameFilterTriggered = false;
     let activeSection = 'requirements';
     let themeObserver = null;
+    let filterSyncTimer = null;
+    let lastRequirementSignature = '';
+    let lastMissionTypeSignature = '';
+    let filterOptions = {};
+    let missionTypeOptions = {};
 
-    // Hier macht was ihr wollt gebt mir nur nicht die Schuld für Fehler. :D
-    const keywordMap = {
-        "Autobahnpolizeiwache": false,
-        "Bahnrettungs-Erweiterung": false,
-        "Bereitschaftspolizeiwache": false,
-        "Bergrettungswache": false,
-        "Betreuungs- und Verpflegungsdienst": false,
-        "Dienstgruppenleitung": false,
-        "Drohnen-Erweiterung": false,
-        "Erweiterung für Sonderfahrzeug: Gefangenenkraftwagen": false,
-        "Feuerwache": false,
-        "Hubschrauberstationen (Seenotrettung)": false,
-        "Lautsprecherkraftwagen-Erweiterung": false,
-        "Lüfter-Erweiterung": false,
-        "MEK-Wache": false,
-        "NEA200-Erweiterung": false,
-        "NEA50-Erweiterung": false,
-        "Polizeihubschrauberstation": false,
-        "Polizei-Motorradstaffel": false,
-        "Polizeiwache": false,
-        "Reiterstaffel": false,
-        "Rettungshundestaffel": false,
-        "Rettungswache": false,
-        "SEK-Wache": false,
-        "Seenotrettungswache": false,
-        "THW: Fachgruppe Notversorgung": false,
-        "THW: Fachgruppe Räumen": false,
-        "THW: Fachgruppe SB": false,
-        "THW: Zugtrupp": false,
-        "THW-Ortsverband": false,
-        "Technischer Zuge: Wasserwerfer": false,
-        "Verpflegungsdienst-Erweiterung": false,
-        "Wasserrettungswache": false,
-        "Werkfeuerwehr": false,
-        "Windenrettungs-Erweiterungen": false,
-        "Züge der 1. Hundertschaft": false
-    }; // Voraussetzungen
-    const missionTypes = {
-        "Autobahnpolizei-Einsätze": false,
-        "Bergrettungseinsätze": false,
-        "Bereitschaftspolizei-Einsätze": false,
-        "Feuerwehreinsätze": false,
-        "Flughafenfeuerwehr-Einsätze": false,
-        "Flughafenfeuerwehr-Einsätze (Spezialisierung)": false,
-        "Kriminalpolizei-Einsätze": false,
-        "NEA200-Einsätze": false,
-        "NEA50-Einsätze": false,
-        "Polizeieinsätze": false,
-        "Rettungseinsätze": false,
-        "SEG-Einsätze": false,
-        "SEG-Sanitätsdienst-Einsätze": false,
-        "Seenotrettungseinsätze": false,
-        "THW-Einsätze": false,
-        "Tierrettungs-Einsätze": false,
-        "Wasserrettungs-Einsätze": false,
-        "Werkfeuerwehr-Einsätze": false
-    }; // Einsatzarten
-
-    let filterOptions = {
-        ...keywordMap,
-        ...loadSettings('einsatzFilterOptions', {})
-    };
-    let missionTypeOptions = {
-        ...missionTypes,
-        ...loadSettings('einsatzMissionTypeOptions', {})
-    };
+    const savedFilterOptions = loadSettings('einsatzFilterOptions', {});
+    const savedMissionTypeOptions = loadSettings('einsatzMissionTypeOptions',{});
 
     // Hier überwache ich eure Einstellungen
     function saveSettings(key, value) {
@@ -121,6 +62,156 @@
         updateModalCounters();
     }
 
+    // Optionen aus dem LSS-Select auslesen
+    function getGameSelectOptions(selectId) {
+        const select = document.getElementById(selectId);
+
+        if (!select) {
+            return null;
+        }
+
+        const result = {};
+
+        select.querySelectorAll('option').forEach(option => {
+            const label = (
+                option.textContent ||
+                option.innerText ||
+                ''
+            ).replace(/\s+/g, ' ').trim();
+
+            if (!label) {
+                return;
+            }
+
+            result[label] = true;
+        });
+
+        return Object.fromEntries(
+            Object.keys(result)
+            .sort((a, b) =>
+                  a.localeCompare(b, 'de', {
+                sensitivity: 'base'
+            })
+                 )
+            .map(label => [label, true])
+        );
+    }
+
+    // Filter anhand der aktuellen Spieloptionen synchronisieren
+    function syncGameFilterOptions(force = false) {
+        const gameRequirements = getGameSelectOptions(
+            'select_requirement'
+        );
+
+        const gameMissionTypes = getGameSelectOptions(
+            'select_mission_type'
+        );
+
+        if (gameRequirements) {
+            const requirementKeys = Object.keys(gameRequirements);
+            const signature = requirementKeys.join('|');
+
+            if (force || signature !== lastRequirementSignature) {
+                lastRequirementSignature = signature;
+
+                const newOptions = {};
+
+                requirementKeys
+                    .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }))
+                    .forEach(label => {
+                    newOptions[label] =
+                        Object.prototype.hasOwnProperty.call(
+                        savedFilterOptions,
+                        label
+                    )
+                        ? Boolean(savedFilterOptions[label])
+                    : Object.prototype.hasOwnProperty.call(
+                        filterOptions,
+                        label
+                    )
+                        ? Boolean(filterOptions[label])
+                    : false;
+                });
+
+                filterOptions = newOptions;
+
+                console.log(
+                    '[LSS-EinsatzFilter] Voraussetzungen synchronisiert:',
+                    requirementKeys.length
+                );
+            }
+        }
+
+        if (gameMissionTypes) {
+            const missionKeys = Object.keys(gameMissionTypes);
+            const signature = missionKeys.join('|');
+
+            if (force || signature !== lastMissionTypeSignature) {
+                lastMissionTypeSignature = signature;
+
+                const newOptions = {};
+
+                missionKeys
+                    .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }))
+                    .forEach(label => {
+                    newOptions[label] =
+                        Object.prototype.hasOwnProperty.call(
+                        savedMissionTypeOptions,
+                        label
+                    )
+                        ? Boolean(savedMissionTypeOptions[label])
+                    : Object.prototype.hasOwnProperty.call(
+                        missionTypeOptions,
+                        label
+                    )
+                        ? Boolean(missionTypeOptions[label])
+                    : false;
+                });
+
+                missionTypeOptions = newOptions;
+
+                console.log(
+                    '[LSS-EinsatzFilter] Einsatzarten synchronisiert:',
+                    missionKeys.length
+                );
+            }
+        }
+
+        updateModalCounters();
+    }
+
+    // Synchronisation verzögert ausführen
+    function scheduleFilterSync() {
+        if (filterSyncTimer) {
+            clearTimeout(filterSyncTimer);
+        }
+
+        filterSyncTimer = setTimeout(() => {
+            filterSyncTimer = null;
+
+            const oldRequirementSignature = lastRequirementSignature;
+            const oldMissionTypeSignature = lastMissionTypeSignature;
+
+            syncGameFilterOptions();
+
+            const changed =
+                  oldRequirementSignature !== lastRequirementSignature ||
+                  oldMissionTypeSignature !== lastMissionTypeSignature;
+
+            if (changed) {
+                const modal = document.getElementById(
+                    'einsatzFilterModal'
+                );
+
+                if (modal) {
+                    renderActiveSection();
+                }
+
+                hideMissions();
+            }
+        }, 100);
+    }
+
     // Darkside of Cookies bzw let the Sun shine
     function getCurrentThemeMode() {
         return (
@@ -129,18 +220,24 @@
         ) ? 'dark' : 'light';
     }
 
-    // Einsätze verschwindebus
+    // Einsätze verschwinden lassen
     function hideMissions() {
         const searchInput = document.getElementById(
             'search_input_field_possible_mission'
         );
 
         const searchTerm = searchInput
-            ? searchInput.value.toLowerCase()
-            : '';
+        ? searchInput.value.toLowerCase()
+        : '';
 
-        document.querySelectorAll('.mission_type_index_searchable').forEach(el => {
-            const text = el.textContent || el.innerText || '';
+        document.querySelectorAll(
+            '.mission_type_index_searchable'
+        ).forEach(el => {
+            const text =
+                  el.textContent ||
+                  el.innerText ||
+                  '';
+
             const textLower = text.toLowerCase();
 
             let visible = true;
@@ -157,7 +254,9 @@
 
             // Voraussetzungen prüfen
             if (visible) {
-                for (const [keyword, shouldHide] of Object.entries(filterOptions)) {
+                for (const [keyword, shouldHide] of Object.entries(
+                    filterOptions
+                )) {
                     if (shouldHide && text.includes(keyword)) {
                         visible = false;
                         break;
@@ -167,7 +266,9 @@
 
             // Einsatzarten prüfen
             if (visible) {
-                for (const [type, shouldHide] of Object.entries(missionTypeOptions)) {
+                for (const [type, shouldHide] of Object.entries(
+                    missionTypeOptions
+                )) {
                     if (shouldHide && text.includes(type)) {
                         visible = false;
                         break;
@@ -176,7 +277,11 @@
             }
 
             // Spielinterne Suche berücksichtigen
-            if (visible && searchTerm !== '' && !textLower.includes(searchTerm)) {
+            if (
+                visible &&
+                searchTerm !== '' &&
+                !textLower.includes(searchTerm)
+            ) {
                 visible = false;
             }
 
@@ -184,7 +289,9 @@
         });
 
         // Spoiler-Überschriften ausblenden, wenn kein Einsatz sichtbar ist
-        document.querySelectorAll('.mission-group-header').forEach(header => {
+        document.querySelectorAll(
+            '.mission-group-header'
+        ).forEach(header => {
             const onclick = header.getAttribute('onclick');
 
             if (!onclick) {
@@ -200,25 +307,32 @@
             }
 
             const childSelector = match[1];
-            const children = document.querySelectorAll(childSelector);
+            const children = document.querySelectorAll(
+                childSelector
+            );
 
-            const hasVisibleChild = Array.from(children).some(child => {
-                return child.style.display !== 'none';
-            });
+            const hasVisibleChild = Array.from(children).some(
+                child => child.style.display !== 'none'
+            );
 
-            header.style.display = hasVisibleChild ? '' : 'none';
+            header.style.display = hasVisibleChild
+                ? ''
+            : 'none';
 
             if (!hasVisibleChild) {
                 return;
             }
 
-            const arrow = header.querySelector('.expand-arrow');
+            const arrow = header.querySelector(
+                '.expand-arrow'
+            );
 
             if (!arrow) {
                 return;
             }
 
-            const isExpanded = arrow.getAttribute('aria-expanded') === 'true';
+            const isExpanded =
+                  arrow.getAttribute('aria-expanded') === 'true';
 
             if (!isExpanded) {
                 arrow.click();
@@ -226,7 +340,32 @@
         });
     }
 
-    // Irgendwas läuft hier automagisch
+    // Einsatzanzahl initial auf "Alle" stellen
+    function triggerInitialPerPageFilter() {
+        const select = document.getElementById('per_page');
+
+        if (!select) {
+            return;
+        }
+
+        if (select.value === 'all') {
+            return;
+        }
+
+        console.log(
+            '[LSS-EinsatzFilter] Stelle Einsatzanzahl automatisch auf "Alle".'
+        );
+
+        select.value = 'all';
+
+        select.dispatchEvent(
+            new Event('change', {
+                bubbles: true
+            })
+        );
+    }
+
+    // Spielinternen Anforderungsfilter initial ausführen
     function triggerInitialGameFilter() {
         if (initialGameFilterTriggered) {
             return;
@@ -246,16 +385,16 @@
             '[LSS-EinsatzFilter] Starte initiale Anforderungsprüfung...'
         );
 
-        // Anforderungen prüfen aktivieren
         if (!checkbox.checked) {
             checkbox.checked = true;
         }
 
-        checkbox.dispatchEvent(new Event('change', {
-            bubbles: true
-        }));
+        checkbox.dispatchEvent(
+            new Event('change', {
+                bubbles: true
+            })
+        );
 
-        // Kurz warten, damit LSS die Änderung verarbeiten kann
         setTimeout(() => {
             const buttons = Array.from(
                 document.querySelectorAll(
@@ -280,6 +419,11 @@
                 );
 
                 applyButton.click();
+
+                setTimeout(() => {
+                    syncGameFilterOptions(true);
+                    hideMissions();
+                }, 100);
             } else {
                 console.warn(
                     '[LSS-EinsatzFilter] Button "Filter anwenden" wurde nicht gefunden.'
@@ -290,11 +434,13 @@
         }, 100);
     }
 
-    // Freund von Sobol
+    // Modal öffnen
     function showModal() {
         if (document.getElementById('einsatzFilterModal')) {
             return;
         }
+
+        syncGameFilterOptions();
 
         injectStyles();
 
@@ -400,7 +546,8 @@
         footer.className = 'einsatz-filter-footer';
 
         const successWrapper = document.createElement('div');
-        successWrapper.className = 'einsatz-filter-success-toggle';
+        successWrapper.className =
+            'einsatz-filter-success-toggle';
 
         const successText = document.createElement('span');
 
@@ -415,10 +562,11 @@
         successText.appendChild(successSmall);
 
         const successSelect = document.createElement('select');
-        successSelect.className = 'einsatz-filter-success-select';
+        successSelect.className =
+            'einsatz-filter-success-select';
 
         const successOptions = [
-            ['none', 'Normal anzeigen'],
+            ['none', 'Alle anzeigen'],
             ['hide', 'Grüne ausblenden'],
             ['only', 'Nur grüne anzeigen']
         ];
@@ -441,7 +589,8 @@
         successWrapper.appendChild(successSelect);
 
         const closeFooterButton = document.createElement('button');
-        closeFooterButton.className = 'einsatz-filter-footer-close';
+        closeFooterButton.className =
+            'einsatz-filter-footer-close';
         closeFooterButton.textContent = 'Schließen';
         closeFooterButton.onclick = closeModal;
 
@@ -457,7 +606,10 @@
 
         renderActiveSection();
 
-        document.addEventListener('keydown', modalEscHandler);
+        document.addEventListener(
+            'keydown',
+            modalEscHandler
+        );
 
         themeObserver = new MutationObserver(() => {
             updateTheme();
@@ -474,15 +626,18 @@
     // Wechsel zwischen Bereichen
     function createNavigationCard(section, icon, title) {
         const card = document.createElement('button');
-        card.className = 'einsatz-filter-nav-card';
+        card.className =
+            'einsatz-filter-nav-card';
         card.dataset.section = section;
 
         const iconElement = document.createElement('div');
-        iconElement.className = 'einsatz-filter-nav-icon';
+        iconElement.className =
+            'einsatz-filter-nav-icon';
         iconElement.textContent = icon;
 
         const text = document.createElement('div');
-        text.className = 'einsatz-filter-nav-text';
+        text.className =
+            'einsatz-filter-nav-text';
 
         const titleElement = document.createElement('strong');
         titleElement.textContent = title;
@@ -490,13 +645,14 @@
         const counter = document.createElement('span');
         counter.id = section === 'requirements'
             ? 'requirementsCounter'
-            : 'missionsCounter';
+        : 'missionsCounter';
 
         text.appendChild(titleElement);
         text.appendChild(counter);
 
         const arrow = document.createElement('div');
-        arrow.className = 'einsatz-filter-nav-arrow';
+        arrow.className =
+            'einsatz-filter-nav-arrow';
         arrow.textContent = '›';
 
         card.appendChild(iconElement);
@@ -513,15 +669,21 @@
 
     // Ausgewählten Bereich anzeigen
     function renderActiveSection() {
-        const content = document.getElementById('einsatzFilterContent');
+        const content = document.getElementById(
+            'einsatzFilterContent'
+        );
 
         if (!content) {
             return;
         }
 
+        syncGameFilterOptions();
+
         content.innerHTML = '';
 
-        document.querySelectorAll('.einsatz-filter-nav-card').forEach(card => {
+        document.querySelectorAll(
+            '.einsatz-filter-nav-card'
+        ).forEach(card => {
             card.classList.toggle(
                 'active',
                 card.dataset.section === activeSection
@@ -555,13 +717,16 @@
     // Filterpanel erstellen
     function createFilterPanel(titleText, icon, options, type) {
         const panel = document.createElement('div');
-        panel.className = 'einsatz-filter-panel';
+        panel.className =
+            'einsatz-filter-panel';
 
         const panelHeader = document.createElement('div');
-        panelHeader.className = 'einsatz-filter-panel-header';
+        panelHeader.className =
+            'einsatz-filter-panel-header';
 
         const panelTitle = document.createElement('div');
-        panelTitle.className = 'einsatz-filter-panel-title';
+        panelTitle.className =
+            'einsatz-filter-panel-title';
 
         panelTitle.innerHTML =
             `<span>${icon}</span>` +
@@ -571,10 +736,12 @@
             `</div>`;
 
         const actions = document.createElement('div');
-        actions.className = 'einsatz-filter-actions';
+        actions.className =
+            'einsatz-filter-actions';
 
         const allOn = document.createElement('button');
-        allOn.textContent = 'Alle an';
+        allOn.type = 'button';
+        allOn.textContent = 'Alle anwählen';
 
         allOn.onclick = () => {
             Object.keys(options).forEach(key => {
@@ -586,7 +753,8 @@
         };
 
         const allOff = document.createElement('button');
-        allOff.textContent = 'Alle aus';
+        allOff.type = 'button';
+        allOff.textContent = 'Alle abwählen';
 
         allOff.onclick = () => {
             Object.keys(options).forEach(key => {
@@ -607,40 +775,45 @@
 
         // Suche
         const searchWrapper = document.createElement('div');
-        searchWrapper.className = 'einsatz-filter-search';
+        searchWrapper.className =
+            'einsatz-filter-search';
         searchWrapper.innerHTML = '🔍';
 
         const search = document.createElement('input');
         search.type = 'search';
-        search.placeholder = type === 'requirements'
+        search.placeholder =
+            type === 'requirements'
             ? 'Voraussetzung suchen...'
-            : 'Einsatzkategorie suchen...';
+        : 'Einsatzkategorie suchen...';
 
         searchWrapper.appendChild(search);
         panel.appendChild(searchWrapper);
 
         // Liste
         const list = document.createElement('div');
-        list.className = 'einsatz-filter-list';
+        list.className =
+            'einsatz-filter-list';
 
-        const entries = Object.entries(options).sort((a, b) =>
-            a[0].localeCompare(b[0], 'de')
-        );
+        const entries = Object.entries(options);
 
         entries.forEach(([key, checked]) => {
             const item = document.createElement('label');
-            item.className = 'einsatz-filter-item';
-            item.dataset.search = key.toLowerCase();
+            item.className =
+                'einsatz-filter-item';
+            item.dataset.search =
+                key.toLowerCase();
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = checked;
 
             const checkmark = document.createElement('span');
-            checkmark.className = 'einsatz-filter-checkmark';
+            checkmark.className =
+                'einsatz-filter-checkmark';
 
             const labelText = document.createElement('span');
-            labelText.className = 'einsatz-filter-item-text';
+            labelText.className =
+                'einsatz-filter-item-text';
             labelText.textContent = key;
 
             checkbox.onchange = () => {
@@ -666,12 +839,17 @@
         });
 
         search.addEventListener('input', () => {
-            const term = search.value.toLowerCase().trim();
+            const term = search.value
+            .toLowerCase()
+            .trim();
 
-            list.querySelectorAll('.einsatz-filter-item').forEach(item => {
-                item.style.display = item.dataset.search.includes(term)
+            list.querySelectorAll(
+                '.einsatz-filter-item'
+            ).forEach(item => {
+                item.style.display =
+                    item.dataset.search.includes(term)
                     ? ''
-                    : 'none';
+                : 'none';
             });
         });
 
@@ -682,21 +860,25 @@
 
     // Zahlen/Daten/Fakten
     function updateModalCounters() {
-        const requirementsCounter = document.getElementById(
-            'requirementsCounter'
-        );
+        const requirementsCounter =
+              document.getElementById(
+                  'requirementsCounter'
+              );
 
-        const missionsCounter = document.getElementById(
-            'missionsCounter'
-        );
+        const missionsCounter =
+              document.getElementById(
+                  'missionsCounter'
+              );
 
-        const requirementActive = Object.values(filterOptions)
-            .filter(Boolean)
-            .length;
+        const requirementActive =
+              Object.values(filterOptions)
+        .filter(Boolean)
+        .length;
 
-        const missionActive = Object.values(missionTypeOptions)
-            .filter(Boolean)
-            .length;
+        const missionActive =
+              Object.values(missionTypeOptions)
+        .filter(Boolean)
+        .length;
 
         if (requirementsCounter) {
             requirementsCounter.textContent =
@@ -713,35 +895,42 @@
 
     // Status aktualisieren
     function updateStatus() {
-        const status = document.getElementById(
-            'einsatzFilterStatusText'
-        );
+        const status =
+              document.getElementById(
+                  'einsatzFilterStatusText'
+              );
 
         if (!status) {
             return;
         }
 
-        const requirementActive = Object.values(filterOptions)
-            .filter(Boolean)
-            .length;
+        const requirementActive =
+              Object.values(filterOptions)
+        .filter(Boolean)
+        .length;
 
-        const missionActive = Object.values(missionTypeOptions)
-            .filter(Boolean)
-            .length;
+        const missionActive =
+              Object.values(missionTypeOptions)
+        .filter(Boolean)
+        .length;
 
-        const total = requirementActive + missionActive;
+        const total =
+              requirementActive + missionActive;
 
         let statusMode = '';
 
         if (successFilterMode === 'hide') {
-            statusMode = ' · Grüne ausgeblendet';
+            statusMode =
+                ' · Grüne ausgeblendet';
         } else if (successFilterMode === 'only') {
-            statusMode = ' · Nur grüne';
+            statusMode =
+                ' · Nur grüne';
         }
 
-        status.textContent = total === 0
+        status.textContent =
+            total === 0
             ? `Keine Filter aktiv${statusMode}`
-            : `${total} Filter aktiv${statusMode}`;
+        : `${total} Filter aktiv${statusMode}`;
     }
 
     // Modal mit Escape schließen
@@ -753,9 +942,10 @@
 
     // Modal entfernen
     function closeModal() {
-        const modal = document.getElementById(
-            'einsatzFilterModal'
-        );
+        const modal =
+              document.getElementById(
+                  'einsatzFilterModal'
+              );
 
         if (modal) {
             modal.remove();
@@ -774,25 +964,34 @@
 
     // Theme
     function updateTheme() {
-        const modal = document.getElementById(
-            'einsatzFilterModal'
-        );
+        const modal =
+              document.getElementById(
+                  'einsatzFilterModal'
+              );
 
         if (!modal) {
             return;
         }
 
-        modal.dataset.theme = getCurrentThemeMode();
+        modal.dataset.theme =
+            getCurrentThemeMode();
     }
 
-    // CSS (Nicht Counterstrike Source falls ihr das denkt)
+    // CSS
     function injectStyles() {
-        if (document.getElementById('einsatzFilterModernStyles')) {
+        if (
+            document.getElementById(
+                'einsatzFilterModernStyles'
+            )
+        ) {
             return;
         }
 
-        const style = document.createElement('style');
-        style.id = 'einsatzFilterModernStyles';
+        const style =
+              document.createElement('style');
+
+        style.id =
+            'einsatzFilterModernStyles';
 
         style.textContent = `
             .einsatz-filter-overlay {
@@ -938,7 +1137,7 @@
             .einsatz-filter-nav-card:hover {
                 transform: translateY(-1px);
                 border-color: #d1d5db;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, .06);
+                box-shadow: 0 5px 15px rgba(0, 0, .06);
             }
 
             .einsatz-filter-nav-card.active {
@@ -1272,7 +1471,6 @@
                 from {
                     opacity: 0;
                 }
-
                 to {
                     opacity: 1;
                 }
@@ -1283,7 +1481,6 @@
                     opacity: 0;
                     transform: translateY(12px) scale(.98);
                 }
-
                 to {
                     opacity: 1;
                     transform: translateY(0) scale(1);
@@ -1295,7 +1492,6 @@
                     opacity: 0;
                     transform: translateX(5px);
                 }
-
                 to {
                     opacity: 1;
                     transform: translateX(0);
@@ -1348,42 +1544,61 @@
         document.head.appendChild(style);
     }
 
-    // Button des Glücks erzeugen
+    // Button erzeugen
     function insertButton() {
-        if (document.getElementById('einsatzFilterOpenButton')) {
+        if (
+            document.getElementById(
+                'einsatzFilterOpenButton'
+            )
+        ) {
             return;
         }
 
-        const header = document.getElementById('filter_panel_header');
+        const header =
+              document.getElementById(
+                  'filter_panel_header'
+              );
 
         if (!header) {
             return;
         }
 
-        const buttonContainer = header.querySelector(
-            '.flex.flex-row.flex-wrap'
-        );
+        const buttonContainer =
+              header.querySelector(
+                  '.flex.flex-row.flex-wrap'
+              );
 
         if (!buttonContainer) {
             return;
         }
 
-        const selectContainer = buttonContainer.querySelector('.select');
+        const selectContainer =
+              buttonContainer.querySelector(
+                  '.select'
+              );
 
         if (!selectContainer) {
             return;
         }
 
-        const wrapper = document.createElement('div');
+        const wrapper =
+              document.createElement('div');
+
         wrapper.className = 'select';
         wrapper.style.marginRight = '10px';
 
-        const button = document.createElement('button');
+        const button =
+              document.createElement('button');
+
         button.type = 'button';
-        button.id = 'einsatzFilterOpenButton';
-        button.innerText = 'Einsätze filtern';
-        button.title = 'Einsatzfilter von Caddy21';
-        button.className = 'btn btn-default';
+        button.id =
+            'einsatzFilterOpenButton';
+        button.innerText =
+            'Einsätze filtern';
+        button.title =
+            'Einsatzfilter von Caddy21';
+        button.className =
+            'btn btn-default';
         button.onclick = showModal;
 
         wrapper.appendChild(button);
@@ -1396,46 +1611,117 @@
 
     // Starte den Bums!
     function init() {
+        // Bereits vorhandene Spieloptionen sofort laden
+        syncGameFilterOptions(true);
         insertButton();
+        triggerInitialPerPageFilter();
 
-        // LSS-Filter beobachten, bis der Filter vorhanden ist
-        const initialFilterObserver = new MutationObserver(() => {
-            triggerInitialGameFilter();
+        // LSS-Filter beobachten
+        const initialFilterObserver =
+              new MutationObserver(() => {
+                  syncGameFilterOptions();
+                  triggerInitialGameFilter();
+                  triggerInitialPerPageFilter();
+                  insertButton();
 
-            if (initialGameFilterTriggered) {
-                initialFilterObserver.disconnect();
+                  if (
+                      initialGameFilterTriggered &&
+                      document.getElementById('per_page')?.value === 'all'
+                  ) {
+                      initialFilterObserver.disconnect();
+                  }
+              });
+
+        initialFilterObserver.observe(
+            document.body,
+            {
+                childList: true,
+                subtree: true
             }
-        });
-
-        initialFilterObserver.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        // Falls der Filter beim Scriptstart bereits vorhanden ist
-        triggerInitialGameFilter();
-
-        // Hauptbeobachter für neue/geänderte Einsätze
-        const mainObserver = new MutationObserver(() => {
-            insertButton();
-            hideMissions();
-        });
-
-        mainObserver.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        // Spielinterne Suche überwachen
-        const searchInput = document.getElementById(
-            'search_input_field_possible_mission'
         );
 
+        // Falls bereits vorhanden
+        syncGameFilterOptions();
+        triggerInitialGameFilter();
+        triggerInitialPerPageFilter();
+
+        // Hauptbeobachter für neue/geänderte Einsätze
+        const mainObserver =
+              new MutationObserver(() => {
+                  insertButton();
+                  scheduleFilterSync();
+                  hideMissions();
+              });
+
+        mainObserver.observe(
+            document.body,
+            {
+                childList: true,
+                subtree: true
+            }
+        );
+
+        // Spielinterne Suche überwachen
+        const searchInput =
+              document.getElementById(
+                  'search_input_field_possible_mission'
+              );
+
         if (searchInput) {
-            searchInput.addEventListener('input', () => {
-                setTimeout(hideMissions, 50);
-            });
+            searchInput.addEventListener(
+                'input',
+                () => {
+                    setTimeout(
+                        hideMissions,
+                        50
+                    );
+                }
+            );
         }
+
+        // Falls das Suchfeld erst später erscheint
+        const searchObserver =
+              new MutationObserver(() => {
+                  const input =
+                        document.getElementById(
+                            'search_input_field_possible_mission'
+                        );
+
+                  if (!input) {
+                      return;
+                  }
+
+                  if (
+                      input.dataset
+                      .einsatzFilterListener === 'true'
+                  ) {
+                      searchObserver.disconnect();
+                      return;
+                  }
+
+                  input.dataset
+                      .einsatzFilterListener = 'true';
+
+                  input.addEventListener(
+                      'input',
+                      () => {
+                          setTimeout(
+                              hideMissions,
+                              50
+                          );
+                      }
+                  );
+
+                  searchObserver.disconnect();
+              });
+
+        searchObserver.observe(
+            document.body,
+            {
+                childList: true,
+                subtree: true
+            }
+        );
 
         // Initial filtern
         hideMissions();
